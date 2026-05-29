@@ -1,0 +1,29 @@
+# Runtime data
+data/usage-index.json
+data/imports/
+logs/
+server*.log
+
+# Local configuration and secrets
+config.json
+.env
+*.local
+
+# Real Codex sessions or exported logs
+.codex/
+**/.codex/sessions/
+**/sessions/**/*.jsonl
+**/sessions/**/*.json
+**/sessions/**/*.log
+**/sessions/**/*.txt
+
+# Dependency and OS noise
+node_modules/
+package-lock.json
+dist/
+.DS_Store
+Thumbs.db
+
+# Keep public-safe sample data
+!sample-data/**
+!config.example.json

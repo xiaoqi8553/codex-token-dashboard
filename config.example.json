@@ -1,0 +1,11 @@
+{
+  "sessionsDir": "",
+  "port": 8787,
+  "host": "127.0.0.1",
+  "autoOpenBrowser": false,
+  "defaultDateRange": "7d",
+  "allowPublicAccess": false,
+  "publicAccessToken": "",
+  "dashboardPassword": "",
+  "anonymizeData": false
+}

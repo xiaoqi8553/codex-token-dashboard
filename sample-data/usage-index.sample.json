@@ -1,0 +1,80 @@
+{
+  "version": 2,
+  "sessionsDir": "[sample]/.codex/sessions",
+  "dataDir": "[sample]/data",
+  "updatedAt": "2026-05-29T10:00:00.000Z",
+  "stats": {
+    "sessionFiles": 3,
+    "importFiles": 1,
+    "reusedFiles": 2,
+    "parsedFiles": 1,
+    "records": 4
+  },
+  "records": [
+    {
+      "id": "sample-official-001",
+      "timestamp": "2026-05-29T08:15:00.000Z",
+      "date": "2026-05-29",
+      "sessionId": "sample-session-official-001",
+      "model": "gpt-5-codex",
+      "source": "official_plus",
+      "provider": "openai",
+      "inputTokens": 980000,
+      "cachedInputTokens": 620000,
+      "outputTokens": 52000,
+      "totalTokens": 1032000,
+      "effectiveTokens": 412000,
+      "estimated": false,
+      "relativePath": "2026/05/29/sample-official.jsonl"
+    },
+    {
+      "id": "sample-relay-001",
+      "timestamp": "2026-05-29T09:20:00.000Z",
+      "date": "2026-05-29",
+      "sessionId": "sample-session-relay-001",
+      "model": "gpt-5-codex",
+      "source": "relay",
+      "provider": "relay_import",
+      "inputTokens": 1420000,
+      "cachedInputTokens": 910000,
+      "outputTokens": 88000,
+      "totalTokens": 1508000,
+      "effectiveTokens": 598000,
+      "estimated": false,
+      "relativePath": "data/imports/sample-relay.csv"
+    },
+    {
+      "id": "sample-official-002",
+      "timestamp": "2026-05-28T14:40:00.000Z",
+      "date": "2026-05-28",
+      "sessionId": "sample-session-official-002",
+      "model": "gpt-5-mini",
+      "source": "official_plus",
+      "provider": "openai",
+      "inputTokens": 360000,
+      "cachedInputTokens": 120000,
+      "outputTokens": 42000,
+      "totalTokens": 402000,
+      "effectiveTokens": 282000,
+      "estimated": false,
+      "relativePath": "2026/05/28/sample-official.jsonl"
+    },
+    {
+      "id": "sample-estimated-001",
+      "timestamp": "2026-05-27T11:00:00.000Z",
+      "date": "2026-05-27",
+      "sessionId": "sample-session-estimated-001",
+      "model": "unknown",
+      "source": "unknown",
+      "provider": "unknown",
+      "inputTokens": 18000,
+      "cachedInputTokens": 0,
+      "outputTokens": 0,
+      "totalTokens": 18000,
+      "effectiveTokens": 18000,
+      "estimated": true,
+      "estimateReason": "missing_usage_fields_text_length",
+      "relativePath": "sample-estimated.txt"
+    }
+  ]
+}
