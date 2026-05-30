@@ -149,10 +149,30 @@
     }
 
     h1 {
-      font-size: clamp(34px, 3vw, 52px);
+      font-size: clamp(32px, 2.7vw, 48px);
       line-height: 1;
       letter-spacing: 0;
       font-weight: 820;
+      white-space: nowrap;
+      word-break: keep-all;
+    }
+
+    .author-mark {
+      margin-top: 8px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      font-weight: 850;
+      letter-spacing: 0;
+      color: var(--muted);
+    }
+
+    .author-mark strong {
+      color: transparent;
+      background: linear-gradient(90deg, #0f766e, #2563eb 52%, #b45309);
+      -webkit-background-clip: text;
+      background-clip: text;
     }
 
     .meta {
@@ -360,6 +380,7 @@
     }
 
     .filters > * { min-width: 0; }
+    .filters input[type="date"] { min-width: 150px; }
     .filters .wide { grid-column: span 3; }
 
     .metrics {
@@ -617,11 +638,40 @@
     }
 
     .cache-line {
-      height: 180px;
+      height: 230px;
       width: 100%;
       border: 1px solid var(--line);
+      border-radius: 10px;
+      background:
+        linear-gradient(180deg, color-mix(in srgb, var(--panel) 92%, transparent), var(--panel-2));
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
+    }
+
+    .chart-caption-row {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: -4px;
+    }
+
+    .chart-chip {
+      border: 1px solid var(--line);
       border-radius: 8px;
-      background: linear-gradient(180deg, var(--panel), var(--panel-2));
+      background: var(--panel-2);
+      padding: 8px;
+      display: grid;
+      gap: 2px;
+      min-width: 0;
+    }
+
+    .chart-chip span {
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .chart-chip strong {
+      font-size: 15px;
+      font-variant-numeric: tabular-nums;
     }
 
     .view-tabs {
@@ -832,6 +882,7 @@
       .detail-grid, .detail-mini { grid-template-columns: 1fr 1fr; }
       .brand { grid-template-columns: 44px minmax(0, 1fr); }
       .brand-icon { width: 44px; height: 44px; }
+      h1 { font-size: clamp(28px, 8vw, 38px); }
     }
   </style>
 </head>
@@ -842,6 +893,7 @@
         <div class="brand-icon">&gt;_</div>
         <div>
           <h1>Codex Token 用量</h1>
+          <div class="author-mark">作者：<strong>车辆研究生笔记</strong></div>
           <div class="meta">
             <span class="pill" id="modeMeta">当前模式：初始化</span>
             <span class="pill" id="pathMeta">数据来源：等待加载</span>
@@ -1915,23 +1967,66 @@
         return;
       }
       const width = 1000;
-      const height = 180;
-      const pad = 22;
+      const height = 230;
+      const padX = 42;
+      const padTop = 24;
+      const padBottom = 38;
       const rates = days.map(day => day.inputTokens ? day.cachedInputTokens / day.inputTokens : 0);
       const avg = rates.reduce((sum, rate) => sum + rate, 0) / rates.length;
+      const minRate = Math.min(...rates);
+      const maxRate = Math.max(...rates);
+      const spread = Math.max(maxRate - minRate, 0.12);
+      const yMin = Math.max(0, minRate - spread * 0.24);
+      const yMax = Math.min(1, maxRate + spread * 0.24);
+      const scaleY = rate => {
+        const normalized = (rate - yMin) / Math.max(yMax - yMin, 0.01);
+        return height - padBottom - normalized * (height - padTop - padBottom);
+      };
       const points = rates.map((rate, index) => {
-        const x = days.length === 1 ? width / 2 : pad + index * ((width - pad * 2) / (days.length - 1));
-        const y = height - pad - rate * (height - pad * 2);
+        const x = days.length === 1 ? width / 2 : padX + index * ((width - padX * 2) / (days.length - 1));
+        const y = scaleY(rate);
         return [x, y, rate];
       });
-      els.cacheTrendSummary.textContent = `平均 ${percent(avg, 1, 1)}%`;
+      const bestIndex = rates.indexOf(maxRate);
+      const worstIndex = rates.indexOf(minRate);
+      const linePath = points.map((point, index) => `${index ? "L" : "M"} ${point[0].toFixed(1)} ${point[1].toFixed(1)}`).join(" ");
+      const areaPath = `${linePath} L ${points[points.length - 1][0].toFixed(1)} ${height - padBottom} L ${points[0][0].toFixed(1)} ${height - padBottom} Z`;
+      const gridLines = [0, .25, .5, .75, 1].map(step => {
+        const rate = yMin + (yMax - yMin) * step;
+        const y = scaleY(rate);
+        return `<line x1="${padX}" y1="${y.toFixed(1)}" x2="${width - padX}" y2="${y.toFixed(1)}" stroke="var(--line)" stroke-opacity="${step === 0 ? .8 : .42}" />
+          <text x="10" y="${(y + 4).toFixed(1)}" fill="var(--muted)" font-size="11">${percent(rate, 1, 0)}%</text>`;
+      }).join("");
+      els.cacheTrendSummary.textContent = `平均 ${percent(avg, 1, 1)}% / 峰值 ${percent(maxRate, 1, 1)}%`;
       els.cacheTrendChart.innerHTML = `
         <svg class="cache-line" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" role="img" aria-label="每日缓存命中率趋势">
-          <line x1="${pad}" y1="${height - pad}" x2="${width - pad}" y2="${height - pad}" stroke="var(--line)" />
-          <line x1="${pad}" y1="${pad}" x2="${pad}" y2="${height - pad}" stroke="var(--line)" />
-          <polyline fill="none" stroke="var(--cache)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" points="${points.map(point => `${point[0]},${point[1]}`).join(" ")}" />
-          ${points.map((point, index) => `<circle cx="${point[0]}" cy="${point[1]}" r="5" fill="var(--cache)"><title>${days[index].date}：${percent(point[2], 1, 1)}%</title></circle>`).join("")}
+          <defs>
+            <linearGradient id="cacheAreaGradient" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stop-color="var(--cache)" stop-opacity=".34" />
+              <stop offset="72%" stop-color="var(--cache)" stop-opacity=".08" />
+              <stop offset="100%" stop-color="var(--cache)" stop-opacity="0" />
+            </linearGradient>
+            <filter id="cacheLineGlow" x="-10%" y="-40%" width="120%" height="180%">
+              <feDropShadow dx="0" dy="5" stdDeviation="5" flood-color="var(--cache)" flood-opacity=".22" />
+            </filter>
+          </defs>
+          ${gridLines}
+          <path d="${areaPath}" fill="url(#cacheAreaGradient)" />
+          <path d="${linePath}" fill="none" stroke="var(--cache)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" filter="url(#cacheLineGlow)" />
+          ${points.map((point, index) => {
+            const featured = index === bestIndex || index === worstIndex || index === points.length - 1;
+            return `<circle cx="${point[0].toFixed(1)}" cy="${point[1].toFixed(1)}" r="${featured ? 5.5 : 2.8}" fill="${featured ? "var(--panel)" : "var(--cache)"}" stroke="var(--cache)" stroke-width="${featured ? 3 : 1.5}">
+              <title>${days[index].date}：${percent(point[2], 1, 1)}% / cached ${formatInt(days[index].cachedInputTokens)} / input ${formatInt(days[index].inputTokens)}</title>
+            </circle>`;
+          }).join("")}
+          <text x="${padX}" y="${height - 10}" fill="var(--muted)" font-size="11">${days[0].date.slice(5)}</text>
+          <text x="${width - padX}" y="${height - 10}" fill="var(--muted)" font-size="11" text-anchor="end">${days[days.length - 1].date.slice(5)}</text>
         </svg>
+        <div class="chart-caption-row">
+          <div class="chart-chip"><span>平均命中率</span><strong>${percent(avg, 1, 1)}%</strong></div>
+          <div class="chart-chip"><span>峰值日期</span><strong>${days[bestIndex].date.slice(5)} / ${percent(maxRate, 1, 1)}%</strong></div>
+          <div class="chart-chip"><span>低点日期</span><strong>${days[worstIndex].date.slice(5)} / ${percent(minRate, 1, 1)}%</strong></div>
+        </div>
       `;
     }
 
