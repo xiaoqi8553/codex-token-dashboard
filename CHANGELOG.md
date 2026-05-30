@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.1 - 2026-05-30
+
+- Refined the README for open-source presentation with badges, preview images, project structure, FAQ, and topic suggestions.
+- Added GitHub-ready project cover and dashboard preview SVG assets under `screenshots/`.
+- Added release notes for the 0.3.0 public static demo and local-first import release.
+- Documented GitHub Topics recommendations and social preview usage.
+
 ## 0.3.0 - 2026-05-29
 
 - Replaced the theme toggle with explicit system/light/dark controls and fixed dark-mode contrast for the total token hero card.
