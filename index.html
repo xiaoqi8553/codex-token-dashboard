@@ -169,10 +169,11 @@
     }
 
     .author-mark strong {
-      color: transparent;
-      background: linear-gradient(90deg, #0f766e, #2563eb 52%, #b45309);
-      -webkit-background-clip: text;
-      background-clip: text;
+      color: #0f766e;
+      background: color-mix(in srgb, #0f766e 12%, transparent);
+      border: 1px solid color-mix(in srgb, #0f766e 30%, transparent);
+      border-radius: 999px;
+      padding: 2px 8px;
     }
 
     .meta {
@@ -375,12 +376,55 @@
     .filters {
       padding: 12px;
       display: grid;
-      grid-template-columns: repeat(12, minmax(0, 1fr));
+      grid-template-columns: repeat(14, minmax(0, 1fr));
       gap: 8px;
     }
 
     .filters > * { min-width: 0; }
-    .filters input[type="date"] { min-width: 150px; }
+    .date-field {
+      display: grid;
+      grid-template-columns: auto minmax(118px, 1fr) auto;
+      align-items: center;
+      gap: 6px;
+      min-height: 40px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      padding: 6px 8px;
+    }
+
+    .date-field span {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 820;
+      white-space: nowrap;
+    }
+
+    .date-field input[type="date"] {
+      position: absolute;
+      opacity: 0;
+      width: 1px;
+      height: 1px;
+      pointer-events: none;
+    }
+
+    .date-display {
+      border: 0;
+      background: transparent;
+      color: var(--ink);
+      padding: 0;
+      min-height: 0;
+      font-variant-numeric: tabular-nums;
+      text-align: left;
+      white-space: nowrap;
+    }
+
+    .date-open {
+      min-height: 26px;
+      width: 28px;
+      border-radius: 6px;
+      padding: 0;
+    }
     .filters .wide { grid-column: span 3; }
 
     .metrics {
@@ -528,6 +572,25 @@
       height: 260px;
       display: flex;
       align-items: flex-end;
+      position: relative;
+    }
+
+    .bar-value {
+      position: absolute;
+      left: 50%;
+      bottom: calc(var(--bar-height, 0%) + 6px);
+      transform: translateX(-50%);
+      color: var(--ink);
+      font-size: 11px;
+      font-weight: 850;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+      background: color-mix(in srgb, var(--panel) 86%, transparent);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 2px 5px;
+      box-shadow: var(--shadow-soft);
+      pointer-events: none;
     }
 
     .stack {
@@ -646,6 +709,28 @@
         linear-gradient(180deg, color-mix(in srgb, var(--panel) 92%, transparent), var(--panel-2));
       box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
     }
+
+    .chart-tooltip {
+      position: fixed;
+      z-index: 40;
+      min-width: 210px;
+      border: 1px solid var(--line-strong);
+      border-radius: 10px;
+      background: color-mix(in srgb, var(--panel) 96%, transparent);
+      color: var(--ink);
+      box-shadow: var(--shadow);
+      padding: 10px;
+      font-size: 12px;
+      pointer-events: none;
+      opacity: 0;
+      transform: translate(10px, 10px);
+      transition: opacity 80ms ease;
+    }
+
+    .chart-tooltip.show { opacity: 1; }
+    .chart-tooltip strong { display: block; font-size: 13px; margin-bottom: 6px; }
+    .chart-tooltip div { display: flex; justify-content: space-between; gap: 16px; color: var(--muted); line-height: 1.6; }
+    .chart-tooltip b { color: var(--ink); font-variant-numeric: tabular-nums; }
 
     .chart-caption-row {
       display: grid;
@@ -868,6 +953,7 @@
       .metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
       .charts, .content-grid { grid-template-columns: 1fr; }
       .filters { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+      .date-field { grid-column: span 2; }
       .filters .wide { grid-column: span 2; }
     }
 
@@ -974,8 +1060,18 @@
     </section>
 
     <section class="filters shell">
-      <input id="fromDate" type="date" aria-label="开始日期">
-      <input id="toDate" type="date" aria-label="结束日期">
+      <label class="date-field">
+        <span>开始</span>
+        <button class="date-display" id="fromDateDisplay" type="button">-</button>
+        <button class="btn date-open" data-date-target="fromDate" type="button">▾</button>
+        <input id="fromDate" type="date" aria-label="开始日期">
+      </label>
+      <label class="date-field">
+        <span>结束</span>
+        <button class="date-display" id="toDateDisplay" type="button">-</button>
+        <button class="btn date-open" data-date-target="toDate" type="button">▾</button>
+        <input id="toDate" type="date" aria-label="结束日期">
+      </label>
       <select id="sourceFilter" aria-label="来源">
         <option value="all">全部来源</option>
         <option value="official_plus">官方 Plus</option>
@@ -1055,6 +1151,7 @@
   </dialog>
 
   <div class="toast" id="toast"></div>
+  <div class="chart-tooltip" id="chartTooltip"></div>
 
   <script>
     const state = {
@@ -1088,6 +1185,8 @@
       statusNotice: document.querySelector("#statusNotice"),
       fromDate: document.querySelector("#fromDate"),
       toDate: document.querySelector("#toDate"),
+      fromDateDisplay: document.querySelector("#fromDateDisplay"),
+      toDateDisplay: document.querySelector("#toDateDisplay"),
       sourceFilter: document.querySelector("#sourceFilter"),
       modelFilter: document.querySelector("#modelFilter"),
       searchInput: document.querySelector("#searchInput"),
@@ -1105,6 +1204,7 @@
       detailGrid: document.querySelector("#detailGrid"),
       detailText: document.querySelector("#detailText"),
       toast: document.querySelector("#toast"),
+      chartTooltip: document.querySelector("#chartTooltip"),
       refreshBtn: document.querySelector("#refreshBtn"),
       themeButtons: document.querySelector("#themeButtons"),
       themeState: document.querySelector("#themeState"),
@@ -1143,6 +1243,17 @@
       });
     }
 
+    function formatDateDisplay(value) {
+      if (!value) return "-";
+      const [year, month, day] = String(value).split("-");
+      return year && month && day ? `${year}/${month}/${day}` : value;
+    }
+
+    function syncDateDisplays() {
+      els.fromDateDisplay.textContent = formatDateDisplay(els.fromDate.value);
+      els.toDateDisplay.textContent = formatDateDisplay(els.toDate.value);
+    }
+
     function applyRange(range) {
       state.range = range;
       setActiveRange(range);
@@ -1156,6 +1267,7 @@
         els.fromDate.value = todayString(-29);
         els.toDate.value = todayString();
       }
+      syncDateDisplays();
       state.page = 1;
       loadUsage();
     }
@@ -1566,6 +1678,7 @@
       if (!dates.length) return;
       els.fromDate.value = dates[0];
       els.toDate.value = dates[dates.length - 1];
+      syncDateDisplays();
       state.range = "custom";
       setActiveRange("custom");
     }
@@ -1902,7 +2015,8 @@
         const title = `${day.date}\n官方 Plus：${formatInt(groupByKey(day.bySource, "official_plus").totalTokens)}\n中转站：${formatInt(groupByKey(day.bySource, "relay").totalTokens)}\n未知：${formatInt(groupByKey(day.bySource, "unknown").totalTokens)}\n总计：${formatInt(day.totalTokens)}`;
         return `
           <button class="day" type="button" data-day="${day.date}" title="${escapeHtml(title)}">
-            <div class="stack-outer">
+            <div class="stack-outer" style="--bar-height:${barHeight}%">
+              <div class="bar-value" title="${formatInt(day.totalTokens)}">${formatToken(day.totalTokens)}</div>
               <div class="stack" style="height:${barHeight}%">
                 ${parts.map(([type, value]) => `<span class="${type}" style="height:${day.totalTokens ? value / day.totalTokens * 100 : 0}%"></span>`).join("")}
               </div>
@@ -2015,9 +2129,7 @@
           <path d="${linePath}" fill="none" stroke="var(--cache)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" filter="url(#cacheLineGlow)" />
           ${points.map((point, index) => {
             const featured = index === bestIndex || index === worstIndex || index === points.length - 1;
-            return `<circle cx="${point[0].toFixed(1)}" cy="${point[1].toFixed(1)}" r="${featured ? 5.5 : 2.8}" fill="${featured ? "var(--panel)" : "var(--cache)"}" stroke="var(--cache)" stroke-width="${featured ? 3 : 1.5}">
-              <title>${days[index].date}：${percent(point[2], 1, 1)}% / cached ${formatInt(days[index].cachedInputTokens)} / input ${formatInt(days[index].inputTokens)}</title>
-            </circle>`;
+            return `<circle class="cache-point" data-date="${days[index].date}" data-rate="${percent(point[2], 1, 1)}" data-cached="${formatInt(days[index].cachedInputTokens)}" data-input="${formatInt(days[index].inputTokens)}" data-output="${formatInt(days[index].outputTokens)}" data-total="${formatInt(days[index].totalTokens)}" cx="${point[0].toFixed(1)}" cy="${point[1].toFixed(1)}" r="${featured ? 5.5 : 3.8}" fill="${featured ? "var(--panel)" : "var(--cache)"}" stroke="var(--cache)" stroke-width="${featured ? 3 : 2}"></circle>`;
           }).join("")}
           <text x="${padX}" y="${height - 10}" fill="var(--muted)" font-size="11">${days[0].date.slice(5)}</text>
           <text x="${width - padX}" y="${height - 10}" fill="var(--muted)" font-size="11" text-anchor="end">${days[days.length - 1].date.slice(5)}</text>
@@ -2483,9 +2595,24 @@
     [els.fromDate, els.toDate].forEach(input => input.addEventListener("change", () => {
       state.range = "custom";
       state.page = 1;
+      syncDateDisplays();
       setActiveRange("custom");
       loadUsage();
     }));
+    document.querySelectorAll("[data-date-target]").forEach(button => {
+      button.addEventListener("click", () => {
+        const input = document.querySelector(`#${button.dataset.dateTarget}`);
+        if (input?.showPicker) input.showPicker();
+        else input?.click();
+      });
+    });
+    [els.fromDateDisplay, els.toDateDisplay].forEach(button => {
+      button.addEventListener("click", () => {
+        const input = button.id === "fromDateDisplay" ? els.fromDate : els.toDate;
+        if (input?.showPicker) input.showPicker();
+        else input?.click();
+      });
+    });
 
     [els.sourceFilter, els.modelFilter, els.searchInput, els.estimateFilter].forEach(input => input.addEventListener("input", () => {
       state.page = 1;
@@ -2547,6 +2674,7 @@
       if (!button) return;
       els.fromDate.value = button.dataset.day;
       els.toDate.value = button.dataset.day;
+      syncDateDisplays();
       state.range = "custom";
       state.page = 1;
       setActiveRange("custom");
@@ -2652,6 +2780,32 @@
       const actionButton = event.target.closest("[data-action]");
       if (actionButton) handlePanelAction(actionButton.dataset.action);
     });
+    document.querySelector("#cacheTrendChart").addEventListener("mousemove", event => {
+      const point = event.target.closest(".cache-point");
+      if (!point) {
+        hideChartTooltip();
+        return;
+      }
+      showChartTooltip(event, `
+        <strong>${escapeHtml(point.dataset.date)} 缓存命中率 ${escapeHtml(point.dataset.rate)}%</strong>
+        <div><span>cached input</span><b>${escapeHtml(point.dataset.cached)}</b></div>
+        <div><span>input</span><b>${escapeHtml(point.dataset.input)}</b></div>
+        <div><span>output</span><b>${escapeHtml(point.dataset.output)}</b></div>
+        <div><span>total</span><b>${escapeHtml(point.dataset.total)}</b></div>
+      `);
+    });
+    document.querySelector("#cacheTrendChart").addEventListener("mouseleave", hideChartTooltip);
+
+    function showChartTooltip(event, html) {
+      els.chartTooltip.innerHTML = html;
+      els.chartTooltip.style.left = `${Math.min(event.clientX + 14, window.innerWidth - 260)}px`;
+      els.chartTooltip.style.top = `${Math.min(event.clientY + 14, window.innerHeight - 170)}px`;
+      els.chartTooltip.classList.add("show");
+    }
+
+    function hideChartTooltip() {
+      els.chartTooltip.classList.remove("show");
+    }
 
     function handlePanelAction(action) {
       if (action === "load-demo") {
