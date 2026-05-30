@@ -1255,7 +1255,9 @@
       dataMode: "server",
       staticPayload: null,
       staticReadOnly: false,
-      staticSourceType: "empty"
+      staticSourceType: "empty",
+      sessionsDirectoryHandle: null,
+      sessionsDirectoryName: ""
     };
 
     const els = {
@@ -1623,13 +1625,37 @@
       }
     }
 
+    async function collectDirectoryFiles(directoryHandle, prefix = "") {
+      const files = [];
+      for await (const [name, handle] of directoryHandle.entries()) {
+        const relativePath = prefix ? `${prefix}/${name}` : name;
+        if (handle.kind === "directory") {
+          files.push(...await collectDirectoryFiles(handle, relativePath));
+        } else if (/\.(jsonl|json|log|txt)$/i.test(name)) {
+          files.push({ file: await handle.getFile(), relativePath });
+        }
+      }
+      return files.sort((a, b) => a.relativePath.localeCompare(b.relativePath));
+    }
+
+    async function hasDirectoryPermission(directoryHandle, request = false) {
+      if (!directoryHandle?.queryPermission) return true;
+      const options = { mode: "read" };
+      if (await directoryHandle.queryPermission(options) === "granted") return true;
+      if (!request || !directoryHandle.requestPermission) return false;
+      return await directoryHandle.requestPermission(options) === "granted";
+    }
+
     async function parseSessionFiles(fileList) {
-      const files = Array.from(fileList || []).filter(file => /\.(jsonl|json|log|txt)$/i.test(file.name));
+      const files = Array.from(fileList || [])
+        .map(entry => entry?.file ? entry : { file: entry, relativePath: entry?.webkitRelativePath || entry?.name || "" })
+        .filter(entry => entry.file && /\.(jsonl|json|log|txt)$/i.test(entry.file.name));
       const records = [];
       let parsedFiles = 0;
-      for (const file of files) {
+      for (const entry of files) {
+        const file = entry.file;
         const text = await file.text();
-        const relativePath = file.webkitRelativePath || file.name;
+        const relativePath = entry.relativePath || file.webkitRelativePath || file.name;
         const meta = { sessionId: file.name, provider: "", model: "unknown", timestamp: new Date(file.lastModified || Date.now()).toISOString() };
         const before = records.length;
         if (/\.json$/i.test(file.name)) {
@@ -1660,10 +1686,48 @@
       }
       return makeStaticPayload(records, {
         sourceLabel: "浏览器 sessions 导入",
-        sourceType: "import",
+        sourceType: state.sessionsDirectoryHandle ? "sessions-folder" : "sessions-files",
         sessionFiles: files.length,
         parsedFiles
       });
+    }
+
+    async function refreshSessionsDirectoryHandle(message = "sessions 文件夹已重新扫描。", options = {}) {
+      if (!state.sessionsDirectoryHandle) {
+        setStatus("当前浏览器没有可复用的 sessions 文件夹权限，请重新选择 sessions 文件夹。", "error");
+        return false;
+      }
+      const allowed = await hasDirectoryPermission(state.sessionsDirectoryHandle, !options.silent);
+      if (!allowed) {
+        if (!options.silent) setStatus("浏览器没有读取该 sessions 文件夹的权限，请重新选择 sessions 文件夹。", "error");
+        return false;
+      }
+      if (!options.silent) setStatus(`正在重新读取 ${state.sessionsDirectoryName || "sessions"} 文件夹...`);
+      const files = await collectDirectoryFiles(state.sessionsDirectoryHandle);
+      const payload = await parseSessionFiles(files);
+      state.dataMode = "static";
+      state.staticPayload = payload;
+      state.staticSourceType = "sessions-folder";
+      fitDateRangeToRecords(payload.records);
+      cacheStaticPayload(payload);
+      renderStaticUsage(options.silent ? "" : `${message}${formatInt(payload.records.length)} 条记录。`);
+      return true;
+    }
+
+    async function chooseSessionsDirectory() {
+      if ("showDirectoryPicker" in window) {
+        try {
+          const handle = await window.showDirectoryPicker({ mode: "read" });
+          state.sessionsDirectoryHandle = handle;
+          state.sessionsDirectoryName = handle.name || "sessions";
+          await refreshSessionsDirectoryHandle("sessions 文件夹解析完成：");
+        } catch (error) {
+          if (error?.name !== "AbortError") setStatus(error.message || "选择 sessions 文件夹失败", "error");
+        }
+        return;
+      }
+      setStatus("当前浏览器不支持持续读取文件夹，导入后刷新不能自动重新扫描；如需更新，请重新选择 sessions 文件夹。");
+      els.sessionsFolderInput.click();
     }
 
     function parseCsv(text) {
@@ -1832,6 +1896,8 @@
 
     async function loadDemoData(message = "已加载示例数据。") {
       state.dataMode = "static";
+      state.sessionsDirectoryHandle = null;
+      state.sessionsDirectoryName = "";
       const payload = await loadDemoPayload();
       state.staticPayload = payload;
       state.staticSourceType = "demo";
@@ -1887,7 +1953,25 @@
           }
           return;
         }
+        if (state.staticSourceType === "sessions-folder" && state.sessionsDirectoryHandle) {
+          try {
+            setLoading(true);
+            await refreshSessionsDirectoryHandle("sessions 文件夹已刷新：");
+          } catch (error) {
+            setStatus(error.message || "sessions 文件夹刷新失败，请重新选择文件夹。", "error");
+          } finally {
+            setLoading(false);
+          }
+          return;
+        }
         renderStaticUsage();
+        if (state.staticSourceType === "sessions-folder" && !state.sessionsDirectoryHandle) {
+          setStatus("浏览器刷新页面后不能自动恢复本机文件夹权限；请重新选择 sessions 文件夹，或使用本地 Node 模式实现自动扫描。");
+        } else if (state.staticSourceType === "sessions-files") {
+          setStatus("当前数据来自一次性文件夹导入，浏览器不能自动重新读取新文件；请重新选择 sessions 文件夹，或使用本地 Node 模式。");
+        } else {
+          setStatus("已重新应用当前导入数据。");
+        }
         return;
       }
       setLoading(true);
@@ -2731,7 +2815,7 @@
     document.querySelector("#exportSnapshotHtmlBtn").addEventListener("click", exportSnapshotHtml);
     document.querySelector("#importBtn").addEventListener("click", () => els.importFile.click());
     document.querySelector("#importIndexBtn").addEventListener("click", () => els.importFile.click());
-    document.querySelector("#importSessionsBtn").addEventListener("click", () => els.sessionsFolderInput.click());
+    document.querySelector("#importSessionsBtn").addEventListener("click", chooseSessionsDirectory);
     document.querySelector("#sampleBtn").addEventListener("click", async () => {
       try {
         await loadDemoData("已加载示例数据。");
@@ -2741,7 +2825,7 @@
     });
     document.querySelector("#welcomeSampleBtn").addEventListener("click", () => document.querySelector("#sampleBtn").click());
     document.querySelector("#welcomeImportBtn").addEventListener("click", () => els.importFile.click());
-    document.querySelector("#welcomeSessionsBtn").addEventListener("click", () => els.sessionsFolderInput.click());
+    document.querySelector("#welcomeSessionsBtn").addEventListener("click", chooseSessionsDirectory);
     document.querySelector("#clearBrowserDataBtn").addEventListener("click", () => {
       localStorage.removeItem("codexTokenStaticPayload");
       state.staticPayload = makeStaticPayload([], { sourceLabel: "浏览器本地导入" });
@@ -2917,6 +3001,8 @@
           return;
         }
         const payload = await parseDataFile(file);
+        state.sessionsDirectoryHandle = null;
+        state.sessionsDirectoryName = "";
         state.dataMode = "static";
         state.staticPayload = payload;
         state.staticSourceType = payload.sourceType || "import";
@@ -2932,14 +3018,16 @@
       try {
         const files = els.sessionsFolderInput.files;
         if (!files?.length) return;
+        state.sessionsDirectoryHandle = null;
+        state.sessionsDirectoryName = "";
         setStatus(`正在浏览器本地解析 ${formatInt(files.length)} 个文件...`);
         const payload = await parseSessionFiles(files);
         state.dataMode = "static";
         state.staticPayload = payload;
-        state.staticSourceType = "import";
+        state.staticSourceType = payload.sourceType || "sessions-files";
         fitDateRangeToRecords(payload.records);
         cacheStaticPayload(payload);
-        renderStaticUsage(`sessions 文件夹解析完成：${formatInt(payload.records.length)} 条记录。`);
+        renderStaticUsage(`sessions 文件夹解析完成：${formatInt(payload.records.length)} 条记录。当前浏览器不支持持续读取，后续更新需要重新选择文件夹。`);
         els.sessionsFolderInput.value = "";
       } catch (error) {
         setStatus(error.message || "sessions 解析失败", "error");
@@ -2953,6 +3041,17 @@
     setInterval(() => {
       if (state.dataMode === "server") loadUsage();
     }, 15000);
+    setInterval(() => {
+      if (
+        state.dataMode === "static" &&
+        state.staticSourceType === "sessions-folder" &&
+        state.sessionsDirectoryHandle &&
+        !state.loading &&
+        document.visibilityState === "visible"
+      ) {
+        refreshSessionsDirectoryHandle("", { silent: true }).catch(() => {});
+      }
+    }, 30000);
   </script>
 </body>
 </html>
