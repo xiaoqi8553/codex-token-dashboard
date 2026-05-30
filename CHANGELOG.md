@@ -4,6 +4,7 @@
 
 - Replaced the theme toggle with explicit system/light/dark controls and fixed dark-mode contrast for the total token hero card.
 - Added static browser mode for Netlify-style hosting when `/api/usage` is unavailable.
+- Added a 30-day public demo dataset that auto-loads on static deployments.
 - Added browser-local imports for usage index snapshots, relay CSV/JSON, and `.codex/sessions` folders via the File API.
 - Added anonymized JSON and HTML snapshot exports for safe sharing.
 - Added Netlify build metadata and a static build check.

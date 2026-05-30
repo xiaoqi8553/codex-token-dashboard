@@ -189,6 +189,24 @@
     .toolbar { justify-content: flex-end; }
     .panel-head { justify-content: space-between; }
 
+    .toolbar-group {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 5px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: color-mix(in srgb, var(--panel) 84%, transparent);
+    }
+
+    .group-label {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 820;
+      padding: 0 3px;
+      white-space: nowrap;
+    }
+
     .btn, input, select {
       min-height: 36px;
       border: 1px solid var(--line);
@@ -293,6 +311,45 @@
       color: var(--muted);
       font-size: 13px;
       line-height: 1.45;
+    }
+
+    .welcome {
+      display: none;
+      padding: 14px;
+      grid-template-columns: minmax(320px, 1.15fr) minmax(360px, .85fr);
+      gap: 14px;
+      align-items: stretch;
+    }
+
+    .welcome.show { display: grid; }
+    .welcome.compact { grid-template-columns: 1fr auto; align-items: center; }
+    .welcome.compact .welcome-copy p { display: none; }
+
+    .welcome-copy {
+      display: grid;
+      gap: 8px;
+      align-content: center;
+    }
+
+    .welcome-copy h2 {
+      font-size: clamp(24px, 2.2vw, 34px);
+      line-height: 1.05;
+      letter-spacing: 0;
+    }
+
+    .welcome-copy p {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.55;
+      max-width: 780px;
+    }
+
+    .welcome-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-content: center;
+      justify-content: flex-end;
     }
 
     .filters {
@@ -675,9 +732,24 @@
       color: var(--muted);
       display: grid;
       place-items: center;
+      gap: 12px;
       text-align: center;
       padding: 18px;
       line-height: 1.6;
+    }
+
+    .empty strong {
+      display: block;
+      color: var(--ink);
+      font-size: 14px;
+      margin-bottom: 4px;
+    }
+
+    .empty-actions {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 8px;
     }
 
     .hidden { display: none !important; }
@@ -771,22 +843,26 @@
         <div>
           <h1>Codex Token 用量</h1>
           <div class="meta">
-            <span class="pill" id="pathMeta">数据源：读取中</span>
+            <span class="pill" id="modeMeta">当前模式：初始化</span>
+            <span class="pill" id="pathMeta">数据来源：等待加载</span>
             <span class="pill" id="updateMeta">最后更新：-</span>
-            <span class="pill" id="scanMeta">扫描：-</span>
-            <span class="pill" id="fileMeta">文件：-</span>
-            <span class="pill" id="modeMeta">本地私有模式</span>
+            <span class="pill" id="fileMeta">记录数：-</span>
+            <span class="pill" id="scanMeta">隐私状态：本地优先</span>
           </div>
         </div>
       </div>
       <div class="toolbar">
-        <div class="segmented" id="rangeButtons">
-          <button type="button" data-range="today">今天</button>
-          <button class="active" type="button" data-range="7d">7 天</button>
-          <button type="button" data-range="30d">30 天</button>
-          <button type="button" data-range="custom">自定义</button>
+        <div class="toolbar-group">
+          <span class="group-label">时间</span>
+          <div class="segmented" id="rangeButtons">
+            <button type="button" data-range="today">今天</button>
+            <button class="active" type="button" data-range="7d">7 天</button>
+            <button type="button" data-range="30d">30 天</button>
+            <button type="button" data-range="custom">自定义</button>
+          </div>
         </div>
-        <div class="theme-control">
+        <div class="toolbar-group theme-control">
+          <span class="group-label">主题</span>
           <div class="segmented" id="themeButtons" aria-label="主题模式">
             <button type="button" data-theme-choice="system">系统</button>
             <button type="button" data-theme-choice="light">浅色</button>
@@ -794,12 +870,15 @@
           </div>
           <span class="muted" id="themeState">系统</span>
         </div>
-        <button class="btn" id="importBtn" type="button">导入数据</button>
-        <button class="btn" id="exportCsvBtn" type="button">导出 CSV</button>
-        <button class="btn" id="exportJsonBtn" type="button">导出 JSON</button>
-        <button class="btn" id="exportSnapshotBtn" type="button">脱敏快照</button>
-        <button class="btn" id="exportSnapshotHtmlBtn" type="button">快照 HTML</button>
-        <button class="btn primary" id="refreshBtn" type="button">刷新</button>
+        <div class="toolbar-group">
+          <span class="group-label">数据</span>
+          <button class="btn" id="importBtn" type="button">导入数据</button>
+          <button class="btn" id="exportCsvBtn" type="button">导出 CSV</button>
+          <button class="btn" id="exportJsonBtn" type="button">导出 JSON</button>
+          <button class="btn" id="exportSnapshotBtn" type="button">脱敏快照</button>
+          <button class="btn" id="exportSnapshotHtmlBtn" type="button">快照 HTML</button>
+          <button class="btn primary" id="refreshBtn" type="button">刷新</button>
+        </div>
         <input class="hidden" id="importFile" type="file" accept=".csv,.json,application/json,text/csv">
         <input class="hidden" id="sessionsFolderInput" type="file" webkitdirectory directory multiple>
       </div>
@@ -808,10 +887,23 @@
     <section class="notice" id="estimateNotice">官方 Plus token 未在日志中提供精确 usage，本页部分数据为估算。</section>
     <section class="notice" id="statusNotice"></section>
 
+    <section class="welcome shell" id="welcomePanel">
+      <div class="welcome-copy">
+        <h2>本地优先的 Codex Token 用量看板</h2>
+        <p>支持官方 Plus、中转站、缓存命中率、脱敏快照和明细分析。公开版默认展示示例数据，你也可以导入自己的脱敏数据。</p>
+      </div>
+      <div class="welcome-actions">
+        <button class="btn primary" id="welcomeSampleBtn" type="button">查看示例数据</button>
+        <button class="btn" id="welcomeImportBtn" type="button">导入 usage-index / 脱敏快照</button>
+        <button class="btn" id="welcomeSessionsBtn" type="button">选择本机 sessions 文件夹</button>
+        <a class="btn" href="https://github.com/xiaoqi8553/codex-token-dashboard#readme" target="_blank" rel="noreferrer">查看本地部署说明</a>
+      </div>
+    </section>
+
     <section class="static-panel shell" id="staticPanel">
       <article class="drop-card">
-        <strong>公开静态模式</strong>
-        <p>当前没有连接本地 Node 服务。你可以在浏览器里导入数据，本页只在本机解析，不会上传你的 sessions、路径或对话内容。</p>
+        <strong>公开静态演示版</strong>
+        <p>当前没有连接本地 Node 服务。公开版默认展示模拟数据；你也可以在浏览器里导入自己的数据，本页只在本机解析，不会上传 sessions、路径或对话内容。</p>
         <div class="toolbar" style="justify-content:start">
           <button class="btn primary" id="sampleBtn" type="button">加载示例数据</button>
           <button class="btn" id="importIndexBtn" type="button">导入 usage-index / 快照</button>
@@ -930,7 +1022,8 @@
       authSecret: localStorage.getItem("codexTokenDashboardSecret") || "",
       dataMode: "server",
       staticPayload: null,
-      staticReadOnly: false
+      staticReadOnly: false,
+      staticSourceType: "empty"
     };
 
     const els = {
@@ -963,6 +1056,7 @@
       refreshBtn: document.querySelector("#refreshBtn"),
       themeButtons: document.querySelector("#themeButtons"),
       themeState: document.querySelector("#themeState"),
+      welcomePanel: document.querySelector("#welcomePanel"),
       staticPanel: document.querySelector("#staticPanel"),
       sessionsFolderInput: document.querySelector("#sessionsFolderInput")
     };
@@ -1089,8 +1183,24 @@
     function setLoading(isLoading) {
       state.loading = isLoading;
       els.refreshBtn.disabled = isLoading;
-      els.refreshBtn.textContent = isLoading ? "正在扫描" : "刷新";
-      if (isLoading) setStatus("正在扫描 sessions 和导入数据...");
+      els.refreshBtn.textContent = isLoading ? (state.dataMode === "server" ? "正在扫描" : "正在加载") : "刷新";
+      if (isLoading) setStatus(state.dataMode === "server" ? "正在扫描 sessions 和导入数据..." : "正在加载浏览器本地数据...");
+    }
+
+    function emptyState(message, detail = "") {
+      return `
+        <div class="empty">
+          <div>
+            <strong>${escapeHtml(message)}</strong>
+            ${detail ? `<span>${escapeHtml(detail)}</span>` : ""}
+          </div>
+          <div class="empty-actions">
+            <button class="btn compact" data-action="load-demo" type="button">加载示例数据</button>
+            <button class="btn compact" data-action="clear-filters" type="button">清空筛选</button>
+            <button class="btn compact" data-action="import-data" type="button">导入数据</button>
+          </div>
+        </div>
+      `;
     }
 
     function buildQuery() {
@@ -1303,6 +1413,7 @@
       }
       return makeStaticPayload(records, {
         sourceLabel: "浏览器 sessions 导入",
+        sourceType: "import",
         sessionFiles: files.length,
         parsedFiles
       });
@@ -1348,12 +1459,13 @@
     async function parseDataFile(file) {
       const text = await file.text();
       const ext = file.name.split(".").pop().toLowerCase();
-      if (ext === "csv") return makeStaticPayload(parseRelayRows(parseCsv(text), file.name), { sourceLabel: `中转站导入：${file.name}`, importFiles: 1 });
+      if (ext === "csv") return makeStaticPayload(parseRelayRows(parseCsv(text), file.name), { sourceLabel: `中转站导入：${file.name}`, sourceType: "import", importFiles: 1 });
       const parsed = parseJsonLine(text);
       if (!parsed) throw new Error("无法解析 JSON 文件");
       if (parsed.snapshotVersion === 1 && Array.isArray(parsed.records)) {
         const payload = makeStaticPayload(parsed.records.map(record => normalizeRecord(record)), {
           sourceLabel: `脱敏快照：${file.name}`,
+          sourceType: "snapshot",
           readOnly: true
         });
         payload.snapshotVersion = 1;
@@ -1361,12 +1473,13 @@
       }
       if (Array.isArray(parsed.records)) return makeStaticPayload(parsed.records.map(record => normalizeRecord(record)), {
         sourceLabel: parsed.sessionsDir || file.name,
+        sourceType: "import",
         sessionFiles: parsed.stats?.sessionFiles || 0,
         importFiles: parsed.stats?.importFiles || 0
       });
-      if (Array.isArray(parsed.data)) return makeStaticPayload(parseRelayRows(parsed.data, file.name), { sourceLabel: `中转站导入：${file.name}`, importFiles: 1 });
-      if (Array.isArray(parsed)) return makeStaticPayload(parseRelayRows(parsed, file.name), { sourceLabel: `中转站导入：${file.name}`, importFiles: 1 });
-      return makeStaticPayload(parseRelayRows([parsed], file.name), { sourceLabel: `中转站导入：${file.name}`, importFiles: 1 });
+      if (Array.isArray(parsed.data)) return makeStaticPayload(parseRelayRows(parsed.data, file.name), { sourceLabel: `中转站导入：${file.name}`, sourceType: "import", importFiles: 1 });
+      if (Array.isArray(parsed)) return makeStaticPayload(parseRelayRows(parsed, file.name), { sourceLabel: `中转站导入：${file.name}`, sourceType: "import", importFiles: 1 });
+      return makeStaticPayload(parseRelayRows([parsed], file.name), { sourceLabel: `中转站导入：${file.name}`, sourceType: "import", importFiles: 1 });
     }
 
     function makeStaticPayload(records, options = {}) {
@@ -1376,10 +1489,11 @@
         ok: true,
         staticMode: true,
         readOnly: Boolean(options.readOnly),
+        sourceType: options.sourceType || "import",
         sessionsDir: options.sourceLabel || "浏览器本地导入",
         indexPath: "browser-local",
-        updatedAt: new Date().toISOString(),
-        generatedAt: new Date().toISOString(),
+        updatedAt: options.updatedAt || new Date().toISOString(),
+        generatedAt: options.generatedAt || new Date().toISOString(),
         scanMs: 0,
         config: { publicAccess: false, anonymizeData: true, defaultDateRange: state.range, staticBrowser: true },
         stats: {
@@ -1419,6 +1533,9 @@
       const payload = makeStaticPayload(records, {
         sourceLabel: source.sessionsDir,
         readOnly: source.readOnly,
+        sourceType: source.sourceType,
+        updatedAt: source.updatedAt,
+        generatedAt: source.generatedAt,
         sessionFiles: source.stats?.sessionFiles,
         importFiles: source.stats?.importFiles,
         parsedFiles: source.stats?.parsedFiles
@@ -1448,16 +1565,49 @@
       }
     }
 
-    function enterStaticMode(reason = "") {
+    async function loadDemoPayload() {
+      const response = await fetch("sample-data/demo-usage-index.json", { cache: "no-store" });
+      if (!response.ok) throw new Error(`示例数据请求失败：${response.status}`);
+      const demo = await response.json();
+      if (!Array.isArray(demo.records)) throw new Error("示例数据格式不正确");
+      return makeStaticPayload(demo.records, {
+        sourceLabel: "示例数据",
+        sourceType: "demo",
+        readOnly: true,
+        sessionFiles: demo.stats?.sessionFiles || 0,
+        importFiles: demo.stats?.importFiles || 0,
+        parsedFiles: demo.stats?.parsedFiles || 0,
+        updatedAt: demo.updatedAt,
+        generatedAt: demo.updatedAt
+      });
+    }
+
+    async function loadDemoData(message = "已加载示例数据。") {
+      state.dataMode = "static";
+      const payload = await loadDemoPayload();
+      state.staticPayload = payload;
+      state.staticSourceType = "demo";
+      fitDateRangeToRecords(payload.records);
+      cacheStaticPayload(payload);
+      renderStaticUsage(message);
+    }
+
+    async function enterStaticMode(reason = "") {
       state.dataMode = "static";
       els.staticPanel.classList.add("show");
       const cached = loadCachedStaticPayload();
       if (cached?.records?.length) {
-        state.staticPayload = makeStaticPayload(cached.records, { sourceLabel: cached.sessionsDir || "浏览器缓存", readOnly: true });
+        state.staticPayload = makeStaticPayload(cached.records, { sourceLabel: cached.sessionsDir || "浏览器缓存", sourceType: cached.sourceType || "import", readOnly: true, updatedAt: cached.updatedAt });
+        state.staticSourceType = state.staticPayload.sourceType;
         renderStaticUsage(`已进入公开静态模式，并恢复浏览器缓存数据。${reason ? `原因：${reason}` : ""}`);
-      } else {
-        state.staticPayload = makeStaticPayload([], { sourceLabel: "浏览器本地导入" });
-        renderStaticUsage(`已进入公开静态模式。${reason ? `原因：${reason}` : "请选择数据或加载示例。"}`);
+        return;
+      }
+      try {
+        await loadDemoData(reason ? `已进入公开静态演示版。原因：${reason}` : "已进入公开静态演示版。");
+      } catch (error) {
+        state.staticPayload = makeStaticPayload([], { sourceLabel: "示例数据加载失败", sourceType: "empty" });
+        state.staticSourceType = "empty";
+        renderStaticUsage("示例数据加载失败，你可以手动导入 usage-index.json 或脱敏快照。");
       }
     }
 
@@ -1465,6 +1615,7 @@
       const payload = filteredStaticPayload();
       state.data = payload;
       state.staticReadOnly = Boolean(payload.readOnly);
+      state.staticSourceType = payload.sourceType || "import";
       state.records = payload.records
         .filter(record => els.estimateFilter.value === "all" || (els.estimateFilter.value === "real" ? !record.estimated : record.estimated))
         .map(record => ({ ...record, activeTokens: activeTokens(record), uncachedInputTokens: uncachedInputTokens(record), hitRate: cacheHitRateOf(record) }));
@@ -1477,6 +1628,17 @@
     async function loadUsage() {
       if (state.loading) return;
       if (state.dataMode === "static") {
+        if (state.staticSourceType === "demo") {
+          try {
+            setLoading(true);
+            await loadDemoData("示例数据已重新加载。");
+          } catch (error) {
+            setStatus("示例数据加载失败，你可以手动导入 usage-index.json 或脱敏快照。", "error");
+          } finally {
+            setLoading(false);
+          }
+          return;
+        }
         renderStaticUsage();
         return;
       }
@@ -1499,7 +1661,7 @@
         render(payload);
         setStatus(`扫描完成：${payload.scanMs ?? 0} ms，更新于 ${formatDateTime(payload.updatedAt)}。`);
       } catch (error) {
-        enterStaticMode(error.message || "本地 API 不可用");
+        await enterStaticMode(error.message || "本地 API 不可用");
       } finally {
         setLoading(false);
       }
@@ -1601,12 +1763,25 @@
     function render(payload) {
       const summary = summarize(state.records);
       const updated = formatDateTime(payload.updatedAt);
-      els.pathMeta.textContent = `数据源：${payload.sessionsDir || "未知"}`;
-      els.updateMeta.textContent = `最后更新：${updated}`;
-      els.scanMeta.textContent = payload.staticMode ? "模式：浏览器本地解析" : `扫描：${payload.scanMs ?? "-"} ms`;
-      els.fileMeta.textContent = `文件：${payload.stats?.sessionFiles ?? "-"} / 记录：${formatInt(state.records.length)}`;
-      els.modeMeta.textContent = payload.staticMode ? "静态公开模式：数据未上传" : payload.config?.publicAccess ? "公开访问模式：已认证" : "本地私有模式";
-      els.staticPanel.classList.toggle("show", state.dataMode === "static");
+      const sourceType = payload.sourceType || state.staticSourceType;
+      if (payload.staticMode) {
+        const isDemo = sourceType === "demo";
+        els.modeMeta.textContent = isDemo ? "当前模式：公开静态演示版" : "当前模式：浏览器导入模式";
+        els.pathMeta.textContent = `数据来源：${isDemo ? "示例数据" : "用户手动导入"}`;
+        els.updateMeta.textContent = `最后更新：${updated}`;
+        els.fileMeta.textContent = `记录数：${formatInt(state.records.length)}`;
+        els.scanMeta.textContent = isDemo ? "隐私状态：不会自动读取本机文件" : "隐私状态：数据只在浏览器本地处理";
+      } else {
+        els.modeMeta.textContent = payload.config?.publicAccess ? "当前模式：公开访问模式" : "当前模式：本地私有模式";
+        els.pathMeta.textContent = "数据来源：本机 .codex/sessions";
+        els.updateMeta.textContent = `最后更新：${updated}`;
+        els.scanMeta.textContent = `扫描：${payload.scanMs ?? "-"} ms`;
+        els.fileMeta.textContent = `文件：${payload.stats?.sessionFiles ?? "-"} / 记录：${formatInt(state.records.length)}`;
+      }
+      els.staticPanel.classList.toggle("show", state.dataMode === "static" && state.records.length === 0);
+      els.welcomePanel.classList.toggle("show", state.dataMode === "static");
+      els.welcomePanel.classList.toggle("compact", state.dataMode === "static" && state.records.length > 0);
+      els.refreshBtn.textContent = payload.staticMode && sourceType === "demo" ? "重新加载示例" : "刷新";
       els.estimateNotice.classList.toggle("show", summary.estimatedRecords > 0);
       renderMetrics(summary, updated);
       renderTrend(summary.byDay);
@@ -1629,6 +1804,8 @@
           </div>
           <div class="metric-foot">
             <span>${unknown ? `<span class="badge unknown">未知</span>` : qualityBadge(summary)}</span>
+            ${state.dataMode === "static" && state.staticSourceType === "demo" ? `<span class="badge unknown">示例数据</span>` : ""}
+            ${state.dataMode === "static" && state.staticSourceType !== "demo" ? `<span class="badge real">浏览器本地</span>` : ""}
             <span class="metric-update">${updated}</span>
           </div>
         </article>
@@ -1651,7 +1828,7 @@
 
     function renderTrend(days) {
       if (!days.length) {
-        els.trendChart.innerHTML = `<div class="empty">当前筛选条件下没有每日趋势数据。</div>`;
+        els.trendChart.innerHTML = emptyState("暂无趋势数据。请加载示例数据或导入 usage-index.json。");
         els.trendChart.style.setProperty("--days", 1);
         return;
       }
@@ -1699,7 +1876,7 @@
       const output = summary.outputTokens;
       const total = cached + uncached + output;
       if (!total) {
-        els.ratioChart.innerHTML = `<div class="empty">当前筛选条件下 cached input、uncached input、output 都为 0。</div>`;
+        els.ratioChart.innerHTML = emptyState("暂无 token 组成数据。");
         els.ratioHint.textContent = "无 token 构成数据";
         return;
       }
@@ -1733,7 +1910,7 @@
 
     function renderCacheTrend(days) {
       if (!days.length) {
-        els.cacheTrendChart.innerHTML = `<div class="empty">当前筛选条件下没有缓存命中率趋势。</div>`;
+        els.cacheTrendChart.innerHTML = emptyState("暂无缓存命中率数据。");
         els.cacheTrendSummary.textContent = "-";
         return;
       }
@@ -1868,7 +2045,7 @@
       const records = sortedRecords();
       const { totalPages, rows } = pageRecords(records);
       if (!records.length) {
-        els.viewPanel.innerHTML = `<section class="panel"><div class="empty">当前筛选条件下没有记录。</div></section>`;
+        els.viewPanel.innerHTML = `<section class="panel">${emptyState("当前筛选条件下没有记录，请清空筛选或扩大日期范围。")}</section>`;
         return;
       }
       const allPageSelected = rows.length > 0 && rows.every(record => state.selectedIds.has(record.id));
@@ -1988,7 +2165,7 @@
     function renderTopSessions() {
       const records = [...state.records].sort((a, b) => b.totalTokens - a.totalTokens).slice(0, state.topLimit);
       if (!records.length) {
-        els.viewPanel.innerHTML = `<section class="panel"><div class="empty">当前筛选条件下没有 Top 会话数据。</div></section>`;
+        els.viewPanel.innerHTML = `<section class="panel">${emptyState("暂无 Top 会话数据。")}</section>`;
         return;
       }
       const max = Math.max(...records.map(record => record.totalTokens), 1);
@@ -2018,7 +2195,7 @@
 
     function renderModels(models) {
       if (!models.length) {
-        els.viewPanel.innerHTML = `<section class="panel"><div class="empty">当前筛选条件下没有模型统计数据。</div></section>`;
+        els.viewPanel.innerHTML = `<section class="panel">${emptyState("暂无模型统计数据。")}</section>`;
         return;
       }
       const max = Math.max(...models.map(model => model.totalTokens), 1);
@@ -2053,7 +2230,10 @@
 
     function showDetail(id) {
       const record = state.records.find(item => item.id === id);
-      if (!record) return;
+      if (!record) {
+        toast("请选择一条明细记录查看详情。");
+        return;
+      }
       const cells = [
         ["时间", record.timestamp || "未知"],
         ["来源", sourceLabels[record.source] || "未知"],
@@ -2228,6 +2408,10 @@
       if (button) setTheme(button.dataset.themeChoice);
     });
     document.querySelector("#clearFiltersBtn").addEventListener("click", () => {
+      clearFilters();
+    });
+
+    function clearFilters() {
       els.sourceFilter.value = "all";
       els.modelFilter.value = "all";
       els.searchInput.value = "";
@@ -2235,7 +2419,7 @@
       state.selectedIds.clear();
       state.expandedIds.clear();
       applyRange("7d");
-    });
+    }
     document.querySelector("#exportCsvBtn").addEventListener("click", () => exportCsv());
     document.querySelector("#exportJsonBtn").addEventListener("click", () => exportJson());
     document.querySelector("#exportSnapshotBtn").addEventListener("click", exportSnapshotJson);
@@ -2245,17 +2429,14 @@
     document.querySelector("#importSessionsBtn").addEventListener("click", () => els.sessionsFolderInput.click());
     document.querySelector("#sampleBtn").addEventListener("click", async () => {
       try {
-        const response = await fetch("sample-data/usage-index.sample.json", { cache: "no-store" });
-        const sample = await response.json();
-        state.dataMode = "static";
-        state.staticPayload = makeStaticPayload(sample.records || [], { sourceLabel: "示例数据", sessionFiles: sample.stats?.sessionFiles || 0, importFiles: sample.stats?.importFiles || 0, readOnly: true });
-        fitDateRangeToRecords(state.staticPayload.records);
-        cacheStaticPayload(state.staticPayload);
-        renderStaticUsage("已加载示例数据。");
+        await loadDemoData("已加载示例数据。");
       } catch (error) {
-        setStatus(error.message || "示例数据加载失败", "error");
+        setStatus("示例数据加载失败，你可以手动导入 usage-index.json 或脱敏快照。", "error");
       }
     });
+    document.querySelector("#welcomeSampleBtn").addEventListener("click", () => document.querySelector("#sampleBtn").click());
+    document.querySelector("#welcomeImportBtn").addEventListener("click", () => els.importFile.click());
+    document.querySelector("#welcomeSessionsBtn").addEventListener("click", () => els.sessionsFolderInput.click());
     document.querySelector("#clearBrowserDataBtn").addEventListener("click", () => {
       localStorage.removeItem("codexTokenStaticPayload");
       state.staticPayload = makeStaticPayload([], { sourceLabel: "浏览器本地导入" });
@@ -2277,6 +2458,11 @@
       loadUsage();
     });
     els.viewPanel.addEventListener("click", event => {
+      const actionButton = event.target.closest("[data-action]");
+      if (actionButton) {
+        handlePanelAction(actionButton.dataset.action);
+        return;
+      }
       const sortHeader = event.target.closest("th[data-sort]");
       if (sortHeader) {
         const key = sortHeader.dataset.sort;
@@ -2332,6 +2518,11 @@
       }
     });
     els.viewPanel.addEventListener("click", event => {
+      const actionButton = event.target.closest("[data-action]");
+      if (actionButton) {
+        handlePanelAction(actionButton.dataset.action);
+        return;
+      }
       if (event.target.id === "prevPageBtn") { state.page -= 1; renderDetails(); }
       if (event.target.id === "nextPageBtn") { state.page += 1; renderDetails(); }
       if (event.target.id === "invertPageBtn") {
@@ -2357,6 +2548,23 @@
         renderTopSessions();
       }
     });
+
+    document.querySelector(".charts").addEventListener("click", event => {
+      const actionButton = event.target.closest("[data-action]");
+      if (actionButton) handlePanelAction(actionButton.dataset.action);
+    });
+    document.querySelector("#cacheTrendChart").addEventListener("click", event => {
+      const actionButton = event.target.closest("[data-action]");
+      if (actionButton) handlePanelAction(actionButton.dataset.action);
+    });
+
+    function handlePanelAction(action) {
+      if (action === "load-demo") {
+        loadDemoData("已重新加载示例数据。").catch(error => setStatus(error.message || "示例数据加载失败", "error"));
+      }
+      if (action === "clear-filters") clearFilters();
+      if (action === "import-data") els.importFile.click();
+    }
     els.importFile.addEventListener("change", async () => {
       const file = els.importFile.files[0];
       if (!file) return;
@@ -2379,6 +2587,7 @@
         const payload = await parseDataFile(file);
         state.dataMode = "static";
         state.staticPayload = payload;
+        state.staticSourceType = payload.sourceType || "import";
         fitDateRangeToRecords(payload.records);
         cacheStaticPayload(payload);
         renderStaticUsage(`已在浏览器本地导入：${file.name}`);
@@ -2395,6 +2604,7 @@
         const payload = await parseSessionFiles(files);
         state.dataMode = "static";
         state.staticPayload = payload;
+        state.staticSourceType = "import";
         fitDateRangeToRecords(payload.records);
         cacheStaticPayload(payload);
         renderStaticUsage(`sessions 文件夹解析完成：${formatInt(payload.records.length)} 条记录。`);

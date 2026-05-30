@@ -5,6 +5,7 @@ const root = path.resolve(__dirname, "..");
 const dist = path.join(root, "dist");
 const required = [
   "index.html",
+  "sample-data/demo-usage-index.json",
   "sample-data/usage-index.sample.json",
   "README.md",
   "LICENSE"
@@ -22,6 +23,7 @@ if (!process.exitCode) {
   fs.rmSync(dist, { recursive: true, force: true });
   fs.mkdirSync(path.join(dist, "sample-data"), { recursive: true });
   fs.copyFileSync(path.join(root, "index.html"), path.join(dist, "index.html"));
+  fs.copyFileSync(path.join(root, "sample-data", "demo-usage-index.json"), path.join(dist, "sample-data", "demo-usage-index.json"));
   fs.copyFileSync(path.join(root, "sample-data", "usage-index.sample.json"), path.join(dist, "sample-data", "usage-index.sample.json"));
   fs.copyFileSync(path.join(root, "LICENSE"), path.join(dist, "LICENSE"));
   fs.writeFileSync(path.join(dist, "_headers"), [

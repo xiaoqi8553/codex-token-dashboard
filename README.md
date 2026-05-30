@@ -66,7 +66,7 @@ npm run build
 dist
 ```
 
-构建脚本只会把 `index.html`、`sample-data/` 和必要静态文件复制到 `dist/`，不会发布 `server.js`、`data/`、`config.json` 或真实日志。部署后，页面会因为没有 `/api/usage` 自动进入“公开静态模式”。访问者可以加载示例数据，或手动导入自己的本地数据。
+构建脚本只会把 `index.html`、`sample-data/` 和必要静态文件复制到 `dist/`，不会发布 `server.js`、`data/`、`config.json` 或真实日志。部署后，页面会因为没有 `/api/usage` 自动进入“公开静态演示版”，并默认加载 `sample-data/demo-usage-index.json`。访问者可以直接查看完整看板，也可以手动导入自己的本地数据。
 
 ## 配置
 
