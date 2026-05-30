@@ -21,6 +21,7 @@ config.json
 node_modules/
 package-lock.json
 dist/
+*.zip
 .DS_Store
 Thumbs.db
 
