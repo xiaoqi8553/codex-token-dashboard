@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.3 - 2026-06-01
+
+- Standardized compact token formatting to use `K`, `M`, and `B`; values below 1B remain in `M` instead of switching to Chinese `亿`.
+- Improved the cache hit rate chart for one-day filters by showing a dedicated single-day summary instead of a flattened line chart.
+- Increased cache hit rate chart height and spacing for multi-day trends to improve readability.
+
 ## 0.3.2 - 2026-06-01
 
 - Fixed browser-imported `sessions` folder refresh so it can rescan the selected directory instead of only re-rendering cached data.

@@ -751,13 +751,85 @@
     }
 
     .cache-line {
-      height: 230px;
+      height: 280px;
       width: 100%;
       border: 1px solid var(--line);
       border-radius: 10px;
       background:
         linear-gradient(180deg, color-mix(in srgb, var(--panel) 92%, transparent), var(--panel-2));
       box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
+    }
+
+    .cache-single {
+      min-height: 280px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background:
+        radial-gradient(circle at 28% 28%, color-mix(in srgb, var(--cache) 16%, transparent), transparent 34%),
+        linear-gradient(180deg, color-mix(in srgb, var(--panel) 92%, transparent), var(--panel-2));
+      padding: 22px;
+      display: grid;
+      grid-template-columns: minmax(220px, .42fr) minmax(0, 1fr);
+      gap: 22px;
+      align-items: center;
+    }
+
+    .cache-single-main {
+      display: grid;
+      gap: 10px;
+      align-content: center;
+    }
+
+    .cache-single-main strong {
+      font-size: clamp(48px, 7vw, 82px);
+      line-height: .95;
+      letter-spacing: 0;
+      font-variant-numeric: tabular-nums;
+      color: var(--cache);
+    }
+
+    .cache-gauge {
+      height: 22px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--panel);
+      overflow: hidden;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
+    }
+
+    .cache-gauge span {
+      display: block;
+      width: var(--hit);
+      height: 100%;
+      min-width: 2px;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--cache), color-mix(in srgb, var(--cache) 72%, white));
+    }
+
+    .cache-single-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .cache-single-cell {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: color-mix(in srgb, var(--panel) 80%, transparent);
+      padding: 12px;
+      min-width: 0;
+    }
+
+    .cache-single-cell span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+
+    .cache-single-cell strong {
+      font-size: 18px;
+      font-variant-numeric: tabular-nums;
     }
 
     .chart-tooltip {
@@ -1033,6 +1105,7 @@
       }
       .date-field { min-width: 0; grid-template-columns: auto minmax(0, 1fr) auto; }
       .date-display { min-width: 0; }
+      .cache-single { grid-template-columns: 1fr; }
       .donut-row { grid-template-columns: 1fr; justify-items: center; }
       .detail-grid, .detail-mini { grid-template-columns: 1fr 1fr; }
       .brand { grid-template-columns: 44px minmax(0, 1fr); }
@@ -1370,9 +1443,15 @@
     function formatToken(value) {
       const number = Number(value || 0);
       const abs = Math.abs(number);
-      if (abs >= 100000000) return `${(number / 100000000).toFixed(2)}亿`;
-      if (abs >= 1000000) return `${(number / 1000000).toFixed(2)}M`;
-      if (abs >= 1000) return `${(number / 1000).toFixed(1)}K`;
+      const unit = (divisor, suffix, digits) => {
+        const sign = number < 0 ? -1 : 1;
+        const factor = 10 ** digits;
+        const compact = Math.floor((abs / divisor) * factor) / factor;
+        return `${(compact * sign).toFixed(digits)}${suffix}`;
+      };
+      if (abs >= 1000000000) return unit(1000000000, "B", 2);
+      if (abs >= 1000000) return unit(1000000, "M", 2);
+      if (abs >= 1000) return unit(1000, "K", 1);
       return formatInt(number);
     }
 
@@ -2344,11 +2423,36 @@
         els.cacheTrendSummary.textContent = "-";
         return;
       }
+      if (days.length === 1) {
+        const day = days[0];
+        const rate = day.inputTokens ? day.cachedInputTokens / day.inputTokens : 0;
+        const uncached = Math.max(day.inputTokens - day.cachedInputTokens, 0);
+        els.cacheTrendSummary.textContent = `单日 ${percent(rate, 1, 1)}%`;
+        els.cacheTrendChart.innerHTML = `
+          <div class="cache-single">
+            <div class="cache-single-main">
+              <span class="badge">${escapeHtml(day.date)} 单日视图</span>
+              <strong>${percent(rate, 1, 1)}%</strong>
+              <div class="cache-gauge" title="缓存命中率 ${percent(rate, 1, 1)}%">
+                <span style="--hit:${percent(rate, 1, 1)}%"></span>
+              </div>
+              <p class="muted">当前筛选只有 1 天数据，无法形成趋势线。切换到 7 天或 30 天可查看完整曲线。</p>
+            </div>
+            <div class="cache-single-grid">
+              <div class="cache-single-cell"><span>cached input</span><strong title="${formatInt(day.cachedInputTokens)}">${formatToken(day.cachedInputTokens)}</strong></div>
+              <div class="cache-single-cell"><span>uncached input</span><strong title="${formatInt(uncached)}">${formatToken(uncached)}</strong></div>
+              <div class="cache-single-cell"><span>input</span><strong title="${formatInt(day.inputTokens)}">${formatToken(day.inputTokens)}</strong></div>
+              <div class="cache-single-cell"><span>output</span><strong title="${formatInt(day.outputTokens)}">${formatToken(day.outputTokens)}</strong></div>
+            </div>
+          </div>
+        `;
+        return;
+      }
       const width = 1000;
-      const height = 230;
+      const height = 280;
       const padX = 42;
-      const padTop = 24;
-      const padBottom = 38;
+      const padTop = 34;
+      const padBottom = 46;
       const rates = days.map(day => day.inputTokens ? day.cachedInputTokens / day.inputTokens : 0);
       const avg = rates.reduce((sum, rate) => sum + rate, 0) / rates.length;
       const minRate = Math.min(...rates);
@@ -2753,7 +2857,7 @@
       const summary = summarize(safeRecords.map(record => ({ ...record, activeTokens: activeTokens(record), uncachedInputTokens: uncachedInputTokens(record), hitRate: cacheHitRateOf(record) })));
       return {
         snapshotVersion: 1,
-        appVersion: "0.3.2",
+        appVersion: "0.3.3",
         generatedAt: new Date().toISOString(),
         privacy: {
           anonymized: true,
