@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.2 - 2026-06-01
+
+- Fixed browser-imported `sessions` folder refresh so it can rescan the selected directory instead of only re-rendering cached data.
+- Preserved Today / 7 days / 30 days date presets after browser imports and folder refreshes instead of forcing the range back to custom.
+- Added IndexedDB persistence for Chrome/Edge directory handles so the public static site can remember a previously selected `sessions` folder when browser permissions allow it.
+- Updated browser cache clearing to also remove the remembered `sessions` folder handle.
+- Added README guidance for the public URL's remembered-folder behavior and browser permission limits.
+
 ## 0.3.1 - 2026-05-30
 
 - Refined the README for open-source presentation with badges, preview images, project structure, FAQ, and topic suggestions.

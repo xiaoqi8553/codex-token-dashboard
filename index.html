@@ -2753,7 +2753,7 @@
       const summary = summarize(safeRecords.map(record => ({ ...record, activeTokens: activeTokens(record), uncachedInputTokens: uncachedInputTokens(record), hitRate: cacheHitRateOf(record) })));
       return {
         snapshotVersion: 1,
-        appVersion: "0.3.0",
+        appVersion: "0.3.2",
         generatedAt: new Date().toISOString(),
         privacy: {
           anonymized: true,
