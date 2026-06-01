@@ -1708,7 +1708,7 @@
       state.dataMode = "static";
       state.staticPayload = payload;
       state.staticSourceType = "sessions-folder";
-      fitDateRangeToRecords(payload.records);
+      if (options.fitRange) fitDateRangeToRecords(payload.records, { preservePreset: true });
       cacheStaticPayload(payload);
       renderStaticUsage(options.silent ? "" : `${message}${formatInt(payload.records.length)} 条记录。`);
       return true;
@@ -1720,7 +1720,7 @@
           const handle = await window.showDirectoryPicker({ mode: "read" });
           state.sessionsDirectoryHandle = handle;
           state.sessionsDirectoryName = handle.name || "sessions";
-          await refreshSessionsDirectoryHandle("sessions 文件夹解析完成：");
+          await refreshSessionsDirectoryHandle("sessions 文件夹解析完成：", { fitRange: true });
         } catch (error) {
           if (error?.name !== "AbortError") setStatus(error.message || "选择 sessions 文件夹失败", "error");
         }
@@ -1820,14 +1820,20 @@
       };
     }
 
-    function fitDateRangeToRecords(records) {
+    function fitDateRangeToRecords(records, options = {}) {
+      if (options.preservePreset && state.range !== "custom" && els.fromDate.value && els.toDate.value) {
+        syncDateDisplays();
+        return;
+      }
       const dates = records.map(record => record.date).filter(Boolean).sort();
       if (!dates.length) return;
       els.fromDate.value = dates[0];
       els.toDate.value = dates[dates.length - 1];
       syncDateDisplays();
-      state.range = "custom";
-      setActiveRange("custom");
+      if (options.markCustom !== false) {
+        state.range = "custom";
+        setActiveRange("custom");
+      }
     }
 
     function filteredStaticPayload() {
@@ -1901,7 +1907,7 @@
       const payload = await loadDemoPayload();
       state.staticPayload = payload;
       state.staticSourceType = "demo";
-      fitDateRangeToRecords(payload.records);
+      if (!els.fromDate.value && !els.toDate.value) fitDateRangeToRecords(payload.records);
       cacheStaticPayload(payload);
       renderStaticUsage(message);
     }
@@ -3006,7 +3012,7 @@
         state.dataMode = "static";
         state.staticPayload = payload;
         state.staticSourceType = payload.sourceType || "import";
-        fitDateRangeToRecords(payload.records);
+        fitDateRangeToRecords(payload.records, { preservePreset: true });
         cacheStaticPayload(payload);
         renderStaticUsage(`已在浏览器本地导入：${file.name}`);
         els.importFile.value = "";
@@ -3025,7 +3031,7 @@
         state.dataMode = "static";
         state.staticPayload = payload;
         state.staticSourceType = payload.sourceType || "sessions-files";
-        fitDateRangeToRecords(payload.records);
+        fitDateRangeToRecords(payload.records, { preservePreset: true });
         cacheStaticPayload(payload);
         renderStaticUsage(`sessions 文件夹解析完成：${formatInt(payload.records.length)} 条记录。当前浏览器不支持持续读取，后续更新需要重新选择文件夹。`);
         els.sessionsFolderInput.value = "";
