@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.4 - 2026-06-01
+
+- Fixed flattened text in the cache hit rate trend by moving axis labels and date labels out of the non-uniformly scaled SVG.
+- Kept SVG rendering for the line, area, and grid only, with non-scaling strokes for cleaner chart geometry.
+- Reworked cache trend axis spacing, chart padding, title typography, and marker rendering for a clearer dashboard-style chart.
+
 ## 0.3.3 - 2026-06-01
 
 - Standardized compact token formatting to use `K`, `M`, and `B`; values below 1B remain in `M` instead of switching to Chinese `亿`.
