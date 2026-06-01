@@ -1315,6 +1315,12 @@
       uncachedInputTokens: "未缓存输入"
     };
 
+    const handleDb = {
+      name: "codexTokenDashboardHandles",
+      store: "handles",
+      sessionsKey: "sessionsDirectory"
+    };
+
     function todayString(offsetDays = 0) {
       const date = new Date();
       date.setDate(date.getDate() + offsetDays);
@@ -1646,6 +1652,86 @@
       return await directoryHandle.requestPermission(options) === "granted";
     }
 
+    function openHandleDatabase() {
+      if (!("indexedDB" in window)) return Promise.resolve(null);
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open(handleDb.name, 1);
+        request.onupgradeneeded = () => {
+          const db = request.result;
+          if (!db.objectStoreNames.contains(handleDb.store)) db.createObjectStore(handleDb.store);
+        };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+    }
+
+    async function saveSessionsDirectoryHandle(handle) {
+      try {
+        const db = await openHandleDatabase();
+        if (!db) return false;
+        return await new Promise((resolve, reject) => {
+          const tx = db.transaction(handleDb.store, "readwrite");
+          tx.objectStore(handleDb.store).put({
+            handle,
+            name: handle.name || "sessions",
+            savedAt: new Date().toISOString()
+          }, handleDb.sessionsKey);
+          tx.oncomplete = () => resolve(true);
+          tx.onerror = () => reject(tx.error);
+        });
+      } catch {
+        return false;
+      }
+    }
+
+    async function loadSessionsDirectoryHandle() {
+      try {
+        const db = await openHandleDatabase();
+        if (!db) return null;
+        return await new Promise((resolve, reject) => {
+          const request = db.transaction(handleDb.store, "readonly")
+            .objectStore(handleDb.store)
+            .get(handleDb.sessionsKey);
+          request.onsuccess = () => resolve(request.result || null);
+          request.onerror = () => reject(request.error);
+        });
+      } catch {
+        return null;
+      }
+    }
+
+    async function clearSessionsDirectoryHandle() {
+      try {
+        const db = await openHandleDatabase();
+        if (!db) return false;
+        return await new Promise((resolve, reject) => {
+          const tx = db.transaction(handleDb.store, "readwrite");
+          tx.objectStore(handleDb.store).delete(handleDb.sessionsKey);
+          tx.oncomplete = () => resolve(true);
+          tx.onerror = () => reject(tx.error);
+        });
+      } catch {
+        return false;
+      }
+    }
+
+    async function restoreSavedSessionsDirectory(options = {}) {
+      if (state.sessionsDirectoryHandle) return true;
+      const saved = await loadSessionsDirectoryHandle();
+      if (!saved?.handle) return false;
+      state.sessionsDirectoryHandle = saved.handle;
+      state.sessionsDirectoryName = saved.name || saved.handle.name || "sessions";
+      const allowed = await hasDirectoryPermission(state.sessionsDirectoryHandle, Boolean(options.requestPermission));
+      if (allowed) {
+        if (!options.silent) setStatus(`已恢复上次选择的 ${state.sessionsDirectoryName} 文件夹。`);
+        return true;
+      }
+      if (!options.silent) {
+        setStatus(`已记住上次选择的 ${state.sessionsDirectoryName} 文件夹；点击“刷新”时浏览器可能会要求再次授权。`);
+      }
+      return false;
+    }
+
     async function parseSessionFiles(fileList) {
       const files = Array.from(fileList || [])
         .map(entry => entry?.file ? entry : { file: entry, relativePath: entry?.webkitRelativePath || entry?.name || "" })
@@ -1720,6 +1806,7 @@
           const handle = await window.showDirectoryPicker({ mode: "read" });
           state.sessionsDirectoryHandle = handle;
           state.sessionsDirectoryName = handle.name || "sessions";
+          await saveSessionsDirectoryHandle(handle);
           await refreshSessionsDirectoryHandle("sessions 文件夹解析完成：", { fitRange: true });
         } catch (error) {
           if (error?.name !== "AbortError") setStatus(error.message || "选择 sessions 文件夹失败", "error");
@@ -1919,6 +2006,7 @@
       if (cached?.records?.length) {
         state.staticPayload = makeStaticPayload(cached.records, { sourceLabel: cached.sessionsDir || "浏览器缓存", sourceType: cached.sourceType || "import", readOnly: true, updatedAt: cached.updatedAt });
         state.staticSourceType = state.staticPayload.sourceType;
+        if (state.staticSourceType === "sessions-folder") await restoreSavedSessionsDirectory({ silent: true });
         renderStaticUsage(`已进入公开静态模式，并恢复浏览器缓存数据。${reason ? `原因：${reason}` : ""}`);
         return;
       }
@@ -1959,6 +2047,9 @@
           }
           return;
         }
+        if (state.staticSourceType === "sessions-folder" && !state.sessionsDirectoryHandle) {
+          await restoreSavedSessionsDirectory({ requestPermission: true });
+        }
         if (state.staticSourceType === "sessions-folder" && state.sessionsDirectoryHandle) {
           try {
             setLoading(true);
@@ -1972,7 +2063,7 @@
         }
         renderStaticUsage();
         if (state.staticSourceType === "sessions-folder" && !state.sessionsDirectoryHandle) {
-          setStatus("浏览器刷新页面后不能自动恢复本机文件夹权限；请重新选择 sessions 文件夹，或使用本地 Node 模式实现自动扫描。");
+          setStatus("当前浏览器没有恢复 sessions 文件夹权限；请重新选择一次，或使用本地 Node 模式实现完全自动扫描。");
         } else if (state.staticSourceType === "sessions-files") {
           setStatus("当前数据来自一次性文件夹导入，浏览器不能自动重新读取新文件；请重新选择 sessions 文件夹，或使用本地 Node 模式。");
         } else {
@@ -2834,8 +2925,11 @@
     document.querySelector("#welcomeSessionsBtn").addEventListener("click", chooseSessionsDirectory);
     document.querySelector("#clearBrowserDataBtn").addEventListener("click", () => {
       localStorage.removeItem("codexTokenStaticPayload");
+      clearSessionsDirectoryHandle();
+      state.sessionsDirectoryHandle = null;
+      state.sessionsDirectoryName = "";
       state.staticPayload = makeStaticPayload([], { sourceLabel: "浏览器本地导入" });
-      renderStaticUsage("浏览器缓存已清除。");
+      renderStaticUsage("浏览器缓存和已记住的 sessions 文件夹已清除。");
     });
     document.querySelector("#closeDialogBtn").addEventListener("click", () => els.detailDialog.close());
     document.querySelector("#viewTabs").addEventListener("click", event => {
@@ -3043,6 +3137,7 @@
     window.addEventListener("error", event => setStatus(event.message, "error"));
     window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", updateThemeState);
     setTheme(localStorage.getItem("codexTokenTheme") || "system");
+    restoreSavedSessionsDirectory({ silent: true });
     applyRange("7d");
     setInterval(() => {
       if (state.dataMode === "server") loadUsage();
