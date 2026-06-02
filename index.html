@@ -18,7 +18,7 @@
       --line-strong: #c5d1da;
       --official: #2f6fed;
       --relay: #008f7a;
-      --unknown: #7a56c2;
+      --unknown: #7b8794;
       --cache: #d78723;
       --uncached: #2f6fed;
       --output: #d44d4d;
@@ -33,6 +33,7 @@
       --shadow: 0 16px 42px rgba(25, 36, 52, .08);
       --shadow-soft: 0 8px 22px rgba(25, 36, 52, .06);
       --radius: 10px;
+      --grid-alpha: .045;
     }
 
     @media (prefers-color-scheme: dark) {
@@ -48,7 +49,7 @@
         --line-strong: #374858;
         --official: #6fa0ff;
         --relay: #39c4ad;
-        --unknown: #b294ff;
+        --unknown: #a9b5c1;
         --cache: #f0a94a;
         --uncached: #6fa0ff;
         --output: #ff7575;
@@ -74,7 +75,7 @@
       --line-strong: #374858;
       --official: #6fa0ff;
       --relay: #39c4ad;
-      --unknown: #b294ff;
+      --unknown: #a9b5c1;
       --cache: #f0a94a;
       --uncached: #6fa0ff;
       --output: #ff7575;
@@ -94,10 +95,11 @@
       min-height: 100vh;
       color: var(--ink);
       background:
-        linear-gradient(90deg, rgba(129,151,166,.08) 1px, transparent 1px) 0 0 / 28px 28px,
-        linear-gradient(rgba(129,151,166,.08) 1px, transparent 1px) 0 0 / 28px 28px,
+        linear-gradient(90deg, rgba(129,151,166,var(--grid-alpha)) 1px, transparent 1px) 0 0 / 28px 28px,
+        linear-gradient(rgba(129,151,166,var(--grid-alpha)) 1px, transparent 1px) 0 0 / 28px 28px,
         var(--bg);
       font-family: "Inter", "PingFang SC", "Microsoft YaHei", "Noto Sans SC", "Segoe UI", sans-serif;
+      font-size: 14px;
     }
 
     button, input, select { font: inherit; }
@@ -120,25 +122,25 @@
     }
 
     .header {
-      padding: 18px;
+      padding: 12px 14px;
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto;
-      gap: 18px;
+      gap: 14px;
       align-items: center;
     }
 
     .brand {
       display: grid;
-      grid-template-columns: 54px minmax(0, 1fr);
-      gap: 14px;
+      grid-template-columns: 42px minmax(0, 1fr);
+      gap: 12px;
       align-items: center;
       min-width: 0;
     }
 
     .brand-icon {
-      width: 54px;
-      height: 54px;
-      border-radius: 12px;
+      width: 42px;
+      height: 42px;
+      border-radius: 10px;
       display: grid;
       place-items: center;
       border: 1px solid var(--line-strong);
@@ -150,7 +152,7 @@
     }
 
     h1 {
-      font-size: clamp(32px, 2.7vw, 48px);
+      font-size: clamp(26px, 2.1vw, 36px);
       line-height: 1;
       letter-spacing: 0;
       font-weight: 820;
@@ -178,7 +180,7 @@
     }
 
     .meta {
-      margin-top: 10px;
+      margin-top: 7px;
       display: flex;
       gap: 8px;
       flex-wrap: wrap;
@@ -201,6 +203,21 @@
       text-overflow: ellipsis;
     }
 
+    .status-drawer {
+      margin-top: 10px;
+      display: none;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .status-drawer.show { display: grid; }
+
+    .status-drawer .pill {
+      max-width: none;
+      border-radius: 8px;
+      justify-content: flex-start;
+    }
+
     .toolbar, .filters, .panel-head, .table-actions, .pagination, .row-actions {
       display: flex;
       align-items: center;
@@ -219,6 +236,31 @@
       border: 1px solid var(--line);
       border-radius: 10px;
       background: color-mix(in srgb, var(--panel) 84%, transparent);
+    }
+
+    .data-actions {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .header .toolbar-group {
+      border: 0;
+      background: transparent;
+      padding: 0;
+    }
+
+    .header .group-label,
+    .header .theme-control .muted {
+      display: none;
+    }
+
+    .header .btn,
+    .header .segmented button {
+      min-height: 32px;
+      padding: 5px 9px;
     }
 
     .group-label {
@@ -297,6 +339,17 @@
     }
 
     .notice.show { display: block; }
+    #estimateNotice.show {
+      display: inline-flex;
+      align-items: center;
+      justify-self: start;
+      width: auto;
+      border-left-width: 1px;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-weight: 760;
+      background: color-mix(in srgb, var(--warn) 10%, var(--panel));
+    }
     .notice.error {
       display: block;
       border-color: color-mix(in srgb, var(--bad) 48%, var(--line));
@@ -430,6 +483,45 @@
     .filter-row.secondary #clearFiltersBtn {
       flex: 0 0 auto;
       min-width: 112px;
+    }
+
+    .range-filter {
+      flex: 0 1 auto;
+    }
+
+    #taskTypeFilter {
+      flex: 0 0 170px;
+      min-width: 150px;
+    }
+
+    .filters.mode-overview .filter-row.primary .date-field,
+    .filters.mode-overview .filter-row.primary select,
+    .filters.mode-overview .filter-row.secondary,
+    .filters.mode-calendar .filter-row.primary select,
+    .filters.mode-calendar .filter-row.secondary,
+    .filters.mode-details #taskTypeFilter,
+    .filters.mode-tasks #searchInput,
+    .filters.mode-tasks #estimateFilter,
+    .filters.mode-settings {
+      display: none;
+    }
+
+    .filters.mode-details .advanced-toggle,
+    .filters.mode-calendar .advanced-toggle,
+    .filters.mode-tasks .advanced-toggle {
+      display: none;
+    }
+
+    .filters.mode-overview:not(.advanced-open) .filter-row.primary .date-field,
+    .filters.mode-overview:not(.advanced-open) .filter-row.primary select,
+    .filters.mode-overview:not(.advanced-open) .filter-row.secondary {
+      display: none;
+    }
+
+    .filters.mode-overview.advanced-open .filter-row.primary .date-field,
+    .filters.mode-overview.advanced-open .filter-row.primary select,
+    .filters.mode-overview.advanced-open .filter-row.secondary {
+      display: flex;
     }
 
     .filters > * { min-width: 0; }
@@ -1010,6 +1102,7 @@
       top: 8px;
       z-index: 8;
       align-items: center;
+      justify-content: center;
       background:
         linear-gradient(180deg, color-mix(in srgb, var(--panel) 94%, transparent), color-mix(in srgb, var(--panel-2) 88%, transparent));
       backdrop-filter: blur(10px);
@@ -1020,6 +1113,8 @@
       align-items: center;
       gap: 7px;
       font-weight: 760;
+      min-width: 112px;
+      justify-content: center;
     }
 
     .view-tabs.page-nav button span {
@@ -1231,11 +1326,20 @@
       gap: 10px;
     }
 
+    .task-type-grid.compact {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
     .task-type-card {
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto;
       gap: 10px;
       align-items: center;
+    }
+
+    .task-type-card.is-empty {
+      opacity: .62;
+      background: var(--panel-2);
     }
 
     .task-type-card strong {
@@ -1246,6 +1350,20 @@
 
     .task-type-card .track { grid-column: 1 / -1; }
 
+    .task-sample-wrap {
+      max-height: 520px;
+    }
+
+    .page-title {
+      display: grid;
+      gap: 5px;
+    }
+
+    .page-title h2 {
+      font-size: clamp(22px, 2vw, 28px);
+      font-weight: 760;
+    }
+
     .task-table {
       min-width: 980px;
     }
@@ -1254,6 +1372,25 @@
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 12px;
+    }
+
+    .settings-card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: color-mix(in srgb, var(--panel) 96%, transparent);
+      box-shadow: var(--shadow-soft);
+      padding: 15px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .settings-card strong {
+      font-size: 15px;
+    }
+
+    .settings-card p {
+      color: var(--muted);
+      line-height: 1.6;
     }
 
     .table-wrap {
@@ -1273,10 +1410,10 @@
     }
 
     th, td {
-      padding: 9px 8px;
+      padding: 10px 9px;
       border-bottom: 1px solid var(--line);
       text-align: left;
-      font-size: 12px;
+      font-size: 13px;
       vertical-align: middle;
       white-space: nowrap;
       overflow: hidden;
@@ -1290,11 +1427,13 @@
       background: var(--panel);
       color: var(--muted);
       font-weight: 850;
+      background: color-mix(in srgb, var(--panel-2) 72%, var(--panel));
     }
 
     th.sortable { cursor: pointer; user-select: none; }
     tr.data-row { cursor: pointer; }
     tr.data-row:hover td { background: color-mix(in srgb, var(--official) 5%, transparent); }
+    tr.data-row.selected td { background: color-mix(in srgb, var(--active) 8%, transparent); }
     tr.detail-row td { background: var(--panel-2); white-space: normal; overflow: visible; }
     .detail-mini {
       display: grid;
@@ -1419,7 +1558,7 @@
       .header { grid-template-columns: 1fr; align-items: start; }
       .toolbar { justify-content: start; }
       .metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-      .charts, .content-grid, .today-status, .story-grid, .task-layout, .day-detail-grid, .settings-grid { grid-template-columns: 1fr; }
+      .charts, .content-grid, .task-layout, .day-detail-grid, .settings-grid { grid-template-columns: 1fr; }
       .calendar-stats, .task-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .filter-row.primary .date-field { flex-basis: 196px; }
       .filter-row.primary select { flex-basis: 150px; }
@@ -1444,6 +1583,7 @@
       .toolbar-group.theme-control .segmented { flex: 1 1 100%; }
       .group-label { flex: 0 0 100%; }
       .metrics { grid-template-columns: 1fr; }
+      .today-status, .story-grid { grid-template-columns: 1fr; }
       .today-metrics, .calendar-stats, .task-stats { grid-template-columns: 1fr; }
       .static-panel.show { grid-template-columns: 1fr; }
       .filter-head { align-items: flex-start; flex-direction: column; gap: 4px; }
@@ -1504,26 +1644,19 @@
         <div class="brand-icon">&gt;_</div>
         <div>
           <h1>Codex Token 用量</h1>
-          <div class="author-mark">作者：<strong>车辆研究生笔记</strong></div>
           <div class="meta">
             <span class="pill" id="modeMeta">当前模式：初始化</span>
-            <span class="pill" id="pathMeta">数据来源：等待加载</span>
             <span class="pill" id="updateMeta">最后更新：-</span>
+            <button class="btn compact" id="statusToggleBtn" type="button">状态详情</button>
+          </div>
+          <div class="status-drawer" id="statusDrawer">
+            <span class="pill" id="pathMeta">数据来源：等待加载</span>
             <span class="pill" id="fileMeta">记录数：-</span>
             <span class="pill" id="scanMeta">隐私状态：本地优先</span>
           </div>
         </div>
       </div>
       <div class="toolbar">
-        <div class="toolbar-group">
-          <span class="group-label">时间</span>
-          <div class="segmented" id="rangeButtons">
-            <button type="button" data-range="today">今天</button>
-            <button class="active" type="button" data-range="7d">7 天</button>
-            <button type="button" data-range="30d">30 天</button>
-            <button type="button" data-range="custom">自定义</button>
-          </div>
-        </div>
         <div class="toolbar-group theme-control">
           <span class="group-label">主题</span>
           <div class="segmented" id="themeButtons" aria-label="主题模式">
@@ -1533,7 +1666,7 @@
           </div>
           <span class="muted" id="themeState">系统</span>
         </div>
-        <div class="toolbar-group">
+        <div class="toolbar-group data-actions">
           <span class="group-label">数据</span>
           <button class="btn" id="importBtn" type="button">导入数据</button>
           <button class="btn" id="exportCsvBtn" type="button">导出 CSV</button>
@@ -1547,7 +1680,7 @@
       </div>
     </header>
 
-    <section class="notice" id="estimateNotice">官方 Plus token 未在日志中提供精确 usage，本页部分数据为估算。</section>
+    <section class="notice" id="estimateNotice" title="官方 Plus token 未在日志中提供精确 usage，本页部分数据为估算。">含估算数据</section>
     <section class="notice" id="statusNotice"></section>
 
     <section class="welcome shell" id="welcomePanel">
@@ -1590,6 +1723,12 @@
         <div class="filter-hint">筛选会同步影响卡片、图表和明细表</div>
       </div>
       <div class="filter-row primary">
+        <div class="segmented range-filter" id="rangeButtons">
+          <button type="button" data-range="today">今天</button>
+          <button class="active" type="button" data-range="7d">7 天</button>
+          <button type="button" data-range="30d">30 天</button>
+          <button type="button" data-range="custom">自定义</button>
+        </div>
         <label class="date-field">
           <span>开始</span>
           <button class="date-display" id="fromDateDisplay" type="button">-</button>
@@ -1611,6 +1750,10 @@
         <select id="modelFilter" aria-label="模型">
           <option value="all">全部模型</option>
         </select>
+        <select id="taskTypeFilter" aria-label="任务类型">
+          <option value="all">全部任务</option>
+        </select>
+        <button class="btn advanced-toggle" id="advancedFiltersBtn" type="button">高级筛选</button>
       </div>
       <div class="filter-row secondary">
         <input id="searchInput" type="search" placeholder="搜索会话 ID / 模型 / 路径">
@@ -1625,10 +1768,10 @@
 
     <nav class="view-tabs page-nav" id="viewTabs" aria-label="页面导航">
       <button class="active" type="button" data-view="overview"><span>◎</span>总览</button>
-      <button type="button" data-view="calendar"><span>▦</span>AI 使用日历</button>
+      <button type="button" data-view="calendar"><span>▦</span>AI 日历</button>
       <button type="button" data-view="tasks"><span>◇</span>任务复盘</button>
-      <button type="button" data-view="details"><span>≡</span>明细表</button>
-      <button type="button" data-view="settings"><span>?</span>设置 / 关于</button>
+      <button type="button" data-view="details"><span>≡</span>明细</button>
+      <button type="button" data-view="settings"><span>?</span>设置</button>
     </nav>
 
     <section class="today-status overview-only" id="todayStatus"></section>
@@ -1697,7 +1840,9 @@
       trendMode: "source",
       calendarMetric: "totalTokens",
       taskMetric: "totalTokens",
+      taskSort: "totalTokens",
       selectedCalendarDay: "",
+      overviewAdvanced: false,
       taskOverrides: {},
       locationLabel: localStorage.getItem("codexTokenLocationLabel") || "",
       topLimit: 10,
@@ -1733,6 +1878,7 @@
       toDateDisplay: document.querySelector("#toDateDisplay"),
       sourceFilter: document.querySelector("#sourceFilter"),
       modelFilter: document.querySelector("#modelFilter"),
+      taskTypeFilter: document.querySelector("#taskTypeFilter"),
       searchInput: document.querySelector("#searchInput"),
       estimateFilter: document.querySelector("#estimateFilter"),
       todayStatus: document.querySelector("#todayStatus"),
@@ -1754,6 +1900,11 @@
       toast: document.querySelector("#toast"),
       chartTooltip: document.querySelector("#chartTooltip"),
       refreshBtn: document.querySelector("#refreshBtn"),
+      filters: document.querySelector(".filters"),
+      filterTitle: document.querySelector(".filter-title"),
+      filterHint: document.querySelector(".filter-hint"),
+      statusDrawer: document.querySelector("#statusDrawer"),
+      statusToggleBtn: document.querySelector("#statusToggleBtn"),
       themeButtons: document.querySelector("#themeButtons"),
       themeState: document.querySelector("#themeState"),
       welcomePanel: document.querySelector("#welcomePanel"),
@@ -1779,14 +1930,14 @@
     };
 
     const taskTypes = [
-      { id: "coding", label: "写代码", icon: "⌘", keywords: ["code", "coding", "implement", "feature", "组件", "函数", "代码", "html", "css", "js", "typescript"] },
-      { id: "debug", label: "调试报错", icon: "!", keywords: ["debug", "bug", "error", "fix", "报错", "修复", "异常", "失败", "stack"] },
-      { id: "frontend", label: "前端 UI", icon: "◫", keywords: ["ui", "ux", "frontend", "css", "界面", "视觉", "样式", "布局", "看板"] },
-      { id: "docs", label: "文档 / README", icon: "¶", keywords: ["readme", "docs", "document", "文档", "说明", "文章", "changelog"] },
-      { id: "deploy", label: "部署 / 运维", icon: "⇧", keywords: ["deploy", "netlify", "github", "ci", "build", "部署", "发布", "运维", "端口"] },
-      { id: "data", label: "数据分析", icon: "∑", keywords: ["data", "token", "csv", "json", "chart", "统计", "数据", "分析", "图表"] },
-      { id: "refactor", label: "重构", icon: "↻", keywords: ["refactor", "cleanup", "重构", "抽象", "整理", "优化结构"] },
-      { id: "planning", label: "项目规划", icon: "◇", keywords: ["plan", "roadmap", "规划", "计划", "方案", "架构", "设计"] },
+      { id: "coding", label: "写代码", icon: "⌘", keywords: ["function", "api", "test", "class", "code", "coding", "implement", "feature", "js", "py", "ts", "tsx", "jsx", "html", "css", "组件", "函数", "代码", "实现", "接口", "测试"] },
+      { id: "debug", label: "调试报错", icon: "!", keywords: ["debug", "bug", "error", "failed", "failure", "fix", "stack trace", "exception", "报错", "修复", "异常", "失败", "错误", "崩溃"] },
+      { id: "frontend", label: "前端 UI", icon: "◫", keywords: ["ui", "ux", "frontend", "css", "html", "layout", "button", "chart", "page", "界面", "页面", "视觉", "样式", "布局", "前端", "按钮", "图表", "看板"] },
+      { id: "docs", label: "文档 / README", icon: "¶", keywords: ["readme", "docs", "document", "markdown", "article", "文档", "说明", "文章", "changelog", "总结", "复盘"] },
+      { id: "deploy", label: "部署 / 运维", icon: "⇧", keywords: ["deploy", "netlify", "vercel", "github", "ci", "build", "server", "port", "npm", "部署", "发布", "运维", "端口", "启动", "构建"] },
+      { id: "data", label: "数据分析", icon: "∑", keywords: ["data", "token", "csv", "json", "chart", "table", "统计", "数据", "分析", "图表", "表格", "导入", "导出"] },
+      { id: "refactor", label: "重构", icon: "↻", keywords: ["refactor", "cleanup", "extract", "重构", "抽象", "整理", "优化结构", "抽离"] },
+      { id: "planning", label: "项目规划", icon: "◇", keywords: ["roadmap", "plan", "architecture", "design", "规划", "计划", "方案", "架构", "设计"] },
       { id: "other", label: "其他 / 未识别", icon: "?", keywords: [] }
     ];
 
@@ -1896,6 +2047,11 @@
     }
 
     function taskSearchText(record) {
+      const stringify = value => {
+        if (!value) return "";
+        if (typeof value === "string") return value;
+        try { return JSON.stringify(value); } catch { return String(value); }
+      };
       return [
         record.sessionTitle,
         record.relativePath,
@@ -1903,8 +2059,9 @@
         record.detailText,
         record.importBatch,
         record.model,
-        record.sessionId
-      ].join(" ").toLowerCase();
+        record.sessionId,
+        record.requestId
+      ].map(stringify).join(" ").toLowerCase();
     }
 
     function classifyTask(record) {
@@ -1978,8 +2135,19 @@
     }
 
     function setStatus(message = "", type = "info") {
+      if (!message) {
+        els.statusNotice.textContent = "";
+        els.statusNotice.className = "notice";
+        return;
+      }
+      if (type !== "error") {
+        els.statusNotice.textContent = "";
+        els.statusNotice.className = "notice";
+        toast(message);
+        return;
+      }
       els.statusNotice.textContent = message;
-      els.statusNotice.className = `notice ${message ? "show" : ""} ${type === "error" ? "error" : ""}`;
+      els.statusNotice.className = "notice show error";
     }
 
     function setLoading(isLoading) {
@@ -2572,9 +2740,7 @@
       state.data = payload;
       state.staticReadOnly = Boolean(payload.readOnly);
       state.staticSourceType = payload.sourceType || "import";
-      state.records = payload.records
-        .filter(record => els.estimateFilter.value === "all" || (els.estimateFilter.value === "real" ? !record.estimated : record.estimated))
-        .map(enrichRecord);
+      state.records = applyClientFilters(payload.records);
       pruneSelection();
       renderModelOptions(payload.models || []);
       render(payload);
@@ -2630,9 +2796,7 @@
         els.staticPanel.classList.remove("show");
         state.data = payload;
         const rawRecords = Array.isArray(payload.records) ? payload.records : [];
-        state.records = rawRecords
-          .filter(record => els.estimateFilter.value === "all" || (els.estimateFilter.value === "real" ? !record.estimated : record.estimated))
-          .map(enrichRecord);
+        state.records = applyClientFilters(rawRecords);
         pruneSelection();
         renderModelOptions(payload.models || []);
         render(payload);
@@ -2648,6 +2812,16 @@
       const ids = new Set(state.records.map(record => record.id));
       state.selectedIds = new Set([...state.selectedIds].filter(id => ids.has(id)));
       state.expandedIds = new Set([...state.expandedIds].filter(id => ids.has(id)));
+    }
+
+    function applyClientFilters(records) {
+      let enriched = records
+        .filter(record => els.estimateFilter.value === "all" || (els.estimateFilter.value === "real" ? !record.estimated : record.estimated))
+        .map(enrichRecord);
+      if (els.taskTypeFilter.value !== "all") {
+        enriched = enriched.filter(record => record.taskType === els.taskTypeFilter.value);
+      }
+      return enriched;
     }
 
     function formatDateTime(value) {
@@ -2737,6 +2911,29 @@
       els.modelFilter.value = models.includes(current) ? current : "all";
     }
 
+    function renderTaskOptions() {
+      const current = els.taskTypeFilter.value || "all";
+      els.taskTypeFilter.innerHTML = [`<option value="all">全部任务</option>`]
+        .concat(taskTypes.map(type => `<option value="${type.id}">${escapeHtml(type.label)}</option>`))
+        .join("");
+      els.taskTypeFilter.value = taskTypes.some(type => type.id === current) ? current : "all";
+    }
+
+    function syncFilterPresentation() {
+      const view = state.view;
+      els.filters.className = `filters shell mode-${view === "tasks" ? "tasks" : view} ${state.overviewAdvanced ? "advanced-open" : ""}`;
+      const copy = {
+        overview: ["总览筛选", "默认只保留时间范围，更多条件可展开"],
+        calendar: ["日历范围", "选择日期范围后，日历仍以完整矩阵展示使用强度"],
+        tasks: ["复盘筛选", "按任务、来源、模型和日期缩小复盘范围"],
+        details: ["明细筛选", "完整筛选会同步影响明细、导出和选择汇总"],
+        settings: ["", ""]
+      }[view] || ["筛选条件", "筛选会同步影响卡片、图表和明细表"];
+      els.filterTitle.textContent = copy[0];
+      els.filterHint.textContent = copy[1];
+      document.querySelector("#advancedFiltersBtn").textContent = state.overviewAdvanced ? "收起筛选" : "高级筛选";
+    }
+
     function render(payload) {
       const summary = summarize(state.records);
       const updated = formatDateTime(payload.updatedAt);
@@ -2755,9 +2952,10 @@
         els.scanMeta.textContent = `扫描：${payload.scanMs ?? "-"} ms`;
         els.fileMeta.textContent = `文件：${payload.stats?.sessionFiles ?? "-"} / 记录：${formatInt(state.records.length)}`;
       }
+      syncFilterPresentation();
       els.staticPanel.classList.toggle("show", state.dataMode === "static" && state.records.length === 0);
-      els.welcomePanel.classList.toggle("show", state.dataMode === "static");
-      els.welcomePanel.classList.toggle("compact", state.dataMode === "static" && state.records.length > 0);
+      els.welcomePanel.classList.toggle("show", state.dataMode === "static" && state.records.length === 0);
+      els.welcomePanel.classList.remove("compact");
       els.refreshBtn.textContent = payload.staticMode && sourceType === "demo" ? "重新加载示例" : "刷新";
       els.estimateNotice.classList.toggle("show", summary.estimatedRecords > 0);
       toggleOverviewSections(state.view === "overview");
@@ -3129,8 +3327,23 @@
       return result;
     }
 
+    function completeCalendarDays(days, span = 90) {
+      const map = Object.fromEntries(days.filter(day => /^\d{4}-\d{2}-\d{2}$/.test(day.date)).map(day => [day.date, day]));
+      const sorted = Object.keys(map).sort();
+      const endKey = els.toDate.value || sorted[sorted.length - 1] || todayString();
+      const end = new Date(`${endKey}T00:00:00`);
+      const start = new Date(end);
+      start.setDate(end.getDate() - span + 1);
+      const result = [];
+      for (let date = new Date(start); date <= end; date.setDate(date.getDate() + 1)) {
+        const key = new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+        result.push(map[key] || finalizeGroup(emptyGroup({ date: key, bySource: [] })));
+      }
+      return result;
+    }
+
     function renderCalendar(summary) {
-      const days = fillDayRange(summary.byDay);
+      const days = completeCalendarDays(summary.byDay, 90);
       if (!days.length) {
         els.viewPanel.innerHTML = `<section class="panel">${emptyState("暂无日历数据。", "请加载示例数据或导入 usage-index.json。")}</section>`;
         return;
@@ -3149,9 +3362,8 @@
         ...Array.from({ length: trailingBlanks }, () => ({ blank: true }))
       ];
       const weeks = Math.max(1, Math.ceil(calendarCells.length / 7));
-      const selected = state.selectedCalendarDay && days.find(day => day.date === state.selectedCalendarDay) ? state.selectedCalendarDay : activeDays[activeDays.length - 1]?.date || days[days.length - 1].date;
-      state.selectedCalendarDay = selected;
-      const selectedDay = days.find(day => day.date === selected) || days[days.length - 1];
+      const selected = state.selectedCalendarDay && days.find(day => day.date === state.selectedCalendarDay) ? state.selectedCalendarDay : "";
+      const selectedDay = selected ? days.find(day => day.date === selected) : null;
       const monthPrefix = todayString().slice(0, 7);
       const monthActive = days.filter(day => day.date.startsWith(monthPrefix) && day.totalTokens > 0).length;
       els.viewPanel.innerHTML = `
@@ -3160,7 +3372,7 @@
             <div class="calendar-toolbar">
               <div>
                 <h2>AI 使用日历</h2>
-                <p class="muted">像 GitHub contribution graph 一样看 Codex 使用节奏。点击某一天会筛选明细表到当天。</p>
+                <p class="muted">像 GitHub contribution graph 一样查看 Codex 使用强度，点击某一天可筛选明细。</p>
               </div>
               <select id="calendarMetric" aria-label="日历指标">
                 <option value="totalTokens">总 Token</option>
@@ -3182,7 +3394,7 @@
                   if (cell.blank) return `<span class="calendar-blank" aria-hidden="true"></span>`;
                   const { day, value } = cell;
                   const level = value <= 0 ? 0 : Math.min(4, Math.max(1, Math.ceil(value / max * 4)));
-                  const title = `${day.date}\n${calendarMetricLabel(metric)}：${calendarValueLabel(value, metric)}\n总 Token：${formatInt(day.totalTokens)}\n会话：${formatInt(day.sessions || 0)}\n记录：${formatInt(day.records || 0)}`;
+                  const title = `${day.date}\n总 Token：${formatInt(day.totalTokens)}\nactive tokens：${formatInt(day.activeTokens)}\n会话：${formatInt(day.sessions || 0)}\n缓存命中率：${percent(day.cachedInputTokens, day.inputTokens, 1)}%`;
                   return `<button class="calendar-cell level-${level}" type="button" data-calendar-day="${day.date}" title="${escapeHtml(title)}" aria-label="${escapeHtml(title)}"></button>`;
                 }).join("")}
               </div>
@@ -3195,22 +3407,23 @@
           </article>
           <section class="day-detail-grid">
             <article class="panel">
+              ${selectedDay ? `
               <div class="panel-head"><h2>${escapeHtml(selectedDay.date)} 日详情</h2><span class="badge">${formatInt(selectedDay.records)} 条记录</span></div>
               <div class="bars">
                 <div class="bar-row"><strong>总 Token</strong><div class="track"><div class="fill active" style="width:100%"></div></div><span class="num" title="${formatInt(selectedDay.totalTokens)}">${formatToken(selectedDay.totalTokens)}</span></div>
                 <div class="bar-row"><strong>active</strong><div class="track"><div class="fill active" style="width:${percent(selectedDay.activeTokens, selectedDay.totalTokens, 1)}%"></div></div><span class="num">${formatToken(selectedDay.activeTokens)}</span></div>
                 <div class="bar-row"><strong>cached input</strong><div class="track"><div class="fill cached" style="width:${percent(selectedDay.cachedInputTokens, selectedDay.inputTokens, 1)}%"></div></div><span class="num">${formatToken(selectedDay.cachedInputTokens)}</span></div>
                 <div class="bar-row"><strong>output</strong><div class="track"><div class="fill output" style="width:${percent(selectedDay.outputTokens, selectedDay.totalTokens, 1)}%"></div></div><span class="num">${formatToken(selectedDay.outputTokens)}</span></div>
-              </div>
+              </div>` : emptyState("点击日历中的某一天查看详情。", "点击后会跳转到明细页并筛选到当天。")}
             </article>
             <article class="panel">
               <div class="panel-head"><h2>来源拆分</h2><span class="muted">当天官方 / 中转站 / 未知</span></div>
-              <div class="bars">
+              ${selectedDay ? `<div class="bars">
                 ${["official_plus", "relay", "unknown"].map(source => {
                   const group = groupByKey(selectedDay.bySource || [], source);
                   return `<div class="bar-row"><strong>${sourceLabels[source]}</strong><div class="track"><div class="fill ${source}" style="width:${percent(group.totalTokens, selectedDay.totalTokens, 1)}%"></div></div><span class="num">${formatToken(group.totalTokens)}</span></div>`;
                 }).join("")}
-              </div>
+              </div>` : emptyState("暂无选中日期。", "选择日历日期后显示来源拆分。")}
             </article>
           </section>
         </section>
@@ -3259,17 +3472,25 @@
     function renderTasks(summary) {
       const taskGroups = summarizeTasks(state.records);
       const max = Math.max(...taskGroups.map(group => taskMetricValue(group, state.taskMetric)), 1);
-      const ruleRecords = state.records.filter(record => record.taskConfidence === "rule" || record.taskConfidence === "provided").length;
+      const activeGroups = taskGroups.filter(group => group.records > 0);
+      const emptyGroups = taskGroups.filter(group => !group.records);
+      const recognizedSessions = activeGroups.filter(group => group.taskType !== "other").reduce((sum, group) => sum + group.sessions, 0);
+      const unknownSessions = groupByKey(activeGroups, "other").sessions || 0;
       const manualRecords = state.records.filter(record => record.taskConfidence === "manual").length;
-      const unknownRecords = state.records.filter(record => record.taskType === "other").length;
-      const topRecords = [...state.records].sort((a, b) => b.totalTokens - a.totalTokens).slice(0, 30);
+      const topType = activeGroups[0];
+      const sorter = {
+        totalTokens: (a, b) => b.totalTokens - a.totalTokens,
+        activeTokens: (a, b) => b.activeTokens - a.activeTokens,
+        timestamp: (a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0)
+      }[state.taskSort] || ((a, b) => b.totalTokens - a.totalTokens);
+      const topRecords = [...state.records].sort(sorter).slice(0, 18);
       els.viewPanel.innerHTML = `
         <section class="tasks-page">
           <article class="panel">
             <div class="task-toolbar">
-              <div>
+              <div class="page-title">
                 <h2>任务复盘</h2>
-                <p class="muted">规则识别，仅供参考。分类只在浏览器本地计算，手动修正会保存在 localStorage。</p>
+                <p class="muted">任务复盘基于关键词规则识别，仅供参考。你可以手动修正任务类型。</p>
               </div>
               <select id="taskMetric" aria-label="任务统计指标">
                 <option value="totalTokens">按总 Token</option>
@@ -3280,35 +3501,53 @@
               </select>
             </div>
             <div class="task-stats">
-              <div class="calendar-stat"><span>规则 / 字段识别</span><strong>${formatInt(ruleRecords)} 条</strong></div>
+              <div class="calendar-stat"><span>已识别会话</span><strong>${formatInt(recognizedSessions)}</strong></div>
+              <div class="calendar-stat"><span>未识别会话</span><strong>${formatInt(unknownSessions)}</strong></div>
               <div class="calendar-stat"><span>手动修正</span><strong>${formatInt(manualRecords)} 条</strong></div>
-              <div class="calendar-stat"><span>未识别</span><strong>${formatInt(unknownRecords)} 条</strong></div>
-              <div class="calendar-stat"><span>当前指标</span><strong>${escapeHtml(taskMetricLabel(state.taskMetric))}</strong></div>
+              <div class="calendar-stat"><span>最高消耗类型</span><strong>${topType ? escapeHtml(taskTypeMap[topType.taskType]?.label || topType.label) : "暂无"}</strong></div>
             </div>
           </article>
           <section class="task-layout">
             <article class="panel">
               <div class="panel-head"><h2>任务类型分布</h2><span class="muted">${taskMetricLabel(state.taskMetric)}</span></div>
               <div class="task-type-grid">
-                ${taskGroups.map(group => {
+                ${activeGroups.map(group => {
                   const type = taskTypeMap[group.taskType] || taskTypeMap.other;
                   const value = taskMetricValue(group, state.taskMetric);
                   return `
                     <div class="task-type-card">
-                      <div><strong>${escapeHtml(type.icon)} ${escapeHtml(type.label)}</strong><span>${formatInt(group.sessions)} 个会话 / ${formatInt(group.records)} 条记录</span></div>
+                      <div><strong>${escapeHtml(type.icon)} ${escapeHtml(type.label)}</strong><span>${formatInt(group.sessions)} 个会话 / ${formatInt(group.records)} 条记录 / 占比 ${percent(group.totalTokens, summary.totalTokens, 1)}%</span></div>
                       <span class="num" title="${formatInt(value)}">${state.taskMetric === "sessions" || state.taskMetric === "records" ? formatInt(value) : formatToken(value)}</span>
                       <div class="track"><div class="fill active" style="width:${percent(value, max, 1)}%"></div></div>
                     </div>
                   `;
                 }).join("")}
+                ${emptyGroups.length ? `
+                  <details>
+                    <summary class="muted">其他任务类型（${emptyGroups.length} 个暂无数据）</summary>
+                    <div class="task-type-grid compact" style="margin-top:10px">
+                      ${emptyGroups.map(group => {
+                        const type = taskTypeMap[group.taskType] || taskTypeMap.other;
+                        return `<div class="task-type-card is-empty"><div><strong>${escapeHtml(type.icon)} ${escapeHtml(type.label)}</strong><span>0 个会话 / 0 条记录</span></div><span class="num">0</span><div class="track"><div class="fill active" style="width:0%"></div></div></div>`;
+                      }).join("")}
+                    </div>
+                  </details>
+                ` : ""}
               </div>
             </article>
             <article class="panel">
-              <div class="panel-head"><h2>高消耗任务样本</h2><span class="muted">可手动修正分类</span></div>
+              <div class="panel-head">
+                <div><h2>高消耗任务样本</h2><p class="muted">按当前排序展示最消耗 Token 的会话</p></div>
+                <select id="taskSortSelect" aria-label="任务样本排序">
+                  <option value="totalTokens">按 Token</option>
+                  <option value="activeTokens">按 active</option>
+                  <option value="timestamp">按时间</option>
+                </select>
+              </div>
               ${topRecords.length ? `
-                <div class="table-wrap">
+                <div class="table-wrap task-sample-wrap">
                   <table class="task-table">
-                    <thead><tr><th>日期</th><th>任务类型</th><th>模型</th><th>来源</th><th class="num">total</th><th>依据</th><th>修正</th></tr></thead>
+                    <thead><tr><th>日期</th><th>任务类型</th><th>模型</th><th>来源</th><th class="num">total</th><th>关键词</th><th>修正</th></tr></thead>
                     <tbody>
                       ${topRecords.map(record => {
                         const type = taskTypeMap[record.taskType] || taskTypeMap.other;
@@ -3337,6 +3576,7 @@
         </section>
       `;
       document.querySelector("#taskMetric").value = state.taskMetric;
+      document.querySelector("#taskSortSelect").value = state.taskSort;
     }
 
     function renderSettings(summary) {
@@ -3358,10 +3598,10 @@
                 <h2>设置 / 关于</h2>
                 <p class="muted">这个页面说明当前运行方式、隐私边界和开源展示口径。</p>
               </div>
-              <span class="badge">版本 0.4.1</span>
+              <span class="badge">版本 0.4.2</span>
             </div>
             <div class="settings-grid">
-              <div class="drop-card">
+              <div class="settings-card">
                 <strong>当前模式</strong>
                 <p>${escapeHtml(modeLabel)}</p>
                 <div class="privacy-list">
@@ -3370,15 +3610,16 @@
                   <span>最后更新：${escapeHtml(formatDateTime(state.data?.updatedAt))}</span>
                 </div>
               </div>
-              <div class="drop-card">
+              <div class="settings-card">
                 <strong>隐私安全</strong>
                 <div class="privacy-list">
+                  <span>数据只在浏览器本地处理，公开版默认使用示例数据。</span>
+                  <span>不会自动上传 sessions 或原始对话内容。</span>
                   <span>本地 Node 模式只监听本机或你配置的地址。</span>
-                  <span>公开静态版不会自动读取电脑文件，必须手动选择或导入。</span>
-                  <span>脱敏快照默认隐藏完整路径、完整 session id 和原始对话。</span>
+                  <span>脱敏快照隐藏完整路径和 session id。</span>
                 </div>
               </div>
-              <div class="drop-card">
+              <div class="settings-card">
                 <strong>今日状态卡</strong>
                 <div class="privacy-list">
                   <span>时间来自浏览器本机时钟。</span>
@@ -3386,7 +3627,7 @@
                   <span>天气未接入外部 API，所以不会向第三方发送位置。</span>
                 </div>
               </div>
-              <div class="drop-card">
+              <div class="settings-card">
                 <strong>任务复盘</strong>
                 <div class="privacy-list">
                   <span>任务类型是规则识别，仅供参考。</span>
@@ -3394,14 +3635,24 @@
                   <span>手动修正只保存在本浏览器 localStorage，不会影响原始 usage-index。</span>
                 </div>
               </div>
-            </div>
-          </article>
-          <article class="panel">
-            <div class="panel-head"><h2>数据口径</h2><span class="muted">真实 / 估算必须分开看</span></div>
-            <div class="content-grid">
-              <div class="mini-stat"><span>真实记录</span><strong>${formatInt(Math.max(summary.records - summary.estimatedRecords, 0))}</strong></div>
-              <div class="mini-stat"><span>估算记录</span><strong>${formatInt(summary.estimatedRecords)}</strong></div>
-              <div class="mini-stat"><span>active tokens</span><strong>${formatToken(summary.activeTokens)}</strong></div>
+              <div class="settings-card">
+                <strong>数据路径</strong>
+                <div class="privacy-list">
+                  <span>真实记录：${formatInt(Math.max(summary.records - summary.estimatedRecords, 0))}</span>
+                  <span>估算记录：${formatInt(summary.estimatedRecords)}</span>
+                  <span>active tokens：${formatToken(summary.activeTokens)}</span>
+                  <span>数据来源：${escapeHtml(sourceLabel)}</span>
+                </div>
+              </div>
+              <div class="settings-card">
+                <strong>项目信息</strong>
+                <p>作者：车辆研究生笔记</p>
+                <div class="privacy-list">
+                  <span>项目：Codex Token 用量看板</span>
+                  <span>定位：本地优先的 AI 使用账本</span>
+                  <span>开源展示：支持 Netlify 静态演示版</span>
+                </div>
+              </div>
             </div>
           </article>
         </section>
@@ -3557,7 +3808,7 @@
           <div class="panel-head">
             <div>
               <h2>明细表</h2>
-              <p class="muted">${formatInt(records.length)} 条记录 / 按 ${sortLabels[state.sortKey] || state.sortKey} ${state.sortDir === "desc" ? "降序" : "升序"}</p>
+              <p class="muted">当前 ${formatInt(records.length)} 条 / 已选 ${formatInt(state.selectedIds.size)} 条 / 按 ${sortLabels[state.sortKey] || state.sortKey} ${state.sortDir === "desc" ? "降序" : "升序"}</p>
             </div>
             <div class="table-actions">
               <select id="sortSelect" aria-label="排序方式">
@@ -3578,8 +3829,8 @@
                 <option value="100">每页 100 条</option>
               </select>
               <button class="btn compact" id="invertPageBtn" type="button">反选当前页</button>
-              <button class="btn compact" id="exportSelectedCsvBtn" type="button">导出选中 CSV</button>
-              <button class="btn compact" id="exportSelectedJsonBtn" type="button">导出选中 JSON</button>
+              <button class="btn compact" id="exportSelectedCsvBtn" type="button">选中 CSV</button>
+              <button class="btn compact" id="exportSelectedJsonBtn" type="button">选中 JSON</button>
             </div>
           </div>
           ${renderSelectedSummary()}
@@ -3628,7 +3879,7 @@
       const expanded = state.expandedIds.has(record.id);
       const hitRate = percent(record.cachedInputTokens, record.inputTokens, 1);
       return `
-        <tr class="data-row" data-row-id="${record.id}">
+        <tr class="data-row ${state.selectedIds.has(record.id) ? "selected" : ""}" data-row-id="${record.id}">
           <td><input class="row-select" data-select-id="${record.id}" type="checkbox" ${state.selectedIds.has(record.id) ? "checked" : ""}></td>
           <td title="${escapeHtml(record.timestamp || "")}">${escapeHtml(record.date || "未知")}</td>
           <td>${sourceBadge(record.source)}</td>
@@ -3786,7 +4037,7 @@
       const summary = summarize(safeRecords.map(record => ({ ...record, activeTokens: activeTokens(record), uncachedInputTokens: uncachedInputTokens(record), hitRate: cacheHitRateOf(record) })));
       return {
         snapshotVersion: 1,
-        appVersion: "0.4.1",
+        appVersion: "0.4.2",
         generatedAt: new Date().toISOString(),
         privacy: {
           anonymized: true,
@@ -3911,7 +4162,7 @@
       });
     });
 
-    [els.sourceFilter, els.modelFilter, els.searchInput, els.estimateFilter].forEach(input => input.addEventListener("input", () => {
+    [els.sourceFilter, els.modelFilter, els.taskTypeFilter, els.searchInput, els.estimateFilter].forEach(input => input.addEventListener("input", () => {
       state.page = 1;
       loadUsage();
     }));
@@ -3929,10 +4180,18 @@
     document.querySelector("#clearFiltersBtn").addEventListener("click", () => {
       clearFilters();
     });
+    document.querySelector("#advancedFiltersBtn").addEventListener("click", () => {
+      state.overviewAdvanced = !state.overviewAdvanced;
+      syncFilterPresentation();
+    });
+    els.statusToggleBtn.addEventListener("click", () => {
+      els.statusDrawer.classList.toggle("show");
+    });
 
     function clearFilters() {
       els.sourceFilter.value = "all";
       els.modelFilter.value = "all";
+      els.taskTypeFilter.value = "all";
       els.searchInput.value = "";
       els.estimateFilter.value = "all";
       state.selectedIds.clear();
@@ -4056,6 +4315,11 @@
       }
       if (event.target.id === "taskMetric") {
         state.taskMetric = event.target.value;
+        renderTasks(summarize(state.records));
+        return;
+      }
+      if (event.target.id === "taskSortSelect") {
+        state.taskSort = event.target.value;
         renderTasks(summarize(state.records));
         return;
       }
@@ -4233,6 +4497,7 @@
 
     window.addEventListener("error", event => setStatus(event.message, "error"));
     window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", updateThemeState);
+    renderTaskOptions();
     setTheme(localStorage.getItem("codexTokenTheme") || "system");
     restoreSavedSessionsDirectory({ silent: true });
     applyRange("7d");

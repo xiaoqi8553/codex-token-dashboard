@@ -130,6 +130,7 @@ async function collectChecks(page, pageInfo, viewport) {
     const charts = ["#trendChart", "#ratioChart", "#cacheTrendChart"]
       .map(selector => ({ selector, rect: rectOf(selector), visible: visible(document.querySelector(selector)), text: document.querySelector(selector)?.textContent.trim() || "" }));
     const filters = {
+      visible: visible(document.querySelector(".filters")),
       from: rectOf(".filter-row.primary .date-field"),
       source: rectOf("#sourceFilter"),
       model: rectOf("#modelFilter"),
@@ -159,10 +160,14 @@ async function collectChecks(page, pageInfo, viewport) {
   if (result.overflowCards) failures.push(`${result.overflowCards} major cards overflow viewport`);
   if (!/Inter|PingFang|Microsoft YaHei|Noto Sans SC|Segoe UI|sans-serif/i.test(result.bodyFont)) failures.push(`unexpected body font: ${result.bodyFont}`);
 
-  if (viewport.width >= 1000) {
+  if (viewport.width >= 1000 && result.filters.visible && ["calendar", "tasks", "details"].includes(pageInfo.view)) {
     if ((result.filters.from?.width || 0) < 150) failures.push("date filter is too narrow");
+  }
+  if (viewport.width >= 1000 && result.filters.visible && ["tasks", "details"].includes(pageInfo.view)) {
     if ((result.filters.source?.width || 0) < 130) failures.push("source filter is too narrow");
     if ((result.filters.model?.width || 0) < 130) failures.push("model filter is too narrow");
+  }
+  if (viewport.width >= 1000 && result.filters.visible && pageInfo.view === "details") {
     if ((result.filters.search?.width || 0) < 300) failures.push("search input is too narrow");
   }
 

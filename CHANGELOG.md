@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.4.2 - 2026-06-02
+
+- Simplified the dashboard header so it focuses on the product name, mode, update time, status details, and core data actions.
+- Moved author and deeper status context into Settings/About instead of repeating it in the header.
+- Reworked page-specific filters so Overview, AI Calendar, Task Review, Detail Table, and Settings use different filter density.
+- Changed long-lived success notices into toast messages and reduced the estimated-data warning into a compact badge.
+- Improved the AI Calendar with a complete 90-day heatmap matrix, clearer tooltip data, larger legend, and explicit click-to-drilldown empty states.
+- Improved Task Review hierarchy, keyword classification, task summaries, non-empty type priority, folded empty types, and sample sorting.
+- Refined Detail Table and Settings/About visual hierarchy, table readability, selected-row states, and formal settings cards.
+- Reduced visual noise by softening the page grid and normalizing source colors, badges, card spacing, and responsive breakpoints.
+
 ## 0.4.1 - 2026-06-02
 
 - Added `docs/UI_ACCEPTANCE.md` with page-level visual standards, failure rules, and the required visual report template.
