@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.4.3 - 2026-06-02
+
+- Tightened the dashboard density by reducing header height, card padding, oversized status blocks, and the desktop wrapping breakpoint.
+- Rebuilt the Overview first screen around one Today Status card plus compact core metrics, removing duplicate daily cards, the overview Top Sessions panel, and the Next Steps panel.
+- Changed Overview model statistics into a compact ranked list so the lower overview area no longer leaves large blank panels.
+- Fixed the Today Status location button by adding the missing click handler for the overview status area.
+- Fixed AI Calendar scope so its 90-day heatmap uses the date-range-independent calendar record set while preserving source/model/search/estimate filters.
+- Renamed the calendar "monthly active days" stat to range active days to avoid implying older May usage was missing when the current month is June.
+- Centered the AI Calendar heatmap matrix and kept empty dates visible as low-emphasis cells.
+- Reworked Task Review type cards into a stable grid with empty categories shown as muted cards instead of a collapsible block.
+- Fixed a 1366px horizontal overflow in the input/output/cache ratio legend with a dedicated compact legend layout.
+
 ## 0.4.2 - 2026-06-02
 
 - Simplified the dashboard header so it focuses on the product name, mode, update time, status details, and core data actions.

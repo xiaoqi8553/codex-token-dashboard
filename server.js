@@ -758,6 +758,10 @@ function apiUsage(url) {
   const index = buildIndex();
   const query = Object.fromEntries(url.searchParams.entries());
   const records = filterRecords(index.records, query);
+  const calendarQuery = { ...query };
+  delete calendarQuery.from;
+  delete calendarQuery.to;
+  const calendarRecords = filterRecords(index.records, calendarQuery);
   const summary = summarize(records);
   const models = Array.from(new Set(index.records.map(record => record.model))).sort();
 
@@ -777,6 +781,7 @@ function apiUsage(url) {
     filters: query,
     models,
     summary,
+    calendarRecords,
     records
   });
 }
@@ -801,7 +806,8 @@ function sanitizePayload(payload) {
     ...payload,
     sessionsDir: "[hidden]",
     indexPath: "[hidden]",
-    records: Array.isArray(payload.records) ? payload.records.map(sanitizeRecord) : payload.records
+    records: Array.isArray(payload.records) ? payload.records.map(sanitizeRecord) : payload.records,
+    calendarRecords: Array.isArray(payload.calendarRecords) ? payload.calendarRecords.map(sanitizeRecord) : payload.calendarRecords
   };
 }
 

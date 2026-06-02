@@ -33,7 +33,7 @@
       --shadow: 0 16px 42px rgba(25, 36, 52, .08);
       --shadow-soft: 0 8px 22px rgba(25, 36, 52, .06);
       --radius: 10px;
-      --grid-alpha: .045;
+      --grid-alpha: .026;
     }
 
     @media (prefers-color-scheme: dark) {
@@ -109,9 +109,9 @@
     .app {
       width: min(1760px, 100%);
       margin: 0 auto;
-      padding: 18px;
+      padding: 14px;
       display: grid;
-      gap: 14px;
+      gap: 10px;
     }
 
     .shell {
@@ -122,7 +122,7 @@
     }
 
     .header {
-      padding: 12px 14px;
+      padding: 10px 12px;
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto;
       gap: 14px;
@@ -131,16 +131,16 @@
 
     .brand {
       display: grid;
-      grid-template-columns: 42px minmax(0, 1fr);
-      gap: 12px;
+      grid-template-columns: 36px minmax(0, 1fr);
+      gap: 10px;
       align-items: center;
       min-width: 0;
     }
 
     .brand-icon {
-      width: 42px;
-      height: 42px;
-      border-radius: 10px;
+      width: 36px;
+      height: 36px;
+      border-radius: 9px;
       display: grid;
       place-items: center;
       border: 1px solid var(--line-strong);
@@ -152,7 +152,7 @@
     }
 
     h1 {
-      font-size: clamp(26px, 2.1vw, 36px);
+      font-size: clamp(24px, 1.8vw, 32px);
       line-height: 1;
       letter-spacing: 0;
       font-weight: 820;
@@ -180,7 +180,7 @@
     }
 
     .meta {
-      margin-top: 7px;
+      margin-top: 5px;
       display: flex;
       gap: 8px;
       flex-wrap: wrap;
@@ -204,7 +204,7 @@
     }
 
     .status-drawer {
-      margin-top: 10px;
+      margin-top: 8px;
       display: none;
       grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 8px;
@@ -272,12 +272,12 @@
     }
 
     .btn, input, select {
-      min-height: 36px;
+      min-height: 34px;
       border: 1px solid var(--line);
       border-radius: 8px;
       background: var(--panel);
       color: var(--ink);
-      padding: 7px 10px;
+      padding: 6px 10px;
     }
 
     .btn {
@@ -572,19 +572,19 @@
     }
     .metrics {
       display: grid;
-      grid-template-columns: 1.45fr repeat(5, minmax(0, 1fr));
-      gap: 12px;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
     }
 
     .metric {
-      min-height: 148px;
+      min-height: 124px;
       border: 1px solid var(--line);
       border-radius: var(--radius);
       background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 96%, white), var(--panel));
       box-shadow: var(--shadow-soft);
-      padding: 15px;
+      padding: 12px;
       display: grid;
-      gap: 10px;
+      gap: 8px;
       align-content: space-between;
       min-width: 0;
       transition: border-color 140ms ease, transform 140ms ease, box-shadow 140ms ease;
@@ -638,7 +638,7 @@
     .icon.active { color: var(--active); }
 
     .metric-value {
-      font-size: clamp(34px, 3vw, 50px);
+      font-size: clamp(30px, 2.25vw, 42px);
       line-height: .95;
       font-weight: 860;
       letter-spacing: 0;
@@ -646,7 +646,7 @@
       white-space: nowrap;
     }
 
-    .metric:not(.hero) .metric-value { font-size: clamp(32px, 2.25vw, 42px); }
+    .metric:not(.hero) .metric-value { font-size: clamp(28px, 1.85vw, 36px); }
     .metric-note, .metric-update, .muted { color: var(--muted); font-size: 12px; line-height: 1.4; }
 
     .badge {
@@ -828,6 +828,21 @@
     .donut-center strong { font-size: 26px; line-height: 1; }
     .donut-center span { color: var(--muted); font-size: 11px; margin-top: 4px; }
 
+    .donut-row .bar-row {
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 6px 10px;
+    }
+
+    .donut-row .bar-row .track {
+      grid-column: 1 / -1;
+      grid-row: 2;
+      height: 12px;
+    }
+
+    .donut-row .bar-row .num {
+      font-size: 12px;
+    }
+
     .bars { display: grid; gap: 10px; }
     .bar-row {
       display: grid;
@@ -854,6 +869,40 @@
     .fill.relay { background: var(--relay); }
     .fill.unknown { background: var(--unknown); }
     .fill.active { background: var(--active); }
+
+    .model-rank {
+      display: grid;
+      gap: 8px;
+    }
+
+    .model-row {
+      display: grid;
+      grid-template-columns: 28px minmax(130px, .7fr) minmax(0, 1fr) 96px;
+      gap: 10px;
+      align-items: center;
+      min-width: 0;
+      font-size: 13px;
+    }
+
+    .model-row .rank {
+      width: 24px;
+      height: 24px;
+      display: inline-grid;
+      place-items: center;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: var(--panel-2);
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 820;
+    }
+
+    .model-row strong {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
 
     .num {
       text-align: right;
@@ -1137,8 +1186,8 @@
 
     .today-status {
       display: grid;
-      grid-template-columns: minmax(320px, .92fr) repeat(3, minmax(0, 1fr));
-      gap: 12px;
+      grid-template-columns: minmax(300px, .95fr) repeat(3, minmax(0, 1fr));
+      gap: 10px;
     }
 
     .today-card, .story-card, .calendar-stat, .task-type-card {
@@ -1146,14 +1195,14 @@
       border-radius: var(--radius);
       background: color-mix(in srgb, var(--panel) 96%, transparent);
       box-shadow: var(--shadow-soft);
-      padding: 14px;
+      padding: 12px;
       min-width: 0;
     }
 
     .today-card {
       display: grid;
-      gap: 12px;
-      min-height: 156px;
+      gap: 10px;
+      min-height: 126px;
       background:
         linear-gradient(135deg, color-mix(in srgb, var(--official) 12%, transparent), transparent 42%),
         color-mix(in srgb, var(--panel) 96%, transparent);
@@ -1167,7 +1216,7 @@
     }
 
     .today-clock strong {
-      font-size: clamp(30px, 3.4vw, 52px);
+      font-size: clamp(28px, 2.45vw, 42px);
       line-height: .95;
       font-weight: 780;
       font-variant-numeric: tabular-nums;
@@ -1183,31 +1232,27 @@
       border: 1px solid var(--line);
       border-radius: 8px;
       background: var(--panel-2);
-      padding: 9px;
+      padding: 8px;
       min-width: 0;
     }
 
     .mini-stat span, .story-card span, .calendar-stat span, .task-type-card span {
       display: block;
       color: var(--muted);
-      font-size: 12px;
+      font-size: 11px;
       line-height: 1.35;
     }
 
     .mini-stat strong, .story-card strong, .calendar-stat strong {
       display: block;
       margin-top: 2px;
-      font-size: 20px;
+      font-size: 18px;
       line-height: 1.15;
       font-weight: 820;
       font-variant-numeric: tabular-nums;
     }
 
-    .story-grid {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 12px;
-    }
+    .story-grid { display: none; }
 
     .story-card {
       display: grid;
@@ -1226,26 +1271,26 @@
     .content-grid {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 12px;
+      gap: 10px;
     }
 
     .calendar-page, .tasks-page, .settings-page {
       display: grid;
-      gap: 12px;
+      gap: 10px;
     }
 
     .calendar-toolbar, .task-toolbar {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
       flex-wrap: wrap;
     }
 
     .calendar-stats, .task-stats {
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 12px;
+      gap: 10px;
     }
 
     .calendar-heatmap {
@@ -1264,6 +1309,8 @@
       grid-template-columns: repeat(var(--calendar-weeks, 5), 18px);
       gap: 6px;
       min-width: max-content;
+      justify-content: center;
+      margin: 0 auto;
     }
 
     .calendar-cell {
@@ -1311,18 +1358,19 @@
 
     .day-detail-grid {
       display: grid;
-      grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr);
-      gap: 12px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
     }
 
     .task-layout {
       display: grid;
-      grid-template-columns: minmax(360px, .72fr) minmax(0, 1.28fr);
-      gap: 12px;
+      grid-template-columns: minmax(420px, .9fr) minmax(0, 1.1fr);
+      gap: 10px;
     }
 
     .task-type-grid {
       display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 10px;
     }
 
@@ -1344,14 +1392,14 @@
 
     .task-type-card strong {
       display: block;
-      font-size: 16px;
+      font-size: 14px;
       margin-bottom: 3px;
     }
 
     .task-type-card .track { grid-column: 1 / -1; }
 
     .task-sample-wrap {
-      max-height: 520px;
+      max-height: 460px;
     }
 
     .page-title {
@@ -1555,13 +1603,17 @@
     .toast.show { opacity: 1; transform: translateY(0); }
 
     @media (max-width: 1500px) {
-      .header { grid-template-columns: 1fr; align-items: start; }
-      .toolbar { justify-content: start; }
-      .metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-      .charts, .content-grid, .task-layout, .day-detail-grid, .settings-grid { grid-template-columns: 1fr; }
-      .calendar-stats, .task-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .filter-row.primary .date-field { flex-basis: 196px; }
       .filter-row.primary select { flex-basis: 150px; }
+    }
+
+    @media (max-width: 1180px) {
+      .header { grid-template-columns: 1fr; align-items: start; }
+      .toolbar { justify-content: start; }
+      .charts, .content-grid, .task-layout, .day-detail-grid, .settings-grid { grid-template-columns: 1fr; }
+      .metrics, .today-status { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .calendar-stats, .task-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .task-type-grid { grid-template-columns: 1fr; }
     }
 
     @media (max-width: 820px) {
@@ -1848,6 +1900,7 @@
       topLimit: 10,
       data: null,
       records: [],
+      calendarRecords: [],
       selectedIds: new Set(),
       expandedIds: new Set(),
       sortKey: "totalTokens",
@@ -2663,7 +2716,19 @@
       });
       payload.updatedAt = source.updatedAt;
       payload.models = Array.from(new Set(source.records.map(record => record.model || "unknown"))).sort();
+      payload.calendarRecords = filteredStaticCalendarRecords(source.records);
       return payload;
+    }
+
+    function filteredStaticCalendarRecords(sourceRecords) {
+      let records = [...(sourceRecords || [])];
+      if (els.sourceFilter.value !== "all") records = records.filter(record => record.source === els.sourceFilter.value);
+      if (els.modelFilter.value !== "all") records = records.filter(record => record.model === els.modelFilter.value);
+      if (els.searchInput.value.trim()) {
+        const search = els.searchInput.value.trim().toLowerCase();
+        records = records.filter(record => [record.sessionId, record.model, record.relativePath, record.sessionTitle].join(" ").toLowerCase().includes(search));
+      }
+      return records;
     }
 
     function cacheStaticPayload(payload) {
@@ -2741,6 +2806,7 @@
       state.staticReadOnly = Boolean(payload.readOnly);
       state.staticSourceType = payload.sourceType || "import";
       state.records = applyClientFilters(payload.records);
+      state.calendarRecords = applyClientFilters(payload.calendarRecords || payload.records);
       pruneSelection();
       renderModelOptions(payload.models || []);
       render(payload);
@@ -2797,6 +2863,7 @@
         state.data = payload;
         const rawRecords = Array.isArray(payload.records) ? payload.records : [];
         state.records = applyClientFilters(rawRecords);
+        state.calendarRecords = applyClientFilters(Array.isArray(payload.calendarRecords) ? payload.calendarRecords : rawRecords);
         pruneSelection();
         renderModelOptions(payload.models || []);
         render(payload);
@@ -2960,8 +3027,8 @@
       els.estimateNotice.classList.toggle("show", summary.estimatedRecords > 0);
       toggleOverviewSections(state.view === "overview");
       if (state.view === "overview") {
-        renderTodayStatus(summary);
-        renderStoryCards(summary);
+        renderTodayStatus(summary, updated);
+        els.storyCards.innerHTML = "";
         renderMetrics(summary, updated);
         renderTrend(summary.byDay);
         renderRatio(summary);
@@ -2974,8 +3041,9 @@
       document.querySelectorAll(".overview-only").forEach(element => element.classList.toggle("hidden", !show));
     }
 
-    function metricCard({ title, value, summary, updated, note, icon, hero = false, colorClass = "" }) {
+    function metricCard({ title, value, displayValue = "", summary, updated, note, icon, hero = false, colorClass = "" }) {
       const unknown = !summary.records && title !== "会话数";
+      const mainValue = displayValue || formatToken(value);
       return `
         <article class="metric ${hero ? "hero" : ""}">
           <div class="metric-top">
@@ -2983,7 +3051,7 @@
             <span class="icon ${colorClass}">${icon}</span>
           </div>
           <div>
-            <div class="metric-value" title="${formatInt(value)}">${formatToken(value)}</div>
+            <div class="metric-value" title="${escapeHtml(displayValue || formatInt(value))}">${escapeHtml(mainValue)}</div>
             <div class="metric-note">${note || "当前筛选区间"}</div>
           </div>
           <div class="metric-foot">
@@ -2997,16 +3065,11 @@
     }
 
     function renderMetrics(summary, updated) {
-      const official = groupByKey(summary.bySource, "official_plus");
-      const relay = groupByKey(summary.bySource, "relay");
-      const avg = summary.byDay.length ? summary.totalTokens / summary.byDay.length : 0;
       els.metrics.innerHTML = [
-        metricCard({ title: "总 Token", value: summary.totalTokens, summary, updated, hero: true, icon: "Σ", note: `${formatInt(summary.records)} 条记录 / ${summary.sessionCount} 个会话 / 日均 ${formatToken(avg)}` }),
-        metricCard({ title: "官方 Plus Token", value: official.totalTokens, summary: official, updated, icon: "P", colorClass: "official", note: `占总量 ${percent(official.totalTokens, summary.totalTokens)}% / ${official.sessions} 个会话` }),
-        metricCard({ title: "中转站 Token", value: relay.totalTokens, summary: relay, updated, icon: "R", colorClass: "relay", note: `占总量 ${percent(relay.totalTokens, summary.totalTokens)}% / ${relay.sessions} 个会话` }),
         metricCard({ title: "缓存输入 Token", value: summary.cachedInputTokens, summary, updated, icon: "C", colorClass: "cache", note: `缓存命中率 ${percent(summary.cachedInputTokens, summary.inputTokens, 1)}%` }),
-        metricCard({ title: "输出 Token", value: summary.outputTokens, summary, updated, icon: "O", colorClass: "output", note: `占总量 ${percent(summary.outputTokens, summary.totalTokens)}% / active ${formatToken(summary.activeTokens)}` }),
-        metricCard({ title: "会话数", value: summary.sessionCount, summary, updated, icon: "#", colorClass: "active", note: `${formatInt(summary.records)} 条 usage 记录` })
+        metricCard({ title: "输出 Token", value: summary.outputTokens, summary, updated, icon: "O", colorClass: "output", note: `占总量 ${percent(summary.outputTokens, summary.totalTokens)}%` }),
+        metricCard({ title: "active tokens", value: summary.activeTokens, summary, updated, icon: "A", colorClass: "active", note: "未缓存输入 + 输出" }),
+        metricCard({ title: "缓存命中率", value: percent(summary.cachedInputTokens, summary.inputTokens, 1), displayValue: `${percent(summary.cachedInputTokens, summary.inputTokens, 1)}%`, summary, updated, icon: "%", colorClass: "cache", note: `${formatToken(summary.cachedInputTokens)} / ${formatToken(summary.inputTokens)}` })
       ].join("");
     }
 
@@ -3014,13 +3077,15 @@
       return days.filter(day => day.date >= from && day.date <= to).reduce((sum, day) => sum + day.totalTokens, 0);
     }
 
-    function renderTodayStatus(summary) {
+    function renderTodayStatus(summary, updated) {
       const now = new Date();
       const today = todayString();
       const day = summary.byDay.find(item => item.date === today) || finalizeGroup(emptyGroup({ date: today }));
       const weekday = now.toLocaleDateString("zh-CN", { weekday: "long" });
       const clock = now.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false });
       const location = state.locationLabel || "未授权定位";
+      const official = groupByKey(summary.bySource, "official_plus");
+      const relay = groupByKey(summary.bySource, "relay");
       els.todayStatus.innerHTML = `
         <article class="today-card">
           <div class="today-clock">
@@ -3041,9 +3106,9 @@
             <button class="btn compact" data-action="request-location" type="button">授权定位</button>
           </div>
         </article>
-        ${renderMiniStory("本日会话", `${formatInt(day.sessions || 0)} 个`, `${formatInt(day.records || 0)} 条 usage 记录`, "◎")}
-        ${renderMiniStory("本日来源", todaySourceNote(day), sourceLabels[(day.bySource || []).sort((a, b) => b.totalTokens - a.totalTokens)[0]?.key] || "暂无数据", "▦")}
-        ${renderMiniStory("本日质量", `${day.estimatedRecords ? "含估算" : "真实统计"}`, `${formatInt(day.estimatedRecords || 0)} 条估算记录`, "◇")}
+        ${metricCard({ title: "总 Token", value: summary.totalTokens, summary, updated, hero: true, icon: "T", note: `${formatInt(summary.records)} 条记录 / ${summary.sessionCount} 个会话` })}
+        ${metricCard({ title: "官方 Plus", value: official.totalTokens, summary: official, updated, icon: "P", colorClass: "official", note: `占总量 ${percent(official.totalTokens, summary.totalTokens)}% / ${official.sessions} 个会话` })}
+        ${metricCard({ title: "中转站", value: relay.totalTokens, summary: relay, updated, icon: "R", colorClass: "relay", note: `占总量 ${percent(relay.totalTokens, summary.totalTokens)}% / ${relay.sessions} 个会话` })}
       `;
     }
 
@@ -3277,7 +3342,7 @@
     }
 
     function renderView(summary) {
-      if (state.view === "calendar") return renderCalendar(summary);
+      if (state.view === "calendar") return renderCalendar(summarize(state.calendarRecords.length ? state.calendarRecords : state.records));
       if (state.view === "tasks") return renderTasks(summary);
       if (state.view === "details") return renderDetails();
       if (state.view === "settings") return renderSettings(summary);
@@ -3364,8 +3429,6 @@
       const weeks = Math.max(1, Math.ceil(calendarCells.length / 7));
       const selected = state.selectedCalendarDay && days.find(day => day.date === state.selectedCalendarDay) ? state.selectedCalendarDay : "";
       const selectedDay = selected ? days.find(day => day.date === selected) : null;
-      const monthPrefix = todayString().slice(0, 7);
-      const monthActive = days.filter(day => day.date.startsWith(monthPrefix) && day.totalTokens > 0).length;
       els.viewPanel.innerHTML = `
         <section class="calendar-page">
           <article class="panel">
@@ -3384,7 +3447,7 @@
             </div>
             <div class="calendar-stats">
               <div class="calendar-stat"><span>连续使用天数</span><strong>${formatInt(consecutiveActiveDays(days))} 天</strong></div>
-              <div class="calendar-stat"><span>本月活跃天</span><strong>${formatInt(monthActive)} 天</strong></div>
+              <div class="calendar-stat"><span>范围活跃天</span><strong>${formatInt(activeDays.length)} 天</strong></div>
               <div class="calendar-stat"><span>峰值日期</span><strong>${escapeHtml(peakDay.date)} / ${calendarValueLabel(values[peakIndex], metric)}</strong></div>
               <div class="calendar-stat"><span>日均 Token</span><strong>${formatToken(summary.byDay.length ? summary.totalTokens / summary.byDay.length : 0)}</strong></div>
             </div>
@@ -3474,6 +3537,7 @@
       const max = Math.max(...taskGroups.map(group => taskMetricValue(group, state.taskMetric)), 1);
       const activeGroups = taskGroups.filter(group => group.records > 0);
       const emptyGroups = taskGroups.filter(group => !group.records);
+      const displayGroups = [...activeGroups, ...emptyGroups];
       const recognizedSessions = activeGroups.filter(group => group.taskType !== "other").reduce((sum, group) => sum + group.sessions, 0);
       const unknownSessions = groupByKey(activeGroups, "other").sessions || 0;
       const manualRecords = state.records.filter(record => record.taskConfidence === "manual").length;
@@ -3511,28 +3575,18 @@
             <article class="panel">
               <div class="panel-head"><h2>任务类型分布</h2><span class="muted">${taskMetricLabel(state.taskMetric)}</span></div>
               <div class="task-type-grid">
-                ${activeGroups.map(group => {
+                ${displayGroups.map(group => {
                   const type = taskTypeMap[group.taskType] || taskTypeMap.other;
                   const value = taskMetricValue(group, state.taskMetric);
+                  const isEmpty = !group.records;
                   return `
-                    <div class="task-type-card">
+                    <div class="task-type-card ${isEmpty ? "is-empty" : ""}">
                       <div><strong>${escapeHtml(type.icon)} ${escapeHtml(type.label)}</strong><span>${formatInt(group.sessions)} 个会话 / ${formatInt(group.records)} 条记录 / 占比 ${percent(group.totalTokens, summary.totalTokens, 1)}%</span></div>
                       <span class="num" title="${formatInt(value)}">${state.taskMetric === "sessions" || state.taskMetric === "records" ? formatInt(value) : formatToken(value)}</span>
                       <div class="track"><div class="fill active" style="width:${percent(value, max, 1)}%"></div></div>
                     </div>
                   `;
                 }).join("")}
-                ${emptyGroups.length ? `
-                  <details>
-                    <summary class="muted">其他任务类型（${emptyGroups.length} 个暂无数据）</summary>
-                    <div class="task-type-grid compact" style="margin-top:10px">
-                      ${emptyGroups.map(group => {
-                        const type = taskTypeMap[group.taskType] || taskTypeMap.other;
-                        return `<div class="task-type-card is-empty"><div><strong>${escapeHtml(type.icon)} ${escapeHtml(type.label)}</strong><span>0 个会话 / 0 条记录</span></div><span class="num">0</span><div class="track"><div class="fill active" style="width:0%"></div></div></div>`;
-                      }).join("")}
-                    </div>
-                  </details>
-                ` : ""}
               </div>
             </article>
             <article class="panel">
@@ -3598,7 +3652,7 @@
                 <h2>设置 / 关于</h2>
                 <p class="muted">这个页面说明当前运行方式、隐私边界和开源展示口径。</p>
               </div>
-              <span class="badge">版本 0.4.2</span>
+              <span class="badge">版本 0.4.3</span>
             </div>
             <div class="settings-grid">
               <div class="settings-card">
@@ -3660,20 +3714,7 @@
     }
 
     function renderOverview(summary) {
-      const peak = summary.byDay.reduce((best, day) => !best || day.totalTokens > best.totalTokens ? day : best, null);
-      const today = summary.byDay.find(day => day.date === todayString()) || finalizeGroup(emptyGroup({ date: todayString() }));
-      const last7Start = todayString(-6);
-      const last7 = summary.byDay.filter(day => day.date >= last7Start && day.date <= todayString()).reduce((sum, day) => sum + day.totalTokens, 0);
-      const avg = summary.byDay.length ? summary.totalTokens / summary.byDay.length : 0;
-      const topRecords = [...state.records].sort((a, b) => b.totalTokens - a.totalTokens).slice(0, 10);
-      const cards = [
-        ["日均 Token", formatToken(avg), `${summary.byDay.length || 0} 天平均值`],
-        ["峰值日期", peak ? peak.date : "未知", peak ? formatToken(peak.totalTokens) : "无数据"],
-        ["今日 Token", formatToken(today.totalTokens), today.records ? `${today.records} 条记录` : "今天暂无记录"],
-        ["最近 7 天 Token", formatToken(last7), `${last7Start} 至 ${todayString()}`],
-        ["active tokens", formatToken(summary.activeTokens), "uncached input + output"],
-        ["缓存命中率", `${percent(summary.cachedInputTokens, summary.inputTokens, 1)}%`, `${formatToken(summary.cachedInputTokens)} / ${formatToken(summary.inputTokens)}`]
-      ];
+      const modelMax = summary.byModel[0]?.totalTokens || 1;
       els.viewPanel.innerHTML = `
         <section class="content-grid">
           <article class="panel">
@@ -3700,51 +3741,16 @@
             </div>
           </article>
           <article class="panel">
-            <div class="panel-head"><h2>关键指标</h2><span class="muted">更适合快速判断</span></div>
-            <div class="bars">
-              ${cards.map(([label, value, note]) => `
-                <div class="bar-row">
-                  <strong>${label}</strong>
-                  <div class="track"><div class="fill active" style="width:100%"></div></div>
-                  <span class="num" title="${escapeHtml(note)}">${escapeHtml(value)}</span>
-                </div>
-              `).join("")}
-            </div>
-          </article>
-        </section>
-        <section class="content-grid">
-          <article class="panel">
-            <div class="panel-head"><h2>Top 会话</h2><span class="muted">当前筛选前 10</span></div>
-            ${topRecords.length ? `
-              <div class="bars">
-                ${topRecords.map(record => `
-                  <button class="bar-row btn ghost" data-open-detail="${record.id}" type="button" style="grid-template-columns: minmax(120px, 180px) minmax(0, 1fr) 120px">
-                    <strong title="${escapeHtml(record.sessionId)}">${escapeHtml(compactId(record.sessionId))}</strong>
-                    <div class="track"><div class="fill ${record.source || "unknown"}" style="width:${percent(record.totalTokens, topRecords[0]?.totalTokens || 1, 1)}%"></div></div>
-                    <span class="num" title="${formatInt(record.totalTokens)}">${formatToken(record.totalTokens)}</span>
-                  </button>
-                `).join("")}
-              </div>
-            ` : emptyState("暂无 Top 会话数据。")}
-          </article>
-          <article class="panel">
             <div class="panel-head"><h2>按模型统计</h2><span class="muted">${formatInt(summary.byModel.length)} 个模型</span></div>
-            <div class="bars">
-              ${summary.byModel.slice(0, 8).map(model => `
-                <div class="bar-row">
+            <div class="model-rank">
+              ${summary.byModel.slice(0, 6).map((model, index) => `
+                <div class="model-row">
+                  <span class="rank">${index + 1}</span>
                   <strong title="${escapeHtml(model.model || "未知")}">${escapeHtml(model.model || "未知")}</strong>
-                  <div class="track"><div class="fill official_plus" style="width:${percent(model.totalTokens, summary.byModel[0]?.totalTokens || 1, 1)}%"></div></div>
+                  <div class="track"><div class="fill official_plus" style="width:${percent(model.totalTokens, modelMax, 1)}%"></div></div>
                   <span class="num" title="${formatInt(model.totalTokens)}">${formatToken(model.totalTokens)}</span>
                 </div>
               `).join("") || emptyState("暂无模型统计数据。")}
-            </div>
-          </article>
-          <article class="panel">
-            <div class="panel-head"><h2>下一步建议</h2><span class="muted">基于当前数据</span></div>
-            <div class="privacy-list">
-              <span>1. 如果估算记录较多，优先查看明细表里的“估算” badge，避免把估算当作精确 usage。</span>
-              <span>2. 如果 active tokens 高但缓存命中率低，说明上下文复用效果可能不够好。</span>
-              <span>3. 任务复盘页可以帮你找出 Token 主要花在写代码、调试、部署还是文档上。</span>
             </div>
           </article>
         </section>
@@ -4037,7 +4043,7 @@
       const summary = summarize(safeRecords.map(record => ({ ...record, activeTokens: activeTokens(record), uncachedInputTokens: uncachedInputTokens(record), hitRate: cacheHitRateOf(record) })));
       return {
         snapshotVersion: 1,
-        appVersion: "0.4.2",
+        appVersion: "0.4.3",
         generatedAt: new Date().toISOString(),
         privacy: {
           anonymized: true,
@@ -4228,6 +4234,10 @@
       const button = event.target.closest("button[data-view]");
       if (button) setActiveView(button.dataset.view);
     });
+    els.todayStatus.addEventListener("click", event => {
+      const actionButton = event.target.closest("[data-action]");
+      if (actionButton) handlePanelAction(actionButton.dataset.action);
+    });
     els.trendChart.addEventListener("click", event => {
       const button = event.target.closest("[data-day]");
       if (!button) return;
@@ -4310,7 +4320,7 @@
     els.viewPanel.addEventListener("change", event => {
       if (event.target.id === "calendarMetric") {
         state.calendarMetric = event.target.value;
-        renderCalendar(summarize(state.records));
+        renderCalendar(summarize(state.calendarRecords.length ? state.calendarRecords : state.records));
         return;
       }
       if (event.target.id === "taskMetric") {
@@ -4328,6 +4338,7 @@
         state.taskOverrides[taskOverride.dataset.taskOverride] = taskOverride.value;
         saveTaskOverrides();
         state.records = state.records.map(enrichRecord);
+        state.calendarRecords = state.calendarRecords.map(enrichRecord);
         renderTasks(summarize(state.records));
         toast("任务分类已保存到浏览器本地");
         return;
