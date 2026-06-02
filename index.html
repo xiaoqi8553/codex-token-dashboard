@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Codex Token 用量</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23111827'/%3E%3Cpath d='M18 22l10 10-10 10' fill='none' stroke='%23f8fafc' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M32 43h14' stroke='%232f6fed' stroke-width='5' stroke-linecap='round'/%3E%3C/svg%3E">
   <style>
     :root {
       color-scheme: light;
@@ -1414,7 +1415,9 @@
 
     .toast.show { opacity: 1; transform: translateY(0); }
 
-    @media (max-width: 1360px) {
+    @media (max-width: 1500px) {
+      .header { grid-template-columns: 1fr; align-items: start; }
+      .toolbar { justify-content: start; }
       .metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
       .charts, .content-grid, .today-status, .story-grid, .task-layout, .day-detail-grid, .settings-grid { grid-template-columns: 1fr; }
       .calendar-stats, .task-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -1426,6 +1429,20 @@
       .app { padding: 10px; }
       .header { grid-template-columns: 1fr; align-items: start; }
       .toolbar { justify-content: start; }
+      .toolbar-group {
+        width: 100%;
+        flex-wrap: wrap;
+        align-items: flex-start;
+      }
+      .toolbar-group .segmented { flex: 1 1 220px; }
+      .toolbar-group .btn {
+        flex: 1 1 96px;
+        min-width: 88px;
+        white-space: normal;
+        line-height: 1.2;
+      }
+      .toolbar-group.theme-control .segmented { flex: 1 1 100%; }
+      .group-label { flex: 0 0 100%; }
       .metrics { grid-template-columns: 1fr; }
       .today-metrics, .calendar-stats, .task-stats { grid-template-columns: 1fr; }
       .static-panel.show { grid-template-columns: 1fr; }
@@ -1464,6 +1481,16 @@
       .filter-row { grid-template-columns: 1fr; }
       .filter-row.secondary #searchInput { grid-column: auto; }
       .filter-hint { white-space: normal; }
+      .bar-row {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 6px;
+      }
+      .bar-row .num { text-align: left; }
+      .bars .btn.ghost.bar-row {
+        grid-template-columns: minmax(0, 1fr) !important;
+        justify-items: stretch;
+      }
+      .calendar-heatmap { padding: 12px; }
       .cache-trend-wrap { padding: 14px 12px 10px; }
       .cache-plot { grid-template-columns: 50px minmax(0, 1fr); }
       .view-tabs.page-nav button { flex: 1 1 100%; justify-content: center; }
@@ -3331,7 +3358,7 @@
                 <h2>设置 / 关于</h2>
                 <p class="muted">这个页面说明当前运行方式、隐私边界和开源展示口径。</p>
               </div>
-              <span class="badge">版本 0.4.0</span>
+              <span class="badge">版本 0.4.1</span>
             </div>
             <div class="settings-grid">
               <div class="drop-card">
@@ -3759,7 +3786,7 @@
       const summary = summarize(safeRecords.map(record => ({ ...record, activeTokens: activeTokens(record), uncachedInputTokens: uncachedInputTokens(record), hitRate: cacheHitRateOf(record) })));
       return {
         snapshotVersion: 1,
-        appVersion: "0.4.0",
+        appVersion: "0.4.1",
         generatedAt: new Date().toISOString(),
         privacy: {
           anonymized: true,

@@ -7,7 +7,7 @@
 ![Codex Token Dashboard cover](screenshots/project-cover.svg)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-0f766e.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.4.0-111827.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.4.1-111827.svg)](CHANGELOG.md)
 [![Netlify Demo](https://img.shields.io/badge/demo-codetoken.netlify.app-2f6fed.svg)](https://codetoken.netlify.app/)
 
 ## 在线演示
@@ -64,6 +64,8 @@ npm start      # 启动本地看板
 npm run dev    # 启动本地看板
 npm run scan   # 只扫描并更新 data/usage-index.json
 npm run build  # 构建 Netlify 静态版到 dist/
+npm run visual:shot  # 生成 UI 验收截图
+npm run visual:test  # 生成截图并自动检查明显视觉问题
 ```
 
 ## 三种使用模式
@@ -109,6 +111,31 @@ npm run build  # 构建 Netlify 静态版到 dist/
 - **设置 / 关于**：展示当前模式、数据来源、隐私边界、定位和任务识别说明。
 
 今日状态卡中的定位必须由用户主动点击授权才会读取。项目没有接入天气 API，因此不会把位置信息发送给第三方天气服务。
+
+## UI 视觉验收
+
+视觉标准写在 [`docs/UI_ACCEPTANCE.md`](docs/UI_ACCEPTANCE.md)。
+
+每次改 UI 后建议执行：
+
+```bash
+npm run visual:shot
+npm run visual:test
+```
+
+脚本会启动本地页面，分别截取总览、AI 使用日历、任务复盘、明细表、设置 / 关于页面，并覆盖这些尺寸：
+
+- `1920x1080`
+- `1366x768`
+- `390x844`
+
+截图保存到：
+
+```text
+docs/screenshots/current/
+```
+
+这个目录默认被 `.gitignore` 排除，因为截图可能包含本地真实用量数据。
 
 ### 3. Netlify 静态演示版
 

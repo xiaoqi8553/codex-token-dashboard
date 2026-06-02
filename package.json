@@ -1,16 +1,21 @@
 {
   "name": "codex-token-dashboard",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "private": false,
   "description": "Local Codex token usage dashboard with official Plus and relay import support.",
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
     "scan": "node server.js --scan",
-    "build": "node scripts/build-static.js"
+    "build": "node scripts/build-static.js",
+    "visual:shot": "node scripts/visual-check.js --shot",
+    "visual:test": "node scripts/visual-check.js --test"
   },
   "engines": {
     "node": ">=18"
+  },
+  "devDependencies": {
+    "playwright": "^1.60.0"
   },
   "license": "MIT"
 }

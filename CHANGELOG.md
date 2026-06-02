@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.4.1 - 2026-06-02
+
+- Added `docs/UI_ACCEPTANCE.md` with page-level visual standards, failure rules, and the required visual report template.
+- Added Playwright-based `visual:shot` and `visual:test` scripts for screenshot capture and automated UI smoke checks.
+- Added screenshot output under `docs/screenshots/current/` and ignored it by default to avoid committing local usage data.
+- Fixed responsive overflow found during visual testing in the mobile toolbar and 1366px overview chart layout.
+- Added an inline SVG favicon to remove the browser 404 noise during visual checks.
+- Documented the visual acceptance workflow in README.
+
 ## 0.4.0 - 2026-06-02
 
 - Added page-level navigation for Overview, AI Usage Calendar, Task Review, Detail Table, and Settings/About.
