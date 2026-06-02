@@ -5,6 +5,17 @@ const root = path.resolve(__dirname, "..");
 const output = path.join(root, "sample-data", "demo-usage-index.json");
 const models = ["gpt-5-codex", "gpt-5-mini", "gpt-4.1", "claude-3.7-sonnet"];
 const sources = ["official_plus", "relay", "unknown"];
+const taskScenarios = [
+  { type: "coding", title: "实现 token dashboard feature", path: "sample-sessions/coding/dashboard-feature.jsonl" },
+  { type: "debug", title: "debug Netlify build error and API fallback", path: "sample-sessions/debug/netlify-error.log" },
+  { type: "frontend", title: "优化前端 UI 布局和暗色模式", path: "sample-sessions/frontend/ui-layout.jsonl" },
+  { type: "docs", title: "更新 README docs and changelog", path: "sample-sessions/docs/readme-update.txt" },
+  { type: "deploy", title: "部署 GitHub Netlify production build", path: "sample-sessions/deploy/netlify-production.jsonl" },
+  { type: "data", title: "分析 CSV JSON token chart 数据", path: "sample-sessions/data/token-analysis.jsonl" },
+  { type: "refactor", title: "refactor usage index parser structure", path: "sample-sessions/refactor/parser-cleanup.jsonl" },
+  { type: "planning", title: "制定 roadmap plan and architecture", path: "sample-sessions/planning/roadmap-plan.md" },
+  { type: "other", title: "临时会话和未识别上下文", path: "sample-sessions/misc/unknown-session.jsonl" }
+];
 const records = [];
 const base = new Date("2026-05-01T09:00:00.000Z");
 
@@ -21,6 +32,7 @@ for (let day = 0; day < 30; day += 1) {
   for (let index = 0; index < dailyRecords; index += 1) {
     const source = sources[(day + index) % sources.length];
     const model = models[(day * 2 + index) % models.length];
+    const scenario = taskScenarios[(day + index * 2) % taskScenarios.length];
     const timestamp = new Date(date);
     timestamp.setUTCHours(8 + (index * 2) % 12, (day * 7 + index * 11) % 60, 0, 0);
 
@@ -50,9 +62,10 @@ for (let day = 0; day < 30; day += 1) {
       estimateReason: estimated ? "demo_missing_usage_fields_text_length" : "",
       requestId: "",
       filePath: "",
-      relativePath: source === "relay" ? "sample-data/imports/demo-relay.csv" : `sample-sessions/${isoDate}/demo-session-${index + 1}.jsonl`,
+      relativePath: source === "relay" ? `sample-data/imports/demo-relay-${scenario.type}.csv` : `${scenario.path.replace("sample-sessions/", `sample-sessions/${isoDate}/`)}`,
       lineNumber: index + 1,
-      sessionTitle: `Demo ${source} ${model}`,
+      sessionTitle: `${scenario.title} (${source} / ${model})`,
+      taskType: scenario.type,
       detailText: "",
       imported: source === "relay",
       importBatch: source === "relay" ? "demo-relay.csv" : ""

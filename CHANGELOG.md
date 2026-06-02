@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.4.0 - 2026-06-02
+
+- Added page-level navigation for Overview, AI Usage Calendar, Task Review, Detail Table, and Settings/About.
+- Added a Today Status module with local time, current-day token usage, active tokens, cache hit rate, optional browser geolocation, and no external weather API calls.
+- Added dashboard story cards that summarize recent 7-day movement, peak usage day, source mix, and data quality.
+- Added an AI usage calendar heatmap with metric switching, hover tooltips, and click-to-filter day drilldown into the detail table.
+- Added rule-based task review for coding, debugging, frontend UI, docs, deployment, data analysis, refactoring, planning, and unknown tasks.
+- Added browser-local manual task classification overrides stored in `localStorage`.
+- Updated demo data generation with simulated task scenarios so the public Netlify demo exercises the new calendar and task review modules.
+- Updated README documentation for the new page structure, task review logic, and privacy behavior.
+
 ## 0.3.4 - 2026-06-01
 
 - Fixed flattened text in the cache hit rate trend by moving axis labels and date labels out of the non-uniformly scaled SVG.

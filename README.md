@@ -7,7 +7,7 @@
 ![Codex Token Dashboard cover](screenshots/project-cover.svg)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-0f766e.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.3.4-111827.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.4.0-111827.svg)](CHANGELOG.md)
 [![Netlify Demo](https://img.shields.io/badge/demo-codetoken.netlify.app-2f6fed.svg)](https://codetoken.netlify.app/)
 
 ## 在线演示
@@ -28,7 +28,9 @@
 - 支持官方 Plus、中转站、unknown 来源分开统计。
 - 缺少精确 usage 时按文本长度估算，并明确标记 `estimated: true`。
 - 支持中转站 CSV / JSON 导入。
-- 支持总览卡片、每日趋势、输入/输出/缓存占比、缓存命中率趋势、Top 会话、按模型统计。
+- 支持总览卡片、今日状态卡、每日趋势、输入/输出/缓存占比、缓存命中率趋势、Top 会话、按模型统计。
+- 支持 AI 使用日历，用热力图查看每日 Token、active tokens、输出、缓存命中率和记录数。
+- 支持任务复盘，用本地规则识别写代码、调试、前端 UI、文档、部署、数据分析、重构、项目规划等任务类型。
 - 明细表支持搜索、筛选、排序、分页、多选、选中导出 CSV / JSON。
 - 支持脱敏快照 JSON / HTML，适合公开分享。
 - 支持本地 Node 模式、浏览器导入模式、Netlify 静态演示版。
@@ -95,6 +97,18 @@ npm run build  # 构建 Netlify 静态版到 dist/
 文件通过浏览器 File API 在本地解析，不会自动上传。
 
 在 Chrome / Edge 等支持 File System Access API 的浏览器里，选择 `sessions` 文件夹后，页面会把文件夹授权句柄保存在浏览器 IndexedDB 中。下次打开同一个网址时会尝试恢复该文件夹；如果浏览器权限仍有效，点击“刷新”即可重新扫描。浏览器仍可能要求再次授权，这是浏览器安全策略。
+
+## 页面模块
+
+0.4.0 之后，看板按页面组织：
+
+- **总览**：大数字卡片、今日状态卡、数据故事、每日 Token 趋势、Token 构成、缓存命中率、Top 会话和模型统计。
+- **AI 使用日历**：类似 GitHub contribution graph 的热力图，可切换总 Token、active tokens、输出 Token、缓存命中率、记录数。点击日期会自动筛选明细表到当天。
+- **任务复盘**：基于本地规则识别任务类型，并统计各类任务消耗。识别结果仅供参考，用户可以在页面里手动修正，修正结果只保存在浏览器 `localStorage`。
+- **明细表**：逐条 usage 记录，支持排序、搜索、筛选、分页、多选和导出。
+- **设置 / 关于**：展示当前模式、数据来源、隐私边界、定位和任务识别说明。
+
+今日状态卡中的定位必须由用户主动点击授权才会读取。项目没有接入天气 API，因此不会把位置信息发送给第三方天气服务。
 
 ### 3. Netlify 静态演示版
 
@@ -189,6 +203,7 @@ source                   official_plus / relay / unknown
 model                    模型名
 sessionId                会话 ID
 timestamp                记录时间
+taskType                 前端规则识别或示例数据提供的任务类型
 ```
 
 真实统计来自明确 usage 字段，例如：
@@ -211,6 +226,8 @@ total_token_usage
 ```
 
 页面会显示“含估算”或“估算”，不会把估算数据伪装成真实统计。
+
+任务复盘的 `taskType` 不参与 token 数值计算，只用于前端分析和分组展示。公开示例数据会提供模拟 `taskType`，真实数据则优先通过本地规则从标题、路径、模型等字段识别；用户手动修正后只保存在当前浏览器。
 
 ## 中转站导入字段
 

@@ -1004,9 +1004,254 @@
       color: var(--panel);
     }
 
+    .view-tabs.page-nav {
+      position: sticky;
+      top: 8px;
+      z-index: 8;
+      align-items: center;
+      background:
+        linear-gradient(180deg, color-mix(in srgb, var(--panel) 94%, transparent), color-mix(in srgb, var(--panel-2) 88%, transparent));
+      backdrop-filter: blur(10px);
+    }
+
+    .view-tabs.page-nav button {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-weight: 760;
+    }
+
+    .view-tabs.page-nav button span {
+      display: inline-grid;
+      width: 22px;
+      height: 22px;
+      place-items: center;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: var(--panel-2);
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .view-tabs.page-nav button.active span {
+      border-color: rgba(255,255,255,.22);
+      background: rgba(255,255,255,.12);
+      color: inherit;
+    }
+
+    .today-status {
+      display: grid;
+      grid-template-columns: minmax(320px, .92fr) repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .today-card, .story-card, .calendar-stat, .task-type-card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: color-mix(in srgb, var(--panel) 96%, transparent);
+      box-shadow: var(--shadow-soft);
+      padding: 14px;
+      min-width: 0;
+    }
+
+    .today-card {
+      display: grid;
+      gap: 12px;
+      min-height: 156px;
+      background:
+        linear-gradient(135deg, color-mix(in srgb, var(--official) 12%, transparent), transparent 42%),
+        color-mix(in srgb, var(--panel) 96%, transparent);
+    }
+
+    .today-clock {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .today-clock strong {
+      font-size: clamp(30px, 3.4vw, 52px);
+      line-height: .95;
+      font-weight: 780;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .today-metrics {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .mini-stat {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel-2);
+      padding: 9px;
+      min-width: 0;
+    }
+
+    .mini-stat span, .story-card span, .calendar-stat span, .task-type-card span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .mini-stat strong, .story-card strong, .calendar-stat strong {
+      display: block;
+      margin-top: 2px;
+      font-size: 20px;
+      line-height: 1.15;
+      font-weight: 820;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .story-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .story-card {
+      display: grid;
+      gap: 8px;
+      transition: border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+    }
+
+    .story-card:hover { border-color: var(--line-strong); box-shadow: var(--shadow); transform: translateY(-1px); }
+
+    .story-card p {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
     .content-grid {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .calendar-page, .tasks-page, .settings-page {
+      display: grid;
+      gap: 12px;
+    }
+
+    .calendar-toolbar, .task-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .calendar-stats, .task-stats {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .calendar-heatmap {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background:
+        linear-gradient(180deg, color-mix(in srgb, var(--panel) 96%, transparent), var(--panel-2));
+      padding: 14px;
+      overflow: auto;
+    }
+
+    .calendar-grid {
+      display: grid;
+      grid-auto-flow: column;
+      grid-template-rows: repeat(7, 18px);
+      grid-template-columns: repeat(var(--calendar-weeks, 5), 18px);
+      gap: 6px;
+      min-width: max-content;
+    }
+
+    .calendar-cell {
+      min-height: 18px;
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      background: var(--panel);
+      padding: 0;
+      transition: transform 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+    }
+
+    .calendar-cell:hover {
+      transform: translateY(-1px);
+      border-color: var(--line-strong);
+      box-shadow: var(--shadow-soft);
+    }
+
+    .calendar-cell.level-0 { background: color-mix(in srgb, var(--panel-2) 92%, transparent); }
+    .calendar-cell.level-1 { background: color-mix(in srgb, var(--official) 18%, var(--panel)); }
+    .calendar-cell.level-2 { background: color-mix(in srgb, var(--official) 34%, var(--panel)); }
+    .calendar-cell.level-3 { background: color-mix(in srgb, var(--relay) 42%, var(--panel)); }
+    .calendar-cell.level-4 { background: color-mix(in srgb, var(--cache) 58%, var(--panel)); }
+    .calendar-blank {
+      width: 18px;
+      height: 18px;
+    }
+
+    .calendar-legend {
+      margin-top: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .calendar-legend i {
+      width: 18px;
+      height: 18px;
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      display: inline-block;
+    }
+
+    .day-detail-grid {
+      display: grid;
+      grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr);
+      gap: 12px;
+    }
+
+    .task-layout {
+      display: grid;
+      grid-template-columns: minmax(360px, .72fr) minmax(0, 1.28fr);
+      gap: 12px;
+    }
+
+    .task-type-grid {
+      display: grid;
+      gap: 10px;
+    }
+
+    .task-type-card {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .task-type-card strong {
+      display: block;
+      font-size: 16px;
+      margin-bottom: 3px;
+    }
+
+    .task-type-card .track { grid-column: 1 / -1; }
+
+    .task-table {
+      min-width: 980px;
+    }
+
+    .settings-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 12px;
     }
 
@@ -1171,7 +1416,8 @@
 
     @media (max-width: 1360px) {
       .metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-      .charts, .content-grid { grid-template-columns: 1fr; }
+      .charts, .content-grid, .today-status, .story-grid, .task-layout, .day-detail-grid, .settings-grid { grid-template-columns: 1fr; }
+      .calendar-stats, .task-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .filter-row.primary .date-field { flex-basis: 196px; }
       .filter-row.primary select { flex-basis: 150px; }
     }
@@ -1181,6 +1427,7 @@
       .header { grid-template-columns: 1fr; align-items: start; }
       .toolbar { justify-content: start; }
       .metrics { grid-template-columns: 1fr; }
+      .today-metrics, .calendar-stats, .task-stats { grid-template-columns: 1fr; }
       .static-panel.show { grid-template-columns: 1fr; }
       .filter-head { align-items: flex-start; flex-direction: column; gap: 4px; }
       .filter-row {
@@ -1219,6 +1466,7 @@
       .filter-hint { white-space: normal; }
       .cache-trend-wrap { padding: 14px 12px 10px; }
       .cache-plot { grid-template-columns: 50px minmax(0, 1fr); }
+      .view-tabs.page-nav button { flex: 1 1 100%; justify-content: center; }
     }
   </style>
 </head>
@@ -1348,9 +1596,20 @@
       </div>
     </section>
 
-    <section class="metrics" id="metrics"></section>
+    <nav class="view-tabs page-nav" id="viewTabs" aria-label="页面导航">
+      <button class="active" type="button" data-view="overview"><span>◎</span>总览</button>
+      <button type="button" data-view="calendar"><span>▦</span>AI 使用日历</button>
+      <button type="button" data-view="tasks"><span>◇</span>任务复盘</button>
+      <button type="button" data-view="details"><span>≡</span>明细表</button>
+      <button type="button" data-view="settings"><span>?</span>设置 / 关于</button>
+    </nav>
 
-    <section class="charts">
+    <section class="today-status overview-only" id="todayStatus"></section>
+    <section class="story-grid overview-only" id="storyCards"></section>
+
+    <section class="metrics overview-only" id="metrics"></section>
+
+    <section class="charts overview-only" id="chartsSection">
       <article class="panel">
         <div class="panel-head">
           <div>
@@ -1376,7 +1635,7 @@
       </article>
     </section>
 
-    <section class="panel">
+    <section class="panel overview-only" id="cacheTrendPanel">
       <div class="panel-head">
         <div>
           <h2>每日缓存命中率趋势</h2>
@@ -1386,13 +1645,6 @@
       </div>
       <div id="cacheTrendChart"></div>
     </section>
-
-    <nav class="view-tabs" id="viewTabs">
-      <button class="active" type="button" data-view="overview">概览</button>
-      <button type="button" data-view="details">明细表</button>
-      <button type="button" data-view="top">Top 会话</button>
-      <button type="button" data-view="models">按模型统计</button>
-    </nav>
 
     <section id="viewPanel"></section>
   </main>
@@ -1416,6 +1668,11 @@
       range: "7d",
       view: "overview",
       trendMode: "source",
+      calendarMetric: "totalTokens",
+      taskMetric: "totalTokens",
+      selectedCalendarDay: "",
+      taskOverrides: {},
+      locationLabel: localStorage.getItem("codexTokenLocationLabel") || "",
       topLimit: 10,
       data: null,
       records: [],
@@ -1451,10 +1708,14 @@
       modelFilter: document.querySelector("#modelFilter"),
       searchInput: document.querySelector("#searchInput"),
       estimateFilter: document.querySelector("#estimateFilter"),
+      todayStatus: document.querySelector("#todayStatus"),
+      storyCards: document.querySelector("#storyCards"),
       metrics: document.querySelector("#metrics"),
+      chartsSection: document.querySelector("#chartsSection"),
       trendChart: document.querySelector("#trendChart"),
       trendMode: document.querySelector("#trendMode"),
       ratioChart: document.querySelector("#ratioChart"),
+      cacheTrendPanel: document.querySelector("#cacheTrendPanel"),
       ratioHint: document.querySelector("#ratioHint"),
       cacheTrendChart: document.querySelector("#cacheTrendChart"),
       cacheTrendSummary: document.querySelector("#cacheTrendSummary"),
@@ -1489,6 +1750,22 @@
       activeTokens: "active",
       uncachedInputTokens: "未缓存输入"
     };
+
+    const taskTypes = [
+      { id: "coding", label: "写代码", icon: "⌘", keywords: ["code", "coding", "implement", "feature", "组件", "函数", "代码", "html", "css", "js", "typescript"] },
+      { id: "debug", label: "调试报错", icon: "!", keywords: ["debug", "bug", "error", "fix", "报错", "修复", "异常", "失败", "stack"] },
+      { id: "frontend", label: "前端 UI", icon: "◫", keywords: ["ui", "ux", "frontend", "css", "界面", "视觉", "样式", "布局", "看板"] },
+      { id: "docs", label: "文档 / README", icon: "¶", keywords: ["readme", "docs", "document", "文档", "说明", "文章", "changelog"] },
+      { id: "deploy", label: "部署 / 运维", icon: "⇧", keywords: ["deploy", "netlify", "github", "ci", "build", "部署", "发布", "运维", "端口"] },
+      { id: "data", label: "数据分析", icon: "∑", keywords: ["data", "token", "csv", "json", "chart", "统计", "数据", "分析", "图表"] },
+      { id: "refactor", label: "重构", icon: "↻", keywords: ["refactor", "cleanup", "重构", "抽象", "整理", "优化结构"] },
+      { id: "planning", label: "项目规划", icon: "◇", keywords: ["plan", "roadmap", "规划", "计划", "方案", "架构", "设计"] },
+      { id: "other", label: "其他 / 未识别", icon: "?", keywords: [] }
+    ];
+
+    const taskTypeMap = Object.fromEntries(taskTypes.map(type => [type.id, type]));
+    const taskOverrideKey = "codexTokenTaskOverrides";
+    state.taskOverrides = loadTaskOverrides();
 
     const handleDb = {
       name: "codexTokenDashboardHandles",
@@ -1577,6 +1854,68 @@
 
     function cacheHitRateOf(record) {
       return Number(record.inputTokens || 0) ? Number(record.cachedInputTokens || 0) / Number(record.inputTokens || 0) : 0;
+    }
+
+    function loadTaskOverrides() {
+      try {
+        return JSON.parse(localStorage.getItem(taskOverrideKey) || "{}");
+      } catch {
+        return {};
+      }
+    }
+
+    function saveTaskOverrides() {
+      localStorage.setItem(taskOverrideKey, JSON.stringify(state.taskOverrides || {}));
+    }
+
+    function taskSearchText(record) {
+      return [
+        record.sessionTitle,
+        record.relativePath,
+        record.filePath,
+        record.detailText,
+        record.importBatch,
+        record.model,
+        record.sessionId
+      ].join(" ").toLowerCase();
+    }
+
+    function classifyTask(record) {
+      const override = state.taskOverrides?.[record.id];
+      if (override && taskTypeMap[override]) {
+        return { taskType: override, taskLabel: taskTypeMap[override].label, taskConfidence: "manual", taskKeywords: ["手动修正"] };
+      }
+      if (record.providedTaskType && taskTypeMap[record.providedTaskType]) {
+        return { taskType: record.providedTaskType, taskLabel: taskTypeMap[record.providedTaskType].label, taskConfidence: "provided", taskKeywords: ["数据字段"] };
+      }
+      const text = taskSearchText(record);
+      let best = taskTypes[taskTypes.length - 1];
+      let bestHits = [];
+      for (const type of taskTypes) {
+        if (type.id === "other") continue;
+        const hits = type.keywords.filter(keyword => text.includes(keyword.toLowerCase()));
+        if (hits.length > bestHits.length) {
+          best = type;
+          bestHits = hits;
+        }
+      }
+      return {
+        taskType: best.id,
+        taskLabel: best.label,
+        taskConfidence: bestHits.length ? "rule" : "unknown",
+        taskKeywords: bestHits.slice(0, 4)
+      };
+    }
+
+    function enrichRecord(record) {
+      const task = classifyTask(record);
+      return {
+        ...record,
+        activeTokens: activeTokens(record),
+        uncachedInputTokens: uncachedInputTokens(record),
+        hitRate: cacheHitRateOf(record),
+        ...task
+      };
     }
 
     function hitBadgeClass(rate) {
@@ -1741,6 +2080,7 @@
         relativePath: raw.relativePath || raw.relative_path || fallback.relativePath || "",
         lineNumber: toNumber(raw.lineNumber || fallback.lineNumber),
         sessionTitle: raw.sessionTitle || raw.title || sessionId,
+        providedTaskType: raw.providedTaskType || raw.provided_task_type || raw.taskType || raw.task_type || "",
         detailText: raw.detailText || "",
         imported: Boolean(raw.imported || fallback.imported),
         importBatch: raw.importBatch || fallback.importBatch || ""
@@ -2207,7 +2547,7 @@
       state.staticSourceType = payload.sourceType || "import";
       state.records = payload.records
         .filter(record => els.estimateFilter.value === "all" || (els.estimateFilter.value === "real" ? !record.estimated : record.estimated))
-        .map(record => ({ ...record, activeTokens: activeTokens(record), uncachedInputTokens: uncachedInputTokens(record), hitRate: cacheHitRateOf(record) }));
+        .map(enrichRecord);
       pruneSelection();
       renderModelOptions(payload.models || []);
       render(payload);
@@ -2265,7 +2605,7 @@
         const rawRecords = Array.isArray(payload.records) ? payload.records : [];
         state.records = rawRecords
           .filter(record => els.estimateFilter.value === "all" || (els.estimateFilter.value === "real" ? !record.estimated : record.estimated))
-          .map(record => ({ ...record, activeTokens: activeTokens(record), uncachedInputTokens: uncachedInputTokens(record), hitRate: cacheHitRateOf(record) }));
+          .map(enrichRecord);
         pruneSelection();
         renderModelOptions(payload.models || []);
         render(payload);
@@ -2393,11 +2733,20 @@
       els.welcomePanel.classList.toggle("compact", state.dataMode === "static" && state.records.length > 0);
       els.refreshBtn.textContent = payload.staticMode && sourceType === "demo" ? "重新加载示例" : "刷新";
       els.estimateNotice.classList.toggle("show", summary.estimatedRecords > 0);
-      renderMetrics(summary, updated);
-      renderTrend(summary.byDay);
-      renderRatio(summary);
-      renderCacheTrend(summary.byDay);
+      toggleOverviewSections(state.view === "overview");
+      if (state.view === "overview") {
+        renderTodayStatus(summary);
+        renderStoryCards(summary);
+        renderMetrics(summary, updated);
+        renderTrend(summary.byDay);
+        renderRatio(summary);
+        renderCacheTrend(summary.byDay);
+      }
       renderView(summary);
+    }
+
+    function toggleOverviewSections(show) {
+      document.querySelectorAll(".overview-only").forEach(element => element.classList.toggle("hidden", !show));
     }
 
     function metricCard({ title, value, summary, updated, note, icon, hero = false, colorClass = "" }) {
@@ -2433,6 +2782,83 @@
         metricCard({ title: "缓存输入 Token", value: summary.cachedInputTokens, summary, updated, icon: "C", colorClass: "cache", note: `缓存命中率 ${percent(summary.cachedInputTokens, summary.inputTokens, 1)}%` }),
         metricCard({ title: "输出 Token", value: summary.outputTokens, summary, updated, icon: "O", colorClass: "output", note: `占总量 ${percent(summary.outputTokens, summary.totalTokens)}% / active ${formatToken(summary.activeTokens)}` }),
         metricCard({ title: "会话数", value: summary.sessionCount, summary, updated, icon: "#", colorClass: "active", note: `${formatInt(summary.records)} 条 usage 记录` })
+      ].join("");
+    }
+
+    function sumDays(days, from, to) {
+      return days.filter(day => day.date >= from && day.date <= to).reduce((sum, day) => sum + day.totalTokens, 0);
+    }
+
+    function renderTodayStatus(summary) {
+      const now = new Date();
+      const today = todayString();
+      const day = summary.byDay.find(item => item.date === today) || finalizeGroup(emptyGroup({ date: today }));
+      const weekday = now.toLocaleDateString("zh-CN", { weekday: "long" });
+      const clock = now.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false });
+      const location = state.locationLabel || "未授权定位";
+      els.todayStatus.innerHTML = `
+        <article class="today-card">
+          <div class="today-clock">
+            <div>
+              <span class="badge">今日状态</span>
+              <strong>${escapeHtml(clock)}</strong>
+            </div>
+            <div class="muted">${escapeHtml(today)} / ${escapeHtml(weekday)}</div>
+          </div>
+          <div class="today-metrics">
+            <div class="mini-stat"><span>今日 Token</span><strong title="${formatInt(day.totalTokens)}">${formatToken(day.totalTokens)}</strong></div>
+            <div class="mini-stat"><span>active</span><strong title="${formatInt(day.activeTokens)}">${formatToken(day.activeTokens)}</strong></div>
+            <div class="mini-stat"><span>缓存命中率</span><strong>${percent(day.cachedInputTokens, day.inputTokens, 1)}%</strong></div>
+          </div>
+          <div class="table-actions">
+            <span class="badge">${escapeHtml(location)}</span>
+            <span class="badge">天气：未接入外部 API</span>
+            <button class="btn compact" data-action="request-location" type="button">授权定位</button>
+          </div>
+        </article>
+        ${renderMiniStory("本日会话", `${formatInt(day.sessions || 0)} 个`, `${formatInt(day.records || 0)} 条 usage 记录`, "◎")}
+        ${renderMiniStory("本日来源", todaySourceNote(day), sourceLabels[(day.bySource || []).sort((a, b) => b.totalTokens - a.totalTokens)[0]?.key] || "暂无数据", "▦")}
+        ${renderMiniStory("本日质量", `${day.estimatedRecords ? "含估算" : "真实统计"}`, `${formatInt(day.estimatedRecords || 0)} 条估算记录`, "◇")}
+      `;
+    }
+
+    function renderMiniStory(title, value, note, icon) {
+      return `
+        <article class="story-card">
+          <span class="icon">${escapeHtml(icon)}</span>
+          <div>
+            <span>${escapeHtml(title)}</span>
+            <strong>${escapeHtml(value)}</strong>
+          </div>
+          <p>${escapeHtml(note)}</p>
+        </article>
+      `;
+    }
+
+    function todaySourceNote(day) {
+      const top = (day.bySource || []).sort((a, b) => b.totalTokens - a.totalTokens)[0];
+      if (!top || !top.totalTokens) return "暂无来源";
+      return `${percent(top.totalTokens, day.totalTokens)}%`;
+    }
+
+    function renderStoryCards(summary) {
+      const today = todayString();
+      const last7Start = todayString(-6);
+      const prev7Start = todayString(-13);
+      const prev7End = todayString(-7);
+      const last7 = sumDays(summary.byDay, last7Start, today);
+      const prev7 = sumDays(summary.byDay, prev7Start, prev7End);
+      const delta = prev7 ? percent(last7 - prev7, prev7, 1) : 0;
+      const peak = summary.byDay.reduce((best, day) => !best || day.totalTokens > best.totalTokens ? day : best, null);
+      const relay = groupByKey(summary.bySource, "relay");
+      const official = groupByKey(summary.bySource, "official_plus");
+      const realRecords = Math.max(summary.records - summary.estimatedRecords, 0);
+      const qualityNote = summary.records ? `${percent(realRecords, summary.records, 1)}% 记录来自真实 usage 字段` : "等待导入数据";
+      els.storyCards.innerHTML = [
+        renderMiniStory("最近 7 天", formatToken(last7), prev7 ? `较前 7 天 ${delta >= 0 ? "+" : ""}${delta}%` : "暂无前 7 天对比", "7"),
+        renderMiniStory("峰值日期", peak ? peak.date : "未知", peak ? `${formatToken(peak.totalTokens)} / ${formatInt(peak.records)} 条记录` : "暂无趋势数据", "▲"),
+        renderMiniStory("来源结构", `${percent(official.totalTokens, summary.totalTokens)}% / ${percent(relay.totalTokens, summary.totalTokens)}%`, "官方 Plus / 中转站占比", "↔"),
+        renderMiniStory("数据可信度", summary.estimatedRecords ? "含估算" : "真实统计", qualityNote, "✓")
       ].join("");
     }
 
@@ -2626,10 +3052,333 @@
     }
 
     function renderView(summary) {
+      if (state.view === "calendar") return renderCalendar(summary);
+      if (state.view === "tasks") return renderTasks(summary);
       if (state.view === "details") return renderDetails();
+      if (state.view === "settings") return renderSettings(summary);
       if (state.view === "top") return renderTopSessions();
       if (state.view === "models") return renderModels(summary.byModel);
       return renderOverview(summary);
+    }
+
+    function metricValueForDay(day, metric) {
+      if (metric === "activeTokens") return day.activeTokens || 0;
+      if (metric === "outputTokens") return day.outputTokens || 0;
+      if (metric === "cacheHitRate") return day.inputTokens ? day.cachedInputTokens / day.inputTokens : 0;
+      if (metric === "records") return day.records || 0;
+      return day.totalTokens || 0;
+    }
+
+    function calendarValueLabel(value, metric) {
+      if (metric === "cacheHitRate") return `${percent(value, 1, 1)}%`;
+      if (metric === "records") return `${formatInt(value)} 条`;
+      return formatToken(value);
+    }
+
+    function consecutiveActiveDays(days) {
+      const active = new Set(days.filter(day => day.totalTokens > 0 && /^\d{4}-\d{2}-\d{2}$/.test(day.date)).map(day => day.date));
+      if (!active.size) return 0;
+      const sorted = [...active].sort();
+      let cursor = new Date(`${sorted[sorted.length - 1]}T00:00:00`);
+      let streak = 0;
+      while (active.has(new Date(cursor.getTime() - cursor.getTimezoneOffset() * 60000).toISOString().slice(0, 10))) {
+        streak += 1;
+        cursor.setDate(cursor.getDate() - 1);
+      }
+      return streak;
+    }
+
+    function fillDayRange(days) {
+      const map = Object.fromEntries(days.filter(day => /^\d{4}-\d{2}-\d{2}$/.test(day.date)).map(day => [day.date, day]));
+      const dates = Object.keys(map).sort();
+      if (!dates.length) return [];
+      const start = new Date(`${dates[0]}T00:00:00`);
+      const end = new Date(`${dates[dates.length - 1]}T00:00:00`);
+      const result = [];
+      for (let date = new Date(start); date <= end; date.setDate(date.getDate() + 1)) {
+        const key = new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+        result.push(map[key] || finalizeGroup(emptyGroup({ date: key, bySource: [] })));
+      }
+      return result;
+    }
+
+    function renderCalendar(summary) {
+      const days = fillDayRange(summary.byDay);
+      if (!days.length) {
+        els.viewPanel.innerHTML = `<section class="panel">${emptyState("暂无日历数据。", "请加载示例数据或导入 usage-index.json。")}</section>`;
+        return;
+      }
+      const metric = state.calendarMetric;
+      const values = days.map(day => metricValueForDay(day, metric));
+      const max = Math.max(...values, metric === "cacheHitRate" ? 1 : 0.0001);
+      const activeDays = days.filter(day => day.totalTokens > 0);
+      const peakIndex = values.indexOf(Math.max(...values));
+      const peakDay = days[peakIndex];
+      const leadingBlanks = new Date(`${days[0].date}T00:00:00`).getDay();
+      const trailingBlanks = (7 - ((leadingBlanks + days.length) % 7)) % 7;
+      const calendarCells = [
+        ...Array.from({ length: leadingBlanks }, () => ({ blank: true })),
+        ...days.map((day, index) => ({ day, value: values[index] })),
+        ...Array.from({ length: trailingBlanks }, () => ({ blank: true }))
+      ];
+      const weeks = Math.max(1, Math.ceil(calendarCells.length / 7));
+      const selected = state.selectedCalendarDay && days.find(day => day.date === state.selectedCalendarDay) ? state.selectedCalendarDay : activeDays[activeDays.length - 1]?.date || days[days.length - 1].date;
+      state.selectedCalendarDay = selected;
+      const selectedDay = days.find(day => day.date === selected) || days[days.length - 1];
+      const monthPrefix = todayString().slice(0, 7);
+      const monthActive = days.filter(day => day.date.startsWith(monthPrefix) && day.totalTokens > 0).length;
+      els.viewPanel.innerHTML = `
+        <section class="calendar-page">
+          <article class="panel">
+            <div class="calendar-toolbar">
+              <div>
+                <h2>AI 使用日历</h2>
+                <p class="muted">像 GitHub contribution graph 一样看 Codex 使用节奏。点击某一天会筛选明细表到当天。</p>
+              </div>
+              <select id="calendarMetric" aria-label="日历指标">
+                <option value="totalTokens">总 Token</option>
+                <option value="activeTokens">active tokens</option>
+                <option value="outputTokens">输出 Token</option>
+                <option value="cacheHitRate">缓存命中率</option>
+                <option value="records">记录数</option>
+              </select>
+            </div>
+            <div class="calendar-stats">
+              <div class="calendar-stat"><span>连续使用天数</span><strong>${formatInt(consecutiveActiveDays(days))} 天</strong></div>
+              <div class="calendar-stat"><span>本月活跃天</span><strong>${formatInt(monthActive)} 天</strong></div>
+              <div class="calendar-stat"><span>峰值日期</span><strong>${escapeHtml(peakDay.date)} / ${calendarValueLabel(values[peakIndex], metric)}</strong></div>
+              <div class="calendar-stat"><span>日均 Token</span><strong>${formatToken(summary.byDay.length ? summary.totalTokens / summary.byDay.length : 0)}</strong></div>
+            </div>
+            <div class="calendar-heatmap">
+              <div class="calendar-grid" style="--calendar-weeks:${weeks}">
+                ${calendarCells.map(cell => {
+                  if (cell.blank) return `<span class="calendar-blank" aria-hidden="true"></span>`;
+                  const { day, value } = cell;
+                  const level = value <= 0 ? 0 : Math.min(4, Math.max(1, Math.ceil(value / max * 4)));
+                  const title = `${day.date}\n${calendarMetricLabel(metric)}：${calendarValueLabel(value, metric)}\n总 Token：${formatInt(day.totalTokens)}\n会话：${formatInt(day.sessions || 0)}\n记录：${formatInt(day.records || 0)}`;
+                  return `<button class="calendar-cell level-${level}" type="button" data-calendar-day="${day.date}" title="${escapeHtml(title)}" aria-label="${escapeHtml(title)}"></button>`;
+                }).join("")}
+              </div>
+              <div class="calendar-legend">
+                <span>少</span>
+                <i class="calendar-cell level-0"></i><i class="calendar-cell level-1"></i><i class="calendar-cell level-2"></i><i class="calendar-cell level-3"></i><i class="calendar-cell level-4"></i>
+                <span>多</span>
+              </div>
+            </div>
+          </article>
+          <section class="day-detail-grid">
+            <article class="panel">
+              <div class="panel-head"><h2>${escapeHtml(selectedDay.date)} 日详情</h2><span class="badge">${formatInt(selectedDay.records)} 条记录</span></div>
+              <div class="bars">
+                <div class="bar-row"><strong>总 Token</strong><div class="track"><div class="fill active" style="width:100%"></div></div><span class="num" title="${formatInt(selectedDay.totalTokens)}">${formatToken(selectedDay.totalTokens)}</span></div>
+                <div class="bar-row"><strong>active</strong><div class="track"><div class="fill active" style="width:${percent(selectedDay.activeTokens, selectedDay.totalTokens, 1)}%"></div></div><span class="num">${formatToken(selectedDay.activeTokens)}</span></div>
+                <div class="bar-row"><strong>cached input</strong><div class="track"><div class="fill cached" style="width:${percent(selectedDay.cachedInputTokens, selectedDay.inputTokens, 1)}%"></div></div><span class="num">${formatToken(selectedDay.cachedInputTokens)}</span></div>
+                <div class="bar-row"><strong>output</strong><div class="track"><div class="fill output" style="width:${percent(selectedDay.outputTokens, selectedDay.totalTokens, 1)}%"></div></div><span class="num">${formatToken(selectedDay.outputTokens)}</span></div>
+              </div>
+            </article>
+            <article class="panel">
+              <div class="panel-head"><h2>来源拆分</h2><span class="muted">当天官方 / 中转站 / 未知</span></div>
+              <div class="bars">
+                ${["official_plus", "relay", "unknown"].map(source => {
+                  const group = groupByKey(selectedDay.bySource || [], source);
+                  return `<div class="bar-row"><strong>${sourceLabels[source]}</strong><div class="track"><div class="fill ${source}" style="width:${percent(group.totalTokens, selectedDay.totalTokens, 1)}%"></div></div><span class="num">${formatToken(group.totalTokens)}</span></div>`;
+                }).join("")}
+              </div>
+            </article>
+          </section>
+        </section>
+      `;
+      document.querySelector("#calendarMetric").value = state.calendarMetric;
+    }
+
+    function calendarMetricLabel(metric) {
+      return {
+        totalTokens: "总 Token",
+        activeTokens: "active tokens",
+        outputTokens: "输出 Token",
+        cacheHitRate: "缓存命中率",
+        records: "记录数"
+      }[metric] || "总 Token";
+    }
+
+    function taskMetricValue(group, metric) {
+      if (metric === "activeTokens") return group.activeTokens || 0;
+      if (metric === "outputTokens") return group.outputTokens || 0;
+      if (metric === "sessions") return group.sessions || 0;
+      if (metric === "records") return group.records || 0;
+      return group.totalTokens || 0;
+    }
+
+    function taskMetricLabel(metric) {
+      return {
+        totalTokens: "总 Token",
+        activeTokens: "active tokens",
+        outputTokens: "输出 Token",
+        sessions: "会话数",
+        records: "记录数"
+      }[metric] || "总 Token";
+    }
+
+    function summarizeTasks(records) {
+      const groups = {};
+      for (const record of records) {
+        const type = record.taskType || "other";
+        addGroup(groups, type, record, { taskType: type, label: taskTypeMap[type]?.label || "其他 / 未识别" });
+      }
+      return taskTypes.map(type => finalizeGroup(groups[type.id] || emptyGroup({ taskType: type.id, label: type.label })))
+        .sort((a, b) => taskMetricValue(b, state.taskMetric) - taskMetricValue(a, state.taskMetric));
+    }
+
+    function renderTasks(summary) {
+      const taskGroups = summarizeTasks(state.records);
+      const max = Math.max(...taskGroups.map(group => taskMetricValue(group, state.taskMetric)), 1);
+      const ruleRecords = state.records.filter(record => record.taskConfidence === "rule" || record.taskConfidence === "provided").length;
+      const manualRecords = state.records.filter(record => record.taskConfidence === "manual").length;
+      const unknownRecords = state.records.filter(record => record.taskType === "other").length;
+      const topRecords = [...state.records].sort((a, b) => b.totalTokens - a.totalTokens).slice(0, 30);
+      els.viewPanel.innerHTML = `
+        <section class="tasks-page">
+          <article class="panel">
+            <div class="task-toolbar">
+              <div>
+                <h2>任务复盘</h2>
+                <p class="muted">规则识别，仅供参考。分类只在浏览器本地计算，手动修正会保存在 localStorage。</p>
+              </div>
+              <select id="taskMetric" aria-label="任务统计指标">
+                <option value="totalTokens">按总 Token</option>
+                <option value="activeTokens">按 active tokens</option>
+                <option value="outputTokens">按输出 Token</option>
+                <option value="sessions">按会话数</option>
+                <option value="records">按记录数</option>
+              </select>
+            </div>
+            <div class="task-stats">
+              <div class="calendar-stat"><span>规则 / 字段识别</span><strong>${formatInt(ruleRecords)} 条</strong></div>
+              <div class="calendar-stat"><span>手动修正</span><strong>${formatInt(manualRecords)} 条</strong></div>
+              <div class="calendar-stat"><span>未识别</span><strong>${formatInt(unknownRecords)} 条</strong></div>
+              <div class="calendar-stat"><span>当前指标</span><strong>${escapeHtml(taskMetricLabel(state.taskMetric))}</strong></div>
+            </div>
+          </article>
+          <section class="task-layout">
+            <article class="panel">
+              <div class="panel-head"><h2>任务类型分布</h2><span class="muted">${taskMetricLabel(state.taskMetric)}</span></div>
+              <div class="task-type-grid">
+                ${taskGroups.map(group => {
+                  const type = taskTypeMap[group.taskType] || taskTypeMap.other;
+                  const value = taskMetricValue(group, state.taskMetric);
+                  return `
+                    <div class="task-type-card">
+                      <div><strong>${escapeHtml(type.icon)} ${escapeHtml(type.label)}</strong><span>${formatInt(group.sessions)} 个会话 / ${formatInt(group.records)} 条记录</span></div>
+                      <span class="num" title="${formatInt(value)}">${state.taskMetric === "sessions" || state.taskMetric === "records" ? formatInt(value) : formatToken(value)}</span>
+                      <div class="track"><div class="fill active" style="width:${percent(value, max, 1)}%"></div></div>
+                    </div>
+                  `;
+                }).join("")}
+              </div>
+            </article>
+            <article class="panel">
+              <div class="panel-head"><h2>高消耗任务样本</h2><span class="muted">可手动修正分类</span></div>
+              ${topRecords.length ? `
+                <div class="table-wrap">
+                  <table class="task-table">
+                    <thead><tr><th>日期</th><th>任务类型</th><th>模型</th><th>来源</th><th class="num">total</th><th>依据</th><th>修正</th></tr></thead>
+                    <tbody>
+                      ${topRecords.map(record => {
+                        const type = taskTypeMap[record.taskType] || taskTypeMap.other;
+                        return `
+                          <tr>
+                            <td>${escapeHtml(record.date || "未知")}</td>
+                            <td><span class="badge">${escapeHtml(type.icon)} ${escapeHtml(type.label)}</span></td>
+                            <td><span class="badge" title="${escapeHtml(record.model || "未知")}">${escapeHtml(record.model || "未知")}</span></td>
+                            <td>${sourceBadge(record.source)}</td>
+                            <td class="num" title="${formatInt(record.totalTokens)}"><strong>${formatToken(record.totalTokens)}</strong></td>
+                            <td title="${escapeHtml((record.taskKeywords || []).join(", ") || record.sessionTitle || record.relativePath || "未识别")}">${escapeHtml(record.taskConfidence === "manual" ? "手动修正" : (record.taskKeywords || []).join(", ") || "未识别")}</td>
+                            <td>
+                              <select data-task-override="${escapeHtml(record.id)}" aria-label="修正任务类型">
+                                ${taskTypes.map(item => `<option value="${item.id}" ${record.taskType === item.id ? "selected" : ""}>${escapeHtml(item.label)}</option>`).join("")}
+                              </select>
+                            </td>
+                          </tr>
+                        `;
+                      }).join("")}
+                    </tbody>
+                  </table>
+                </div>
+              ` : emptyState("暂无任务复盘数据。", "请加载示例数据或导入 usage-index.json。")}
+            </article>
+          </section>
+        </section>
+      `;
+      document.querySelector("#taskMetric").value = state.taskMetric;
+    }
+
+    function renderSettings(summary) {
+      const modeLabel = state.dataMode === "server"
+        ? "本地 Node 模式"
+        : state.staticSourceType === "demo"
+          ? "公开静态演示版"
+          : "浏览器导入模式";
+      const sourceLabel = state.dataMode === "server"
+        ? "本机 .codex/sessions + data/imports"
+        : state.staticSourceType === "demo"
+          ? "sample-data/demo-usage-index.json"
+          : state.staticPayload?.sessionsDir || "用户手动导入";
+      els.viewPanel.innerHTML = `
+        <section class="settings-page">
+          <article class="panel">
+            <div class="panel-head">
+              <div>
+                <h2>设置 / 关于</h2>
+                <p class="muted">这个页面说明当前运行方式、隐私边界和开源展示口径。</p>
+              </div>
+              <span class="badge">版本 0.4.0</span>
+            </div>
+            <div class="settings-grid">
+              <div class="drop-card">
+                <strong>当前模式</strong>
+                <p>${escapeHtml(modeLabel)}</p>
+                <div class="privacy-list">
+                  <span>数据来源：${escapeHtml(sourceLabel)}</span>
+                  <span>当前记录：${formatInt(state.records.length)} 条 / ${formatInt(summary.sessionCount)} 个会话</span>
+                  <span>最后更新：${escapeHtml(formatDateTime(state.data?.updatedAt))}</span>
+                </div>
+              </div>
+              <div class="drop-card">
+                <strong>隐私安全</strong>
+                <div class="privacy-list">
+                  <span>本地 Node 模式只监听本机或你配置的地址。</span>
+                  <span>公开静态版不会自动读取电脑文件，必须手动选择或导入。</span>
+                  <span>脱敏快照默认隐藏完整路径、完整 session id 和原始对话。</span>
+                </div>
+              </div>
+              <div class="drop-card">
+                <strong>今日状态卡</strong>
+                <div class="privacy-list">
+                  <span>时间来自浏览器本机时钟。</span>
+                  <span>定位必须点击授权才会读取，只保存粗略经纬度文本到 localStorage。</span>
+                  <span>天气未接入外部 API，所以不会向第三方发送位置。</span>
+                </div>
+              </div>
+              <div class="drop-card">
+                <strong>任务复盘</strong>
+                <div class="privacy-list">
+                  <span>任务类型是规则识别，仅供参考。</span>
+                  <span>规则只使用 records 里的标题、路径、模型等本地字段。</span>
+                  <span>手动修正只保存在本浏览器 localStorage，不会影响原始 usage-index。</span>
+                </div>
+              </div>
+            </div>
+          </article>
+          <article class="panel">
+            <div class="panel-head"><h2>数据口径</h2><span class="muted">真实 / 估算必须分开看</span></div>
+            <div class="content-grid">
+              <div class="mini-stat"><span>真实记录</span><strong>${formatInt(Math.max(summary.records - summary.estimatedRecords, 0))}</strong></div>
+              <div class="mini-stat"><span>估算记录</span><strong>${formatInt(summary.estimatedRecords)}</strong></div>
+              <div class="mini-stat"><span>active tokens</span><strong>${formatToken(summary.activeTokens)}</strong></div>
+            </div>
+          </article>
+        </section>
+      `;
     }
 
     function renderOverview(summary) {
@@ -2638,6 +3387,7 @@
       const last7Start = todayString(-6);
       const last7 = summary.byDay.filter(day => day.date >= last7Start && day.date <= todayString()).reduce((sum, day) => sum + day.totalTokens, 0);
       const avg = summary.byDay.length ? summary.totalTokens / summary.byDay.length : 0;
+      const topRecords = [...state.records].sort((a, b) => b.totalTokens - a.totalTokens).slice(0, 10);
       const cards = [
         ["日均 Token", formatToken(avg), `${summary.byDay.length || 0} 天平均值`],
         ["峰值日期", peak ? peak.date : "未知", peak ? formatToken(peak.totalTokens) : "无数据"],
@@ -2681,6 +3431,42 @@
                   <span class="num" title="${escapeHtml(note)}">${escapeHtml(value)}</span>
                 </div>
               `).join("")}
+            </div>
+          </article>
+        </section>
+        <section class="content-grid">
+          <article class="panel">
+            <div class="panel-head"><h2>Top 会话</h2><span class="muted">当前筛选前 10</span></div>
+            ${topRecords.length ? `
+              <div class="bars">
+                ${topRecords.map(record => `
+                  <button class="bar-row btn ghost" data-open-detail="${record.id}" type="button" style="grid-template-columns: minmax(120px, 180px) minmax(0, 1fr) 120px">
+                    <strong title="${escapeHtml(record.sessionId)}">${escapeHtml(compactId(record.sessionId))}</strong>
+                    <div class="track"><div class="fill ${record.source || "unknown"}" style="width:${percent(record.totalTokens, topRecords[0]?.totalTokens || 1, 1)}%"></div></div>
+                    <span class="num" title="${formatInt(record.totalTokens)}">${formatToken(record.totalTokens)}</span>
+                  </button>
+                `).join("")}
+              </div>
+            ` : emptyState("暂无 Top 会话数据。")}
+          </article>
+          <article class="panel">
+            <div class="panel-head"><h2>按模型统计</h2><span class="muted">${formatInt(summary.byModel.length)} 个模型</span></div>
+            <div class="bars">
+              ${summary.byModel.slice(0, 8).map(model => `
+                <div class="bar-row">
+                  <strong title="${escapeHtml(model.model || "未知")}">${escapeHtml(model.model || "未知")}</strong>
+                  <div class="track"><div class="fill official_plus" style="width:${percent(model.totalTokens, summary.byModel[0]?.totalTokens || 1, 1)}%"></div></div>
+                  <span class="num" title="${formatInt(model.totalTokens)}">${formatToken(model.totalTokens)}</span>
+                </div>
+              `).join("") || emptyState("暂无模型统计数据。")}
+            </div>
+          </article>
+          <article class="panel">
+            <div class="panel-head"><h2>下一步建议</h2><span class="muted">基于当前数据</span></div>
+            <div class="privacy-list">
+              <span>1. 如果估算记录较多，优先查看明细表里的“估算” badge，避免把估算当作精确 usage。</span>
+              <span>2. 如果 active tokens 高但缓存命中率低，说明上下文复用效果可能不够好。</span>
+              <span>3. 任务复盘页可以帮你找出 Token 主要花在写代码、调试、部署还是文档上。</span>
             </div>
           </article>
         </section>
@@ -2935,6 +3721,7 @@
         ["total", formatInt(record.totalTokens)],
         ["active", formatInt(record.activeTokens)],
         ["缓存命中率", `${percent(record.cachedInputTokens, record.inputTokens, 1)}%`],
+        ["任务类型", record.taskLabel || "未识别"],
         ["统计方式", record.estimated ? `估算：${record.estimateReason || "未知原因"}` : "真实 usage 字段"],
         ["文件", record.relativePath || record.filePath || "未知"]
       ];
@@ -2972,7 +3759,7 @@
       const summary = summarize(safeRecords.map(record => ({ ...record, activeTokens: activeTokens(record), uncachedInputTokens: uncachedInputTokens(record), hitRate: cacheHitRateOf(record) })));
       return {
         snapshotVersion: 1,
-        appVersion: "0.3.4",
+        appVersion: "0.4.0",
         generatedAt: new Date().toISOString(),
         privacy: {
           anonymized: true,
@@ -3040,7 +3827,7 @@
     function setActiveView(view) {
       state.view = view;
       document.querySelectorAll("#viewTabs button").forEach(button => button.classList.toggle("active", button.dataset.view === view));
-      if (state.data) renderView(summarize(state.records));
+      if (state.data) render(state.data);
     }
 
     function applySort(value) {
@@ -3172,6 +3959,19 @@
         handlePanelAction(actionButton.dataset.action);
         return;
       }
+      const calendarDay = event.target.closest("[data-calendar-day]");
+      if (calendarDay) {
+        state.selectedCalendarDay = calendarDay.dataset.calendarDay;
+        els.fromDate.value = state.selectedCalendarDay;
+        els.toDate.value = state.selectedCalendarDay;
+        syncDateDisplays();
+        state.range = "custom";
+        state.page = 1;
+        setActiveRange("custom");
+        setActiveView("details");
+        loadUsage();
+        return;
+      }
       const sortHeader = event.target.closest("th[data-sort]");
       if (sortHeader) {
         const key = sortHeader.dataset.sort;
@@ -3208,7 +4008,39 @@
         renderDetails();
       }
     });
+    els.viewPanel.addEventListener("mousemove", event => {
+      const calendarCell = event.target.closest("[data-calendar-day]");
+      if (!calendarCell) {
+        hideChartTooltip();
+        return;
+      }
+      const title = calendarCell.getAttribute("title") || "";
+      showChartTooltip(event, `<strong>${escapeHtml(calendarCell.dataset.calendarDay)}</strong>${title.split("\n").slice(1).map(line => {
+        const [label, value] = line.split("：");
+        return `<div><span>${escapeHtml(label || "")}</span><b>${escapeHtml(value || "")}</b></div>`;
+      }).join("")}`);
+    });
+    els.viewPanel.addEventListener("mouseleave", hideChartTooltip);
     els.viewPanel.addEventListener("change", event => {
+      if (event.target.id === "calendarMetric") {
+        state.calendarMetric = event.target.value;
+        renderCalendar(summarize(state.records));
+        return;
+      }
+      if (event.target.id === "taskMetric") {
+        state.taskMetric = event.target.value;
+        renderTasks(summarize(state.records));
+        return;
+      }
+      const taskOverride = event.target.closest("[data-task-override]");
+      if (taskOverride) {
+        state.taskOverrides[taskOverride.dataset.taskOverride] = taskOverride.value;
+        saveTaskOverrides();
+        state.records = state.records.map(enrichRecord);
+        renderTasks(summarize(state.records));
+        toast("任务分类已保存到浏览器本地");
+        return;
+      }
       if (event.target.id === "sortSelect") applySort(event.target.value);
       if (event.target.id === "pageSizeSelect") {
         state.pageSize = Number(event.target.value);
@@ -3299,6 +4131,25 @@
       }
       if (action === "clear-filters") clearFilters();
       if (action === "import-data") els.importFile.click();
+      if (action === "request-location") requestLocation();
+    }
+
+    function requestLocation() {
+      if (!navigator.geolocation) {
+        setStatus("当前浏览器不支持定位能力。", "error");
+        return;
+      }
+      setStatus("正在请求浏览器定位授权...");
+      navigator.geolocation.getCurrentPosition(position => {
+        const lat = position.coords.latitude.toFixed(2);
+        const lng = position.coords.longitude.toFixed(2);
+        state.locationLabel = `定位：${lat}, ${lng}`;
+        localStorage.setItem("codexTokenLocationLabel", state.locationLabel);
+        setStatus("定位已保存到浏览器本地。天气未接入外部 API，不会发送位置。");
+        if (state.data) render(state.data);
+      }, error => {
+        setStatus(error.message || "定位授权失败。", "error");
+      }, { enableHighAccuracy: false, timeout: 8000, maximumAge: 3600000 });
     }
     els.importFile.addEventListener("change", async () => {
       const file = els.importFile.files[0];
