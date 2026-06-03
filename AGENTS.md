@@ -23,6 +23,7 @@
 - 2026-06-03: The high-consumption task table still depended on horizontal scrolling. For dashboard pages, compact columns and truncation are preferred over sideways scrolling.
 - 2026-06-03: Header retained too much operational metadata. Mode and estimated-data warnings should be moved into status/settings/detail contexts instead of sitting below the main title.
 - 2026-06-03: The cache hit trend chart used too much vertical space for too little information. Trend modules should show richer multi-metric usage data with tooltips and compact layout.
+- 2026-06-03: GitHub Pages deployment failure was initially treated like workflow code alone could solve it. First-time Pages deploys also require repository Pages to be enabled and set to GitHub Actions in GitHub settings.
 
 ## Before Finishing
 

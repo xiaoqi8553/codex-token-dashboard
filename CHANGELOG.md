@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.6 - 2026-06-03
+
+- Adjusted the GitHub Pages workflow to match the recommended build/deploy structure.
+- Moved `configure-pages` into the build job before artifact upload.
+- Updated GitHub Actions runtime versions to reduce Node 20 deprecation warnings.
+- Documented that first-time GitHub Pages deployment still requires the repository Pages source to be set to GitHub Actions.
+
 ## 0.4.5 - 2026-06-03
 
 - Added GitHub Pages deployment workflow as a Netlify-free static hosting option.
