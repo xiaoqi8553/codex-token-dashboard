@@ -9,6 +9,7 @@ const ROOT = __dirname;
 const DATA_DIR = path.join(ROOT, "data");
 const IMPORT_DIR = path.join(DATA_DIR, "imports");
 const INDEX_PATH = path.join(DATA_DIR, "usage-index.json");
+const INDEX_VERSION = 3;
 const SUPPORTED_SESSION_EXTENSIONS = new Set([".jsonl", ".json", ".log", ".txt"]);
 
 loadDotEnv();
@@ -97,9 +98,11 @@ function ensureDirs() {
 
 function loadIndex() {
   try {
-    return JSON.parse(fs.readFileSync(INDEX_PATH, "utf8"));
+    const index = JSON.parse(fs.readFileSync(INDEX_PATH, "utf8"));
+    if (index.version !== INDEX_VERSION) return { version: INDEX_VERSION, files: {}, imports: {}, records: [] };
+    return index;
   } catch {
-    return { version: 2, files: {}, imports: {}, records: [] };
+    return { version: INDEX_VERSION, files: {}, imports: {}, records: [] };
   }
 }
 
@@ -217,9 +220,16 @@ function estimateTokens(text) {
 }
 
 function normalizeSource(provider, explicitSource = "") {
-  const value = String(explicitSource || provider || "").toLowerCase();
-  if (["official_plus", "official", "plus", "openai", "chatgpt"].includes(value)) return "official_plus";
-  if (["relay", "rightcode", "right_code", "proxy", "中转站"].includes(value)) return "relay";
+  const values = [explicitSource, provider]
+    .map(value => String(value || "").trim().toLowerCase())
+    .filter(value => value && value !== "unknown");
+  if (values.some(value => ["official_plus", "official", "plus", "openai", "chatgpt"].includes(value))) return "official_plus";
+  if (values.some(value => (
+    ["relay", "rightcode", "right_code", "right-code", "proxy", "custom", "中转站"].includes(value) ||
+    value.includes("rightcode") ||
+    value.includes("right.codes") ||
+    value.includes("right-code")
+  ))) return "relay";
   return "unknown";
 }
 
@@ -628,7 +638,7 @@ function buildIndex() {
 
   const deduped = dedupeRecords(allRecords);
   const index = {
-    version: 2,
+    version: INDEX_VERSION,
     sessionsDir: SESSIONS_DIR,
     dataDir: DATA_DIR,
     updatedAt: new Date().toISOString(),

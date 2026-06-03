@@ -1348,8 +1348,9 @@
 
     .today-status {
       display: grid;
-      grid-template-columns: minmax(300px, .95fr) repeat(3, minmax(0, 1fr));
+      grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 10px;
+      align-items: stretch;
     }
 
     .today-card, .story-card, .calendar-stat, .task-type-card {
@@ -1364,7 +1365,8 @@
     .today-card {
       display: grid;
       gap: 10px;
-      min-height: 126px;
+      min-height: 124px;
+      align-content: space-between;
       background:
         linear-gradient(135deg, color-mix(in srgb, var(--official) 12%, transparent), transparent 42%),
         color-mix(in srgb, var(--panel) 96%, transparent);
@@ -2547,9 +2549,16 @@
     }
 
     function normalizeSource(provider, explicitSource = "") {
-      const value = String(explicitSource || provider || "").toLowerCase();
-      if (["official_plus", "official", "plus", "openai", "chatgpt"].includes(value)) return "official_plus";
-      if (["relay", "rightcode", "right_code", "proxy", "中转站"].includes(value)) return "relay";
+      const values = [explicitSource, provider]
+        .map(value => String(value || "").trim().toLowerCase())
+        .filter(value => value && value !== "unknown");
+      if (values.some(value => ["official_plus", "official", "plus", "openai", "chatgpt"].includes(value))) return "official_plus";
+      if (values.some(value => (
+        ["relay", "rightcode", "right_code", "right-code", "proxy", "custom", "中转站"].includes(value) ||
+        value.includes("rightcode") ||
+        value.includes("right.codes") ||
+        value.includes("right-code")
+      ))) return "relay";
       return "unknown";
     }
 
@@ -3897,8 +3906,8 @@
                 <strong>今日状态卡</strong>
                 <div class="privacy-list">
                   <span>时间来自浏览器本机时钟。</span>
-                  <span>定位必须点击授权才会读取，只保存粗略经纬度文本到 localStorage。</span>
-                  <span>天气只会在你点击授权后按粗略经纬度请求 Open-Meteo，不会自动读取或上传 sessions。</span>
+                  <span>定位必须点击授权才会读取，页面只保存城市标签和天气标签到 localStorage。</span>
+                  <span>城市名来自 OpenStreetMap 反查，天气来自 Open-Meteo；都只在你点击授权后请求。</span>
                 </div>
               </div>
               <div class="settings-card">
@@ -4263,7 +4272,7 @@
       const summary = summarize(safeRecords.map(record => ({ ...record, activeTokens: activeTokens(record), uncachedInputTokens: uncachedInputTokens(record), hitRate: cacheHitRateOf(record) })));
       return {
         snapshotVersion: 1,
-        appVersion: "0.4.4",
+        appVersion: "0.4.9",
         generatedAt: new Date().toISOString(),
         privacy: {
           anonymized: true,
@@ -4695,6 +4704,21 @@
       return Number.isFinite(temp) ? `天气：${label} ${temp.toFixed(0)}°C` : `天气：${label}`;
     }
 
+    function formatLocationName(address = {}) {
+      const city = address.city || address.town || address.village || address.municipality || address.county || address.state_district;
+      const stateName = address.state || address.region || "";
+      if (city && stateName && !String(city).includes(stateName)) return `${stateName} ${city}`;
+      return city || stateName || address.country || "";
+    }
+
+    async function fetchLocationName(latitude, longitude) {
+      const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(latitude)}&lon=${encodeURIComponent(longitude)}&accept-language=zh-CN`;
+      const response = await fetch(url, { cache: "no-store" });
+      if (!response.ok) throw new Error(`城市定位请求失败：${response.status}`);
+      const payload = await response.json();
+      return formatLocationName(payload.address || {});
+    }
+
     async function requestLocation() {
       if (!navigator.geolocation) {
         setStatus("当前浏览器不支持定位能力。", "error");
@@ -4708,17 +4732,32 @@
       navigator.geolocation.getCurrentPosition(async position => {
         const lat = position.coords.latitude.toFixed(2);
         const lng = position.coords.longitude.toFixed(2);
-        state.locationLabel = `定位：${lat}, ${lng}`;
+        state.locationLabel = "定位：城市读取中";
         localStorage.setItem("codexTokenLocationLabel", state.locationLabel);
         state.weatherLabel = "天气：读取中";
         localStorage.setItem("codexTokenWeatherLabel", state.weatherLabel);
         if (state.data) render(state.data);
         try {
-          state.weatherLabel = await fetchWeather(lat, lng);
+          const [locationName, weatherLabel] = await Promise.allSettled([
+            fetchLocationName(lat, lng),
+            fetchWeather(lat, lng)
+          ]);
+          if (locationName.status === "fulfilled" && locationName.value) {
+            state.locationLabel = `定位：${locationName.value}`;
+          } else {
+            state.locationLabel = "定位：已授权";
+          }
+          state.weatherLabel = weatherLabel.status === "fulfilled" ? weatherLabel.value : "天气：获取失败";
+          localStorage.setItem("codexTokenLocationLabel", state.locationLabel);
           localStorage.setItem("codexTokenWeatherLabel", state.weatherLabel);
-          setStatus("定位和天气已更新。天气数据来自 Open-Meteo，仅在点击授权后请求。");
+          if (weatherLabel.status === "rejected") throw weatherLabel.reason;
+          setStatus("定位和天气已更新。城市来自 OpenStreetMap，天气来自 Open-Meteo，仅在点击授权后请求。");
         } catch (error) {
-          state.weatherLabel = "天气：获取失败";
+          if (state.locationLabel === "定位：城市读取中") {
+            state.locationLabel = "定位：已授权";
+            localStorage.setItem("codexTokenLocationLabel", state.locationLabel);
+          }
+          if (!state.weatherLabel || state.weatherLabel === "天气：读取中") state.weatherLabel = "天气：获取失败";
           localStorage.setItem("codexTokenWeatherLabel", state.weatherLabel);
           setStatus(error.message || "天气获取失败，但定位已保存。", "error");
         }

@@ -7,7 +7,7 @@
 ![Codex Token Dashboard cover](screenshots/project-cover.svg)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-0f766e.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.4.8-111827.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.4.9-111827.svg)](CHANGELOG.md)
 [![Netlify Demo](https://img.shields.io/badge/demo-codetoken.netlify.app-2f6fed.svg)](https://codetoken.netlify.app/)
 [![GitHub Pages](https://img.shields.io/badge/pages-github.io-111827.svg)](https://xiaoqi8553.github.io/codex-token-dashboard/)
 
@@ -113,7 +113,7 @@ npm run visual:test  # 生成截图并自动检查明显视觉问题
 - **明细表**：逐条 usage 记录，支持排序、搜索、筛选、分页、多选和导出。
 - **设置 / 关于**：展示当前模式、数据来源、隐私边界、定位和任务识别说明。
 
-今日状态卡中的定位必须由用户主动点击授权才会读取。项目没有接入天气 API，因此不会把位置信息发送给第三方天气服务。
+今日状态卡中的定位必须由用户主动点击授权才会读取。授权后，页面会用粗略经纬度请求 OpenStreetMap 反查城市名，并请求 Open-Meteo 获取天气；这些请求只在用户点击授权后发生，不会上传 sessions 或原始对话内容。
 
 ## UI 视觉验收
 

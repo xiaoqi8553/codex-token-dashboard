@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.9 - 2026-06-03
+
+- Aligned the Overview top status row and metric row to the same four-column grid.
+- Changed authorized location display from raw latitude/longitude to a city label when reverse geocoding succeeds.
+- Allowed geolocation in static deployment headers for the current site instead of blocking it with `geolocation=()`.
+- Treated Codex `custom` providers as relay data so RightCode-style middle-station usage no longer falls into `unknown`.
+- Updated privacy documentation for the city/weather lookup behavior.
+
 ## 0.4.8 - 2026-06-03
 
 - Improved the public static import experience for GitHub Pages and Netlify.
