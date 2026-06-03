@@ -1,4 +1,4 @@
-# Changelog
+﻿# Changelog
 
 ## 0.5.0 - 2026-06-03
 
@@ -7,7 +7,10 @@
 - Work Replay supports local Node data, browser-import cached data, and public demo data fallback.
 - Work Replay visualizes session events by token size, task type color, and official Plus / relay / unknown source borders.
 - Added Markdown export for replay summaries.
-- Improved task classification with weighted field matching and safer Latin keyword boundaries so `rightcode` no longer causes broad "写代码" misclassification.
+- Redesigned Work Replay from a decorative orbit view into a product-style timeline and task-lane replay page.
+- Added clearer replay metrics, a wider selected-session detail panel, structured task distribution, and a stronger replay summary area.
+- Added safe display cleanup so object-shaped titles or ids do not render as `[object Object]` in the replay page.
+- Improved task classification with weighted field matching and safer Latin keyword boundaries so rightcode no longer causes broad "写代码" misclassification.
 - Included Work Replay in static builds and visual acceptance screenshots.
 
 ## 0.4.9 - 2026-06-03

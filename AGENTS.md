@@ -30,6 +30,7 @@
 - 2026-06-03: Location/weather fixes missed deployment response headers. If geolocation is used, check both button logic and static host `Permissions-Policy`.
 - 2026-06-03: RightCode usage can appear as Codex provider `custom`; source classification must treat `custom` as relay instead of leaving it in `unknown`.
 - 2026-06-03: Task classification was too broad because short Latin keywords such as `code`, `js`, and `css` matched inside unrelated strings and paths. Use weighted field matching and word boundaries for Latin keywords.
+- 2026-06-03: The first Work Replay page overused sci-fi orbit visuals and underused business structure. Replay pages should prioritize timeline, session detail, task lanes, and summary insight over decorative effects.
 
 ## Before Finishing
 

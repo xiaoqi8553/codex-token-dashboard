@@ -4,244 +4,613 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Codex Work Replay</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f172a'/%3E%3Cpath d='M18 22l10 10-10 10' fill='none' stroke='%2322d3ee' stroke-width='6' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M32 42h14' fill='none' stroke='%23edf4ff' stroke-width='6' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23111827'/%3E%3Cpath d='M18 22l10 10-10 10' fill='none' stroke='%23f8fafc' stroke-width='6' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M32 42h14' fill='none' stroke='%2322c55e' stroke-width='6' stroke-linecap='round'/%3E%3C/svg%3E">
   <style>
     :root {
-      color-scheme: dark;
-      --bg: #090d12;
-      --panel: rgba(17, 24, 39, .82);
-      --panel-2: rgba(30, 41, 59, .72);
-      --line: rgba(148, 163, 184, .22);
-      --text: #edf4ff;
-      --muted: #9fb1c7;
-      --blue: #3b82f6;
-      --green: #10b981;
-      --gray: #94a3b8;
-      --orange: #f59e0b;
-      --red: #f43f5e;
-      --cyan: #22d3ee;
-      --violet: #8b5cf6;
-      --radius: 18px;
-      font-family: "Aptos", "Microsoft YaHei", "Noto Sans SC", "Segoe UI", sans-serif;
+      color-scheme: light;
+      --bg: #eef3f7;
+      --surface: #ffffff;
+      --surface-soft: #f7fafc;
+      --surface-muted: #eef3f8;
+      --text: #0f172a;
+      --muted: #637083;
+      --faint: #8a97a9;
+      --line: #d8e2ec;
+      --line-strong: #bdcad8;
+      --shadow: 0 18px 44px rgba(15, 23, 42, .08);
+      --official: #2563eb;
+      --relay: #059669;
+      --unknown: #64748b;
+      --cache: #d97706;
+      --output: #e11d48;
+      --active: #0891b2;
+      --radius: 16px;
+      --font: "Aptos", "Segoe UI", "Microsoft YaHei", "PingFang SC", "Noto Sans SC", sans-serif;
+      font-family: var(--font);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        color-scheme: dark;
+        --bg: #111827;
+        --surface: #151d2a;
+        --surface-soft: #101722;
+        --surface-muted: #1b2534;
+        --text: #edf3fb;
+        --muted: #a9b6c7;
+        --faint: #7e8da3;
+        --line: #2b384a;
+        --line-strong: #3b4b60;
+        --shadow: 0 20px 56px rgba(0, 0, 0, .22);
+        --official: #60a5fa;
+        --relay: #34d399;
+        --unknown: #94a3b8;
+        --cache: #f59e0b;
+        --output: #fb7185;
+        --active: #22d3ee;
+      }
     }
 
     * { box-sizing: border-box; }
-    html, body { overflow-x: hidden; }
+    html, body { min-height: 100%; overflow-x: hidden; }
     body {
       margin: 0;
-      min-height: 100vh;
       color: var(--text);
       background:
-        radial-gradient(circle at 20% 10%, rgba(59,130,246,.24), transparent 32%),
-        radial-gradient(circle at 78% 18%, rgba(16,185,129,.18), transparent 28%),
-        linear-gradient(135deg, #090d12, #0f172a 54%, #07111b);
-      overflow-x: hidden;
+        linear-gradient(rgba(37, 99, 235, .035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(37, 99, 235, .035) 1px, transparent 1px),
+        var(--bg);
+      background-size: 32px 32px;
+      font-family: var(--font);
+      font-size: 14px;
+      line-height: 1.45;
     }
-    body::before {
-      content: "";
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
-      background-image:
-        linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
-      background-size: 36px 36px;
-      mask-image: linear-gradient(to bottom, black, transparent 88%);
-    }
-    button, select {
+    button, select, input {
       min-height: 36px;
       border: 1px solid var(--line);
-      border-radius: 12px;
-      background: rgba(15, 23, 42, .72);
+      border-radius: 10px;
+      background: var(--surface);
       color: var(--text);
       padding: 7px 11px;
       font: inherit;
     }
     button { cursor: pointer; }
-    button:hover { border-color: rgba(237,244,255,.42); }
-    button.primary { background: #edf4ff; color: #0f172a; border-color: #edf4ff; font-weight: 800; }
+    button:hover { border-color: var(--line-strong); background: var(--surface-soft); }
+    button.primary { background: var(--text); color: var(--surface); border-color: var(--text); font-weight: 700; }
     a { color: inherit; text-decoration: none; }
-    .app { width: min(1500px, calc(100vw - 28px)); margin: 0 auto; padding: 18px 0 28px; }
+
+    .app {
+      width: min(1520px, calc(100vw - 28px));
+      margin: 0 auto;
+      padding: 14px 0 30px;
+    }
     .topbar {
-      display: flex;
+      display: grid;
+      grid-template-columns: minmax(280px, 1fr) auto;
+      gap: 16px;
       align-items: center;
-      justify-content: space-between;
-      gap: 14px;
-      padding: 14px 16px;
+      padding: 14px;
       border: 1px solid var(--line);
       border-radius: var(--radius);
-      background: rgba(9, 13, 18, .74);
-      backdrop-filter: blur(18px);
+      background: color-mix(in srgb, var(--surface) 92%, transparent);
+      box-shadow: var(--shadow);
       position: sticky;
-      top: 12px;
-      z-index: 10;
+      top: 10px;
+      z-index: 20;
+      backdrop-filter: blur(14px);
     }
-    .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .brand {
+      display: grid;
+      grid-template-columns: 42px minmax(0, 1fr);
+      gap: 12px;
+      align-items: center;
+      min-width: 0;
+    }
     .mark {
-      width: 38px;
-      height: 38px;
+      width: 42px;
+      height: 42px;
       display: grid;
       place-items: center;
       border-radius: 12px;
-      background: linear-gradient(135deg, var(--blue), var(--cyan));
-      color: white;
-      font-weight: 900;
-      box-shadow: 0 12px 40px rgba(34,211,238,.25);
+      background: var(--text);
+      color: var(--surface);
+      font-weight: 800;
+      letter-spacing: .02em;
     }
-    h1 { margin: 0; font-size: clamp(24px, 2.4vw, 38px); line-height: 1; letter-spacing: 0; }
-    .sub { color: var(--muted); font-size: 13px; margin-top: 6px; }
-    .toolbar { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
-    .hero {
-      margin-top: 14px;
+    h1 {
+      margin: 0;
+      font-size: clamp(24px, 2.1vw, 34px);
+      line-height: 1.06;
+      letter-spacing: 0;
+    }
+    .sub {
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 5px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+    .source-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 3px 8px;
+      background: var(--surface-soft);
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .toolbar .date-input {
+      width: 132px;
+      display: none;
+    }
+    .toolbar.custom .date-input { display: inline-block; }
+    .progress-wrap {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      min-width: 260px;
+      padding: 6px 10px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--surface-soft);
+      color: var(--muted);
+      font-size: 12px;
+    }
+    input[type="range"] {
+      min-height: auto;
+      padding: 0;
+      width: 180px;
+      accent-color: var(--active);
+    }
+
+    .stats {
+      margin-top: 12px;
       display: grid;
-      grid-template-columns: minmax(0, 1fr) 360px;
-      gap: 14px;
-      align-items: stretch;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 10px;
     }
-    .stage, .side, .panel {
+    .stat-card, .stage, .side, .panel {
       border: 1px solid var(--line);
       border-radius: var(--radius);
-      background: var(--panel);
-      backdrop-filter: blur(18px);
-      box-shadow: 0 24px 80px rgba(0,0,0,.22);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+    .stat-card {
+      min-height: 118px;
+      padding: 14px;
+      display: grid;
+      align-content: space-between;
+      gap: 12px;
+    }
+    .stat-card span {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .stat-card strong {
+      display: block;
+      font-size: clamp(24px, 2.4vw, 36px);
+      line-height: 1;
+      letter-spacing: 0;
+    }
+    .stat-card small {
+      color: var(--faint);
+      font-size: 12px;
+    }
+    .stat-card.hero-stat {
+      background: linear-gradient(135deg, #13233a, #17305c);
+      color: #f8fafc;
+      border-color: rgba(255, 255, 255, .16);
+    }
+    .stat-card.hero-stat span, .stat-card.hero-stat small { color: rgba(248, 250, 252, .76); }
+
+    .workspace {
+      margin-top: 12px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 430px;
+      gap: 12px;
+      align-items: stretch;
     }
     .stage {
-      min-height: 540px;
+      min-height: 520px;
+      padding: 18px;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      gap: 14px;
+      overflow: hidden;
+    }
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    .section-head h2 {
+      margin: 0;
+      font-size: 20px;
+      line-height: 1.2;
+    }
+    .section-head p {
+      margin: 5px 0 0;
+      color: var(--muted);
+      max-width: 720px;
+    }
+    .timeline-meta {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 4px 8px;
+      background: var(--surface-soft);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .badge.official_plus { color: var(--official); border-color: color-mix(in srgb, var(--official) 32%, var(--line)); }
+    .badge.relay { color: var(--relay); border-color: color-mix(in srgb, var(--relay) 32%, var(--line)); }
+    .badge.unknown { color: var(--unknown); }
+    .badge.estimated { color: var(--cache); border-color: color-mix(in srgb, var(--cache) 34%, var(--line)); }
+
+    .timeline-board {
       position: relative;
       overflow: hidden;
-      padding: 24px;
-    }
-    .stage::before {
-      content: "";
-      position: absolute;
-      inset: 36px;
-      border: 1px solid rgba(148,163,184,.14);
-      border-radius: 50%;
-      transform: rotate(-8deg);
-    }
-    .stage::after {
-      content: "";
-      position: absolute;
-      width: 460px;
-      height: 460px;
-      left: 50%;
-      top: 50%;
-      transform: translate(-50%, -50%);
-      border-radius: 50%;
-      background: radial-gradient(circle, rgba(59,130,246,.2), rgba(34,211,238,.08) 42%, transparent 68%);
-      filter: blur(4px);
-    }
-    .scene-title { position: relative; z-index: 2; display: flex; justify-content: space-between; gap: 16px; }
-    .scene-title h2 { margin: 0; font-size: clamp(28px, 4vw, 62px); line-height: .95; }
-    .scene-title p { color: var(--muted); margin: 10px 0 0; max-width: 620px; line-height: 1.55; }
-    .metric-strip { position: relative; z-index: 2; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 22px; }
-    .mini {
-      padding: 12px;
-      border: 1px solid rgba(148,163,184,.18);
+      border: 1px solid var(--line);
       border-radius: 14px;
-      background: rgba(15,23,42,.52);
+      background:
+        linear-gradient(90deg, rgba(100, 116, 139, .12) 1px, transparent 1px),
+        var(--surface-soft);
+      background-size: 10% 100%;
+      min-height: 360px;
+      padding: 12px 12px 34px;
     }
-    .mini span { color: var(--muted); font-size: 12px; display: block; }
-    .mini strong { display: block; margin-top: 6px; font-size: 24px; line-height: 1; }
-    .orbit {
-      position: absolute;
-      inset: 160px 38px 34px;
-      z-index: 3;
+    .lanes {
+      position: relative;
+      height: 100%;
+      display: grid;
+      grid-template-rows: repeat(var(--lane-count), minmax(42px, 1fr));
+      gap: 6px;
+      z-index: 2;
+    }
+    .lane {
+      display: grid;
+      grid-template-columns: 116px minmax(0, 1fr);
+      gap: 12px;
+      align-items: center;
+      min-height: 42px;
+    }
+    .lane-label {
+      color: var(--muted);
+      font-weight: 700;
+      font-size: 12px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .lane-track {
+      position: relative;
+      height: 100%;
+      min-height: 42px;
+      border-radius: 10px;
+      background: color-mix(in srgb, var(--surface) 72%, transparent);
+      border: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
     }
     .node {
       position: absolute;
+      left: var(--x);
+      top: 50%;
       width: var(--size);
       height: var(--size);
-      left: var(--x);
-      top: var(--y);
       transform: translate(-50%, -50%);
       border-radius: 999px;
       border: 2px solid var(--source);
-      background:
-        radial-gradient(circle at 34% 30%, rgba(255,255,255,.82), transparent 14%),
-        radial-gradient(circle, var(--task), rgba(15,23,42,.92) 68%);
-      box-shadow: 0 0 0 1px rgba(255,255,255,.08), 0 0 calc(var(--size) * .9) color-mix(in srgb, var(--task) 52%, transparent);
-      opacity: .38;
-      transition: transform 220ms ease, opacity 220ms ease, filter 220ms ease;
-    }
-    .node.active {
-      opacity: 1;
-      transform: translate(-50%, -50%) scale(1.25);
-      filter: saturate(1.25);
-      z-index: 4;
+      background: var(--task);
+      box-shadow: 0 1px 0 rgba(255,255,255,.28) inset, 0 4px 10px rgba(15,23,42,.16);
+      opacity: .42;
+      transition: transform 160ms ease, opacity 160ms ease, box-shadow 160ms ease;
+      padding: 0;
+      min-height: 0;
     }
     .node.past { opacity: .72; }
-    .beam {
-      position: absolute;
-      left: 10%;
-      right: 10%;
-      bottom: 42px;
-      height: 3px;
-      z-index: 3;
-      border-radius: 999px;
-      background: linear-gradient(90deg, var(--blue), var(--green), var(--orange), var(--red));
-      transform-origin: left;
-      transform: scaleX(var(--progress, .02));
-      box-shadow: 0 0 22px rgba(59,130,246,.36);
+    .node.active {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1.2);
+      box-shadow: 0 0 0 5px color-mix(in srgb, var(--task) 18%, transparent), 0 12px 26px rgba(15,23,42,.22);
+      z-index: 5;
     }
-    .side { padding: 14px; display: grid; gap: 12px; align-content: start; }
-    .current-card { border: 1px solid var(--line); border-radius: 16px; padding: 14px; background: rgba(15,23,42,.72); min-height: 220px; }
-    .current-card h3 { margin: 0; font-size: 18px; line-height: 1.25; overflow-wrap: anywhere; }
-    .current-card .time { color: var(--muted); margin: 8px 0 12px; font-size: 13px; }
-    .badges { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0; }
-    .badge { border: 1px solid var(--line); border-radius: 999px; padding: 4px 8px; color: var(--muted); font-size: 12px; font-weight: 800; }
-    .badge.official_plus { color: #7db0ff; }
-    .badge.relay { color: #60d7c4; }
-    .badge.unknown { color: #cbd5e1; }
-    .rows { display: grid; gap: 8px; }
-    .row { display: flex; justify-content: space-between; gap: 10px; color: var(--muted); font-size: 13px; }
-    .row strong { color: var(--text); }
+    .playhead {
+      position: absolute;
+      top: 12px;
+      bottom: 34px;
+      left: calc(128px + (100% - 152px) * var(--progress));
+      width: 2px;
+      background: var(--text);
+      opacity: .44;
+      z-index: 3;
+      pointer-events: none;
+    }
+    .playhead::after {
+      content: "";
+      position: absolute;
+      bottom: -7px;
+      left: 50%;
+      width: 10px;
+      height: 10px;
+      transform: translateX(-50%);
+      border-radius: 50%;
+      background: var(--text);
+    }
+    .axis {
+      position: absolute;
+      left: 140px;
+      right: 12px;
+      bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      color: var(--faint);
+      font-size: 11px;
+      z-index: 2;
+    }
+    .empty {
+      color: var(--muted);
+      padding: 28px;
+      text-align: center;
+      border: 1px dashed var(--line);
+      border-radius: 14px;
+      background: var(--surface-soft);
+    }
+    .legend {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .legend-group {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 5px;
+      background: var(--color);
+    }
+
+    .side {
+      padding: 16px;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      gap: 12px;
+      min-width: 0;
+      overflow: hidden;
+    }
+    .current-card {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--surface-soft);
+      padding: 14px;
+    }
+    .current-kicker {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
+    .current-card h3 {
+      margin: 0;
+      font-size: 18px;
+      line-height: 1.3;
+      overflow-wrap: anywhere;
+      display: -webkit-box;
+      -webkit-line-clamp: 5;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin: 12px 0;
+    }
+    .big-metrics {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      margin: 12px 0;
+    }
+    .big-metrics div {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 10px;
+      background: var(--surface);
+    }
+    .big-metrics span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 6px;
+    }
+    .big-metrics strong {
+      font-size: 21px;
+      line-height: 1;
+    }
+    .rows {
+      display: grid;
+      gap: 8px;
+    }
+    .row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .row strong {
+      color: var(--text);
+      text-align: right;
+      overflow-wrap: anywhere;
+    }
     .timeline {
-      max-height: 364px;
       overflow: auto;
       display: grid;
+      align-content: start;
       gap: 7px;
       padding-right: 2px;
+      min-height: 0;
     }
     .event-card {
-      border: 1px solid rgba(148,163,184,.14);
-      border-radius: 13px;
-      background: rgba(15,23,42,.48);
-      padding: 9px;
-      display: grid;
-      grid-template-columns: 70px 1fr auto;
-      gap: 8px;
-      align-items: center;
-      text-align: left;
       width: 100%;
       min-width: 0;
+      display: grid;
+      grid-template-columns: 70px minmax(0, 1fr) auto;
+      gap: 9px;
+      align-items: center;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--surface);
+      text-align: left;
+      padding: 9px;
     }
-    .event-card.active { border-color: rgba(237,244,255,.5); background: rgba(59,130,246,.16); }
-    .event-card span { min-width: 0; }
-    .event-card .title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .legend { display: flex; gap: 8px; flex-wrap: wrap; color: var(--muted); font-size: 12px; }
-    .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; margin-right: 5px; background: var(--color); }
-    .lower { margin-top: 14px; display: grid; grid-template-columns: 1.05fr .95fr; gap: 14px; }
-    .panel { padding: 16px; }
-    .panel h2 { margin: 0 0 12px; font-size: 20px; }
-    .bars { display: grid; gap: 10px; }
-    .bar { display: grid; grid-template-columns: 110px minmax(0,1fr) 84px; gap: 10px; align-items: center; font-size: 13px; }
-    .track { height: 10px; border-radius: 999px; background: rgba(148,163,184,.14); overflow: hidden; }
-    .fill { height: 100%; width: var(--w); background: linear-gradient(90deg, var(--blue), var(--cyan)); border-radius: inherit; }
-    .empty { color: var(--muted); padding: 30px; text-align: center; border: 1px dashed var(--line); border-radius: 16px; }
-    @media (max-width: 1100px) {
-      .hero, .lower { grid-template-columns: 1fr; }
-      .stage { min-height: 600px; }
+    .event-card.active {
+      border-color: color-mix(in srgb, var(--active) 50%, var(--line));
+      background: color-mix(in srgb, var(--active) 9%, var(--surface));
     }
-    @media (max-width: 640px) {
-      .app { width: min(100vw - 16px, 1500px); padding-top: 8px; }
-      .topbar { position: static; align-items: flex-start; }
+    .event-card .time { color: var(--muted); font-size: 12px; }
+    .event-card .title {
+      min-width: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-weight: 700;
+    }
+    .event-card .value {
+      color: var(--text);
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .lower {
+      margin-top: 12px;
+      display: grid;
+      grid-template-columns: 1.05fr .95fr;
+      gap: 12px;
+    }
+    .panel {
+      padding: 16px;
+      min-height: 236px;
+    }
+    .panel h2 {
+      margin: 0;
+      font-size: 19px;
+    }
+    .panel .panel-sub {
+      margin: 4px 0 14px;
+      color: var(--muted);
+    }
+    .bars {
+      display: grid;
+      gap: 10px;
+    }
+    .bar {
+      display: grid;
+      grid-template-columns: 118px minmax(0, 1fr) 86px;
+      gap: 10px;
+      align-items: center;
+      font-size: 13px;
+    }
+    .bar strong {
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+    .bar span {
+      color: var(--muted);
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+    .track {
+      height: 10px;
+      border-radius: 999px;
+      background: var(--surface-muted);
+      overflow: hidden;
+      border: 1px solid var(--line);
+    }
+    .fill {
+      height: 100%;
+      width: var(--w);
+      min-width: 2px;
+      background: var(--color);
+      border-radius: inherit;
+    }
+    .insight {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--surface-soft);
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+    .insight strong {
+      display: block;
+      font-size: 19px;
+      margin-bottom: 6px;
+    }
+    .insight p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.65;
+    }
+
+    @media (max-width: 1180px) {
+      .topbar, .workspace, .lower { grid-template-columns: 1fr; }
       .toolbar { justify-content: flex-start; }
-      .metric-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .event-card { grid-template-columns: 56px 1fr; }
-      .event-card > span:last-child { grid-column: 2; justify-self: start; }
-      .stage { min-height: 620px; padding: 16px; }
-      .orbit { inset: 218px 18px 46px; }
+      .stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .side { grid-template-rows: auto 330px; }
+    }
+    @media (max-width: 760px) {
+      .app { width: min(100vw - 16px, 1520px); padding-top: 8px; }
+      .topbar { position: static; }
+      .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .stat-card { min-height: 104px; }
+      .progress-wrap { width: 100%; min-width: 0; }
+      input[type="range"] { width: 100%; }
+      .stage { padding: 13px; min-height: 620px; }
+      .section-head { display: grid; }
+      .timeline-board { overflow: auto; }
+      .lane { grid-template-columns: 88px minmax(360px, 1fr); }
+      .axis { left: 112px; min-width: 360px; }
+      .playhead { left: calc(100px + (100% - 124px) * var(--progress)); }
+      .event-card { grid-template-columns: 62px minmax(0, 1fr); }
+      .event-card .value { grid-column: 2; }
+      .bar { grid-template-columns: 94px minmax(0, 1fr) 72px; }
     }
   </style>
 </head>
@@ -252,49 +621,80 @@
         <div class="mark">CR</div>
         <div>
           <h1>Codex Work Replay</h1>
-          <div class="sub" id="sourceText">正在读取数据...</div>
+          <div class="sub">
+            <span>回放 AI 协作过程 / 工作流回顾</span>
+            <span class="source-pill" id="sourceText">正在读取数据...</span>
+          </div>
         </div>
       </div>
-      <div class="toolbar">
+      <div class="toolbar" id="toolbar">
         <select id="rangeSelect" aria-label="回放范围">
           <option value="today">今天</option>
           <option value="7d" selected>最近 7 天</option>
           <option value="30d">最近 30 天</option>
           <option value="all">全部</option>
+          <option value="custom">自定义</option>
+        </select>
+        <input class="date-input" id="fromDate" type="date" aria-label="开始日期">
+        <input class="date-input" id="toDate" type="date" aria-label="结束日期">
+        <select id="sortSelect" aria-label="列表排序">
+          <option value="time">按时间</option>
+          <option value="token">按 Token</option>
+          <option value="task">按任务类型</option>
         </select>
         <button id="playBtn" class="primary" type="button">播放</button>
         <button id="speedBtn" type="button">1x</button>
+        <div class="progress-wrap">
+          <span id="progressText">0 / 0</span>
+          <input id="progressInput" type="range" min="0" max="0" value="0" aria-label="回放进度">
+        </div>
         <button id="exportBtn" type="button">导出总结</button>
         <a href="index.html"><button type="button">返回看板</button></a>
       </div>
     </header>
 
-    <section class="hero">
-      <div class="stage">
-        <div class="scene-title">
+    <section class="stats" id="metricStrip"></section>
+
+    <section class="workspace">
+      <section class="stage">
+        <div class="section-head">
           <div>
-            <h2>把 AI 协作过程播放出来</h2>
-            <p id="storyText">回放会把每个 session 聚合成事件节点。节点越大，Token 越多；颜色代表任务类型；边框代表官方 Plus / 中转站 / 未知来源。</p>
+            <h2>时间轴回放</h2>
+            <p>横轴代表时间，纵向泳道代表任务类型。节点越大，Token 体量越高；颜色代表任务类型，边框代表来源。</p>
+          </div>
+          <div class="timeline-meta" id="timelineMeta"></div>
+        </div>
+        <div class="timeline-board" id="timelineBoard">
+          <div class="playhead" id="playhead"></div>
+          <div class="lanes" id="lanes"></div>
+          <div class="axis" id="axis"></div>
+        </div>
+        <div class="legend">
+          <div class="legend-group" id="legend"></div>
+          <div class="legend-group">
+            <span><i class="dot" style="--color:var(--official)"></i>官方 Plus</span>
+            <span><i class="dot" style="--color:var(--relay)"></i>中转站</span>
+            <span><i class="dot" style="--color:var(--unknown)"></i>未知</span>
           </div>
         </div>
-        <div class="metric-strip" id="metricStrip"></div>
-        <div class="orbit" id="orbit"></div>
-        <div class="beam" id="beam"></div>
-      </div>
+      </section>
+
       <aside class="side">
         <div class="current-card" id="currentCard"></div>
-        <div class="legend" id="legend"></div>
         <div class="timeline" id="timeline"></div>
       </aside>
     </section>
 
     <section class="lower">
       <article class="panel">
-        <h2>任务类型能量</h2>
+        <h2>任务类型分布</h2>
+        <p class="panel-sub">按当前回放范围统计各类任务的 Token 体量和 session 数量。</p>
         <div class="bars" id="taskBars"></div>
       </article>
       <article class="panel">
         <h2>回放总结</h2>
+        <p class="panel-sub">用一组稳定指标概括这段 AI 协作的节奏和结构。</p>
+        <div id="summaryInsight"></div>
         <div class="rows" id="summaryRows"></div>
       </article>
     </section>
@@ -304,33 +704,43 @@
     const els = {
       sourceText: document.querySelector("#sourceText"),
       metricStrip: document.querySelector("#metricStrip"),
-      orbit: document.querySelector("#orbit"),
-      beam: document.querySelector("#beam"),
-      currentCard: document.querySelector("#currentCard"),
-      timeline: document.querySelector("#timeline"),
-      legend: document.querySelector("#legend"),
-      taskBars: document.querySelector("#taskBars"),
-      summaryRows: document.querySelector("#summaryRows"),
+      toolbar: document.querySelector("#toolbar"),
       rangeSelect: document.querySelector("#rangeSelect"),
+      fromDate: document.querySelector("#fromDate"),
+      toDate: document.querySelector("#toDate"),
+      sortSelect: document.querySelector("#sortSelect"),
       playBtn: document.querySelector("#playBtn"),
       speedBtn: document.querySelector("#speedBtn"),
-      exportBtn: document.querySelector("#exportBtn")
+      progressInput: document.querySelector("#progressInput"),
+      progressText: document.querySelector("#progressText"),
+      exportBtn: document.querySelector("#exportBtn"),
+      timelineMeta: document.querySelector("#timelineMeta"),
+      timelineBoard: document.querySelector("#timelineBoard"),
+      lanes: document.querySelector("#lanes"),
+      axis: document.querySelector("#axis"),
+      legend: document.querySelector("#legend"),
+      currentCard: document.querySelector("#currentCard"),
+      timeline: document.querySelector("#timeline"),
+      taskBars: document.querySelector("#taskBars"),
+      summaryInsight: document.querySelector("#summaryInsight"),
+      summaryRows: document.querySelector("#summaryRows")
     };
 
     const sourceLabels = { official_plus: "官方 Plus", relay: "中转站", unknown: "未知" };
-    const sourceColors = { official_plus: "#3b82f6", relay: "#10b981", unknown: "#94a3b8" };
+    const sourceColors = { official_plus: "var(--official)", relay: "var(--relay)", unknown: "var(--unknown)" };
     const taskTypes = [
-      { id: "debug", label: "调试报错", color: "#f43f5e", priority: 92, keywords: ["debug", "bug", "error", "failed", "failure", "stack trace", "exception", "traceback", "报错", "修复报错", "异常", "失败", "错误", "崩溃", "排错"] },
-      { id: "deploy", label: "部署 / 运维", color: "#f59e0b", priority: 88, keywords: ["deploy", "deployment", "netlify", "vercel", "github pages", "github actions", "ci", "build", "server", "port", "npm", "部署", "发布", "运维", "端口", "启动", "构建", "上线"] },
-      { id: "frontend", label: "前端 UI", color: "#22d3ee", priority: 82, keywords: ["ui", "ux", "frontend", "layout", "button", "chart", "page", "dashboard", "visual", "responsive", "界面", "页面", "视觉", "样式", "布局", "前端", "按钮", "图表", "看板", "暗色", "明细表"] },
-      { id: "docs", label: "文档 / README", color: "#8b5cf6", priority: 78, keywords: ["readme", "docs", "document", "markdown", "article", "changelog", "release", "文档", "说明", "文章", "更新日志", "公众号", "总结", "复盘", "开源展示"] },
-      { id: "data", label: "数据分析", color: "#06b6d4", priority: 74, keywords: ["data", "token", "csv", "json", "chart", "table", "analytics", "usage", "统计", "数据", "分析", "图表", "表格", "导入", "导出", "缓存命中"] },
-      { id: "planning", label: "项目规划", color: "#eab308", priority: 70, keywords: ["roadmap", "plan", "architecture", "design", "proposal", "规划", "计划", "方案", "架构", "设计", "建议", "计划表", "重大飞跃"] },
+      { id: "debug", label: "调试报错", color: "#e11d48", priority: 92, keywords: ["debug", "bug", "error", "failed", "failure", "stack trace", "exception", "traceback", "报错", "修复报错", "异常", "失败", "错误", "崩溃", "排错"] },
+      { id: "deploy", label: "部署 / 运维", color: "#d97706", priority: 88, keywords: ["deploy", "deployment", "netlify", "vercel", "github pages", "github actions", "ci", "build", "server", "port", "npm", "部署", "发布", "运维", "端口", "启动", "构建", "上线"] },
+      { id: "frontend", label: "前端 UI", color: "#0891b2", priority: 82, keywords: ["ui", "ux", "frontend", "layout", "button", "chart", "page", "dashboard", "visual", "responsive", "界面", "页面", "视觉", "样式", "布局", "前端", "按钮", "图表", "看板", "暗色", "明细表"] },
+      { id: "docs", label: "文档 / README", color: "#7c3aed", priority: 78, keywords: ["readme", "docs", "document", "markdown", "article", "changelog", "release", "文档", "说明", "文章", "更新日志", "公众号", "总结", "复盘", "开源展示"] },
+      { id: "data", label: "数据分析", color: "#0d9488", priority: 74, keywords: ["data", "token", "csv", "json", "chart", "table", "analytics", "usage", "统计", "数据", "分析", "图表", "表格", "导入", "导出", "缓存命中"] },
+      { id: "planning", label: "项目规划", color: "#ca8a04", priority: 70, keywords: ["roadmap", "plan", "architecture", "design", "proposal", "规划", "计划", "方案", "架构", "设计", "建议", "计划表", "重大飞跃"] },
       { id: "refactor", label: "重构", color: "#14b8a6", priority: 66, keywords: ["refactor", "cleanup", "extract", "restructure", "重构", "抽象", "整理", "优化结构", "抽离"] },
-      { id: "coding", label: "写代码", color: "#60a5fa", priority: 58, keywords: ["function", "class", "component", "module", "api", "test", "implement", "feature", "script", "写代码", "代码实现", "实现功能", "函数", "组件", "接口", "测试"] },
-      { id: "other", label: "其他 / 未识别", color: "#94a3b8", keywords: [] }
+      { id: "coding", label: "写代码", color: "#2563eb", priority: 58, keywords: ["function", "class", "component", "module", "api", "test", "implement", "feature", "script", "写代码", "代码实现", "实现功能", "函数", "组件", "接口", "测试"] },
+      { id: "other", label: "其他 / 未识别", color: "#64748b", priority: 0, keywords: [] }
     ];
     const taskMap = Object.fromEntries(taskTypes.map(type => [type.id, type]));
+
     let rawRecords = [];
     let events = [];
     let activeIndex = 0;
@@ -346,27 +756,52 @@
     function formatToken(value) {
       const number = Number(value || 0);
       const abs = Math.abs(number);
-      const unit = (divisor, suffix, digits) => `${(Math.floor(abs / divisor * 10 ** digits) / 10 ** digits * (number < 0 ? -1 : 1)).toFixed(digits)}${suffix}`;
+      const signed = number < 0 ? -1 : 1;
+      const unit = (divisor, suffix, digits) => `${(Math.floor(abs / divisor * 10 ** digits) / 10 ** digits * signed).toFixed(digits)}${suffix}`;
       if (abs >= 1e9) return unit(1e9, "B", 2);
       if (abs >= 1e6) return unit(1e6, "M", 2);
       if (abs >= 1e3) return unit(1e3, "K", 1);
       return Math.round(number).toLocaleString("zh-CN");
     }
-    function formatInt(value) { return Math.round(Number(value || 0)).toLocaleString("zh-CN"); }
-    function percent(part, total, digits = 1) { return total ? Number((part / total * 100).toFixed(digits)) : 0; }
+    function formatInt(value) {
+      return Math.round(Number(value || 0)).toLocaleString("zh-CN");
+    }
+    function percent(part, total, digits = 1) {
+      return total ? Number((part / total * 100).toFixed(digits)) : 0;
+    }
     function escapeHtml(value) {
       return String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
     }
     function isLowValueTitle(value) {
       const text = String(value || "").trim().toLowerCase();
-      return !text ||
-        text.startsWith("<environment_context>") ||
-        text.includes("# agents.md instructions") ||
-        text.includes("current_date") ||
-        text.includes("<cwd>");
+      return !text || text.startsWith("<environment_context>") || text.includes("# agents.md instructions") || text.includes("current_date") || text.includes("<cwd>");
+    }
+    function toText(value, fallback = "") {
+      if (value == null) return fallback;
+      if (typeof value === "string") return value.trim() === "[object Object]" ? fallback : value;
+      if (typeof value === "number" || typeof value === "boolean") return String(value);
+      if (Array.isArray(value)) return value.map(item => toText(item)).filter(Boolean).join(" ");
+      if (typeof value === "object") {
+        for (const key of ["sessionId", "session_id", "id", "title", "name", "path", "relativePath", "relative_path"]) {
+          const text = toText(value[key]);
+          if (text && text !== "[object Object]") return text;
+        }
+        return fallback;
+      }
+      return String(value || fallback);
+    }
+    function displayTitle(value, fallback = "未命名会话") {
+      const text = toText(value, fallback).replace(/\s+/g, " ").trim();
+      return text.length > 120 ? `${text.slice(0, 120)}...` : text;
     }
     function activeTokens(record) {
       return Math.max(Number(record.inputTokens || 0) - Number(record.cachedInputTokens || 0), 0) + Number(record.outputTokens || 0);
+    }
+    function normalizeSource(value, provider) {
+      const text = String(value || provider || "unknown").toLowerCase();
+      if (["relay", "rightcode", "custom", "openrouter"].some(key => text.includes(key))) return "relay";
+      if (["official_plus", "openai", "plus"].some(key => text.includes(key))) return "official_plus";
+      return "unknown";
     }
     function normalizeRecord(raw = {}) {
       const inputTokens = Number(raw.inputTokens ?? raw.input_tokens ?? raw.prompt_tokens ?? raw.input ?? 0);
@@ -374,19 +809,21 @@
       const outputTokens = Number(raw.outputTokens ?? raw.output_tokens ?? raw.completion_tokens ?? raw.output ?? 0);
       const totalTokens = Number(raw.totalTokens ?? raw.total_tokens ?? raw.tokens ?? raw.total ?? inputTokens + outputTokens);
       const timestamp = new Date(raw.timestamp || raw.time || raw.date || raw.created_at || Date.now()).toISOString();
+      const provider = toText(raw.provider || raw.source, "unknown");
+      const rawTitle = toText(raw.sessionTitle || raw.title);
+      const fallbackTitle = toText(raw.relativePath || raw.relative_path || raw.sessionId || raw.session_id, "未命名会话");
       return {
-        id: String(raw.id || `${timestamp}-${raw.sessionId || raw.session_id || Math.random()}`),
+        id: toText(raw.id, `${timestamp}-${toText(raw.sessionId || raw.session_id, Math.random())}`),
         timestamp,
         date: timestamp.slice(0, 10),
-        sessionId: String(raw.sessionId || raw.session_id || raw.conversation_id || raw.id || "unknown"),
-        model: String(raw.model || raw.model_name || "unknown"),
-        source: raw.source || "unknown",
-        provider: raw.provider || raw.source || "unknown",
-        sessionTitle: isLowValueTitle(raw.sessionTitle || raw.title)
-          ? (raw.relativePath || raw.relative_path || raw.sessionId || raw.session_id || "未命名会话")
-          : (raw.sessionTitle || raw.title || raw.sessionId || raw.session_id || "未命名会话"),
-        relativePath: raw.relativePath || raw.relative_path || "",
-        detailText: raw.detailText || "",
+        sessionId: toText(raw.sessionId || raw.session_id || raw.conversation_id || raw.id, "unknown"),
+        model: toText(raw.model || raw.model_name, "unknown"),
+        source: normalizeSource(raw.source, provider),
+        provider,
+        taskType: toText(raw.taskType || raw.task_type),
+        sessionTitle: displayTitle(isLowValueTitle(rawTitle) ? fallbackTitle : (rawTitle || fallbackTitle)),
+        relativePath: toText(raw.relativePath || raw.relative_path),
+        detailText: toText(raw.detailText),
         inputTokens,
         cachedInputTokens,
         outputTokens,
@@ -394,7 +831,9 @@
         estimated: Boolean(raw.estimated)
       };
     }
-    function escapeRegExp(value) { return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
+    function escapeRegExp(value) {
+      return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    }
     function keywordMatches(text, keyword) {
       const key = String(keyword || "").toLowerCase();
       if (!key) return false;
@@ -423,11 +862,20 @@
       }
       return best;
     }
-    function rangeRecords(records) {
+    function getRangeBounds(records) {
       const range = els.rangeSelect.value;
-      if (range === "all") return records;
+      if (range === "custom") {
+        return { from: els.fromDate.value || "0000-01-01", to: els.toDate.value || "9999-12-31" };
+      }
+      if (range === "all") {
+        const dates = records.map(record => record.date).sort();
+        return { from: dates[0] || todayString(), to: dates[dates.length - 1] || todayString() };
+      }
       const from = range === "today" ? todayString() : range === "30d" ? todayString(-29) : todayString(-6);
-      const to = todayString();
+      return { from, to: todayString() };
+    }
+    function rangeRecords(records) {
+      const { from, to } = getRangeBounds(records);
       return records.filter(record => record.date >= from && record.date <= to);
     }
     function groupEvents(records) {
@@ -490,8 +938,8 @@
       els.sourceText.textContent = `公开示例数据 / ${demo.records.length.toLocaleString("zh-CN")} 条 usage 记录`;
       return demo.records.map(normalizeRecord);
     }
-    function summarize(events) {
-      return events.reduce((summary, event) => {
+    function summarize(items) {
+      return items.reduce((summary, event) => {
         summary.totalTokens += event.totalTokens;
         summary.activeTokens += event.activeTokens;
         summary.cachedInputTokens += event.cachedInputTokens;
@@ -505,62 +953,122 @@
         return summary;
       }, { totalTokens: 0, activeTokens: 0, cachedInputTokens: 0, inputTokens: 0, outputTokens: 0, sessions: 0, sources: {}, tasks: {} });
     }
-    function render() {
-      events = groupEvents(rangeRecords(rawRecords));
-      activeIndex = Math.min(activeIndex, Math.max(events.length - 1, 0));
-      const summary = summarize(events);
-      const max = Math.max(...events.map(event => event.totalTokens), 1);
+    function sortedEventsForList() {
+      const mode = els.sortSelect.value;
+      const list = events.slice();
+      if (mode === "token") return list.sort((a, b) => b.totalTokens - a.totalTokens);
+      if (mode === "task") return list.sort((a, b) => a.task.label.localeCompare(b.task.label, "zh-CN") || b.totalTokens - a.totalTokens);
+      return list.sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+    }
+    function renderMetrics(summary) {
+      const tasks = Object.values(summary.tasks).sort((a, b) => b.totalTokens - a.totalTokens);
+      const peak = events.reduce((best, event) => event.totalTokens > (best?.totalTokens || 0) ? event : best, null);
       els.metricStrip.innerHTML = [
-        ["总 Token", formatToken(summary.totalTokens)],
-        ["session 事件", formatInt(summary.sessions)],
-        ["active tokens", formatToken(summary.activeTokens)],
-        ["缓存命中率", `${percent(summary.cachedInputTokens, summary.inputTokens)}%`]
-      ].map(([label, value]) => `<div class="mini"><span>${label}</span><strong>${value}</strong></div>`).join("");
-      els.orbit.innerHTML = events.length ? events.map((event, index) => {
-        const angle = events.length === 1 ? 0 : (index / Math.max(events.length - 1, 1)) * Math.PI * 1.72 - Math.PI * .86;
-        const radiusX = 42;
-        const radiusY = 38;
-        const x = 50 + Math.cos(angle) * radiusX;
-        const y = 52 + Math.sin(angle) * radiusY;
-        const size = Math.max(16, Math.min(70, 16 + (event.totalTokens / max) * 54));
-        const cls = index === activeIndex ? "active" : index < activeIndex ? "past" : "";
-        return `<button class="node ${cls}" data-index="${index}" title="${escapeHtml(event.title)} / ${formatToken(event.totalTokens)}" style="--x:${x}%;--y:${y}%;--size:${size}px;--task:${event.task.color};--source:${sourceColors[event.source] || sourceColors.unknown}" type="button"></button>`;
-      }).join("") : `<div class="empty">当前范围没有可回放的 usage 记录。</div>`;
-      els.beam.style.setProperty("--progress", events.length ? String((activeIndex + 1) / events.length) : "0.02");
-      els.timeline.innerHTML = events.map((event, index) => `
-        <button class="event-card ${index === activeIndex ? "active" : ""}" data-index="${index}" type="button">
-          <span>${event.timestamp.slice(5, 16).replace("T", " ")}</span>
-          <span class="title">${escapeHtml(event.title)}</span>
-          <span>${formatToken(event.totalTokens)}</span>
-        </button>
-      `).join("") || `<div class="empty">暂无事件。请回到主看板导入 sessions 文件夹。</div>`;
-      els.legend.innerHTML = taskTypes.filter(type => type.id !== "other").map(type => `<span><i class="dot" style="--color:${type.color}"></i>${type.label}</span>`).join("");
-      renderCurrent();
-      renderLower(summary);
+        { label: "总 Token", value: formatToken(summary.totalTokens), note: `${formatInt(summary.sessions)} 个 session`, hero: true },
+        { label: "session 数量", value: formatInt(summary.sessions), note: "按日期 + session 聚合" },
+        { label: "active tokens", value: formatToken(summary.activeTokens), note: "未缓存输入 + 输出" },
+        { label: "缓存命中率", value: `${percent(summary.cachedInputTokens, summary.inputTokens)}%`, note: `${formatToken(summary.cachedInputTokens)} / ${formatToken(summary.inputTokens)}` },
+        { label: "主任务类型", value: tasks[0]?.label || "暂无", note: peak ? `峰值 ${peak.date}` : "暂无峰值" }
+      ].map(item => `
+        <div class="stat-card ${item.hero ? "hero-stat" : ""}">
+          <span>${escapeHtml(item.label)}</span>
+          <strong>${escapeHtml(item.value)}</strong>
+          <small>${escapeHtml(item.note)}</small>
+        </div>
+      `).join("");
+    }
+    function renderTimeline(summary) {
+      const active = events[activeIndex];
+      const minTime = Math.min(...events.map(event => new Date(event.timestamp).getTime()), Date.now());
+      const maxTime = Math.max(...events.map(event => new Date(event.timestamp).getTime()), minTime + 1);
+      const totalSpan = Math.max(maxTime - minTime, 1);
+      const maxTokens = Math.max(...events.map(event => event.totalTokens), 1);
+      const usedTasks = taskTypes
+        .map(type => ({ ...type, count: events.filter(event => event.task.id === type.id).length }))
+        .filter(type => type.count || type.id === "other")
+        .sort((a, b) => (b.count > 0) - (a.count > 0) || b.count - a.count || a.priority - b.priority);
+      const lanes = usedTasks.filter(type => type.count).length ? usedTasks.filter(type => type.count) : [taskMap.other];
+      els.lanes.style.setProperty("--lane-count", lanes.length);
+      els.lanes.innerHTML = lanes.map(type => {
+        const laneEvents = events.filter(event => event.task.id === type.id);
+        return `
+          <div class="lane">
+            <div class="lane-label" title="${escapeHtml(type.label)}">${escapeHtml(type.label)}</div>
+            <div class="lane-track">
+              ${laneEvents.map(event => {
+                const index = events.indexOf(event);
+                const x = events.length <= 1 ? 50 : 3 + ((new Date(event.timestamp).getTime() - minTime) / totalSpan) * 94;
+                const size = Math.max(12, Math.min(34, 12 + Math.sqrt(event.totalTokens / maxTokens) * 22));
+                const cls = index === activeIndex ? "active" : index < activeIndex ? "past" : "";
+                return `<button class="node ${cls}" data-index="${index}" title="${escapeHtml(event.timestamp.slice(0, 16).replace("T", " "))} / ${escapeHtml(event.task.label)} / ${formatToken(event.totalTokens)}" style="--x:${x}%;--size:${size}px;--task:${event.task.color};--source:${sourceColors[event.source] || sourceColors.unknown}" type="button"></button>`;
+              }).join("")}
+            </div>
+          </div>
+        `;
+      }).join("") || `<div class="empty">当前范围没有可回放的 usage 记录。</div>`;
+      const progress = events.length ? activeIndex / Math.max(events.length - 1, 1) : 0;
+      els.timelineBoard.style.setProperty("--progress", String(progress));
+      els.axis.innerHTML = events.length ? [
+        new Date(minTime).toISOString().slice(5, 10),
+        active ? active.timestamp.slice(5, 16).replace("T", " ") : "",
+        new Date(maxTime).toISOString().slice(5, 10)
+      ].map(item => `<span>${escapeHtml(item)}</span>`).join("") : "";
+      const { from, to } = getRangeBounds(rawRecords);
+      els.timelineMeta.innerHTML = `
+        <span class="badge">${escapeHtml(from)} 至 ${escapeHtml(to)}</span>
+        <span class="badge">${formatInt(events.length)} 个节点</span>
+        <span class="badge">${formatToken(summary.totalTokens)}</span>
+      `;
+      els.legend.innerHTML = taskTypes.filter(type => type.id !== "other").map(type => `<span><i class="dot" style="--color:${type.color}"></i>${escapeHtml(type.label)}</span>`).join("");
     }
     function renderCurrent() {
       const event = events[activeIndex];
+      els.progressInput.max = String(Math.max(events.length - 1, 0));
+      els.progressInput.value = String(activeIndex);
+      els.progressText.textContent = events.length ? `${activeIndex + 1} / ${events.length}` : "0 / 0";
       if (!event) {
-        els.currentCard.innerHTML = `<div class="empty">没有可展示的事件。</div>`;
+        els.currentCard.innerHTML = `<div class="empty">没有可展示的事件。请回到主看板导入 sessions 文件夹，或加载示例数据。</div>`;
         return;
       }
       els.currentCard.innerHTML = `
+        <div class="current-kicker">
+          <span>当前 session</span>
+          <span>${activeIndex + 1} / ${events.length}</span>
+        </div>
         <h3>${escapeHtml(event.title)}</h3>
-        <div class="time">${escapeHtml(event.timestamp.replace("T", " ").slice(0, 16))}</div>
         <div class="badges">
-          <span class="badge">${escapeHtml(event.task.label)}</span>
+          <span class="badge">${escapeHtml(event.timestamp.replace("T", " ").slice(0, 16))}</span>
           <span class="badge ${event.source}">${sourceLabels[event.source] || "未知"}</span>
+          <span class="badge">${escapeHtml(event.task.label)}</span>
           <span class="badge">${escapeHtml(event.model)}</span>
-          ${event.estimated ? `<span class="badge">含估算</span>` : `<span class="badge">真实 usage</span>`}
+          ${event.estimated ? `<span class="badge estimated">含估算</span>` : `<span class="badge">真实 usage</span>`}
+        </div>
+        <div class="big-metrics">
+          <div><span>total</span><strong>${formatToken(event.totalTokens)}</strong></div>
+          <div><span>active</span><strong>${formatToken(event.activeTokens)}</strong></div>
         </div>
         <div class="rows">
-          <div class="row"><span>total</span><strong>${formatToken(event.totalTokens)}</strong></div>
-          <div class="row"><span>active</span><strong>${formatToken(event.activeTokens)}</strong></div>
-          <div class="row"><span>input / cached / output</span><strong>${formatToken(event.inputTokens)} / ${formatToken(event.cachedInputTokens)} / ${formatToken(event.outputTokens)}</strong></div>
+          <div class="row"><span>input</span><strong>${formatToken(event.inputTokens)}</strong></div>
+          <div class="row"><span>cached input</span><strong>${formatToken(event.cachedInputTokens)}</strong></div>
+          <div class="row"><span>output</span><strong>${formatToken(event.outputTokens)}</strong></div>
           <div class="row"><span>records</span><strong>${formatInt(event.records)}</strong></div>
+          <div class="row"><span>session id</span><strong>${escapeHtml(event.sessionId.slice(0, 10))}...</strong></div>
         </div>
       `;
       document.querySelector(`.event-card[data-index="${activeIndex}"]`)?.scrollIntoView({ block: "nearest" });
+    }
+    function renderEventList() {
+      const list = sortedEventsForList();
+      els.timeline.innerHTML = list.map(event => {
+        const index = events.indexOf(event);
+        return `
+          <button class="event-card ${index === activeIndex ? "active" : ""}" data-index="${index}" type="button">
+            <span class="time">${escapeHtml(event.timestamp.slice(5, 16).replace("T", " "))}</span>
+            <span class="title">${escapeHtml(event.title)}</span>
+            <span class="value">${formatToken(event.totalTokens)}</span>
+          </button>
+        `;
+      }).join("") || `<div class="empty">暂无事件。请回到主看板导入 sessions 文件夹。</div>`;
     }
     function renderLower(summary) {
       const tasks = Object.values(summary.tasks).sort((a, b) => b.totalTokens - a.totalTokens);
@@ -568,19 +1076,35 @@
       els.taskBars.innerHTML = tasks.map(task => `
         <div class="bar">
           <strong>${escapeHtml(task.label)}</strong>
-          <div class="track"><div class="fill" style="--w:${percent(task.totalTokens, max)}%;background:${task.color}"></div></div>
+          <div class="track"><div class="fill" style="--w:${percent(task.totalTokens, max)}%;--color:${task.color}"></div></div>
           <span>${formatToken(task.totalTokens)}</span>
         </div>
       `).join("") || `<div class="empty">暂无任务类型。</div>`;
       const peak = events.reduce((best, event) => event.totalTokens > (best?.totalTokens || 0) ? event : best, null);
       const topTask = tasks[0];
       const relayShare = percent(summary.sources.relay || 0, summary.totalTokens);
+      els.summaryInsight.innerHTML = `
+        <div class="insight">
+          <strong>${topTask ? `${topTask.label} 是主要工作类型` : "暂无可总结的回放数据"}</strong>
+          <p>${peak ? `峰值 session 出现在 ${peak.timestamp.slice(0, 16).replace("T", " ")}，消耗 ${formatToken(peak.totalTokens)}。当前范围中转站占比 ${relayShare}%，输出 Token 为 ${formatToken(summary.outputTokens)}。` : "导入 sessions 或 usage-index 后，这里会生成本段协作的结构化总结。"}</p>
+        </div>
+      `;
       els.summaryRows.innerHTML = `
-        <div class="row"><span>主要任务</span><strong>${topTask ? topTask.label : "暂无"}</strong></div>
-        <div class="row"><span>最高消耗事件</span><strong>${peak ? `${peak.timestamp.slice(5, 16).replace("T", " ")} / ${formatToken(peak.totalTokens)}` : "暂无"}</strong></div>
+        <div class="row"><span>主要任务类型</span><strong>${topTask ? topTask.label : "暂无"}</strong></div>
+        <div class="row"><span>最高消耗 session</span><strong>${peak ? `${peak.date} / ${formatToken(peak.totalTokens)}` : "暂无"}</strong></div>
         <div class="row"><span>中转站占比</span><strong>${relayShare}%</strong></div>
         <div class="row"><span>输出 Token</span><strong>${formatToken(summary.outputTokens)}</strong></div>
       `;
+    }
+    function render() {
+      events = groupEvents(rangeRecords(rawRecords));
+      activeIndex = Math.min(activeIndex, Math.max(events.length - 1, 0));
+      const summary = summarize(events);
+      renderMetrics(summary);
+      renderTimeline(summary);
+      renderCurrent();
+      renderEventList();
+      renderLower(summary);
     }
     function step() {
       if (!events.length) return;
@@ -591,7 +1115,7 @@
       playing = value;
       els.playBtn.textContent = playing ? "暂停" : "播放";
       clearInterval(timer);
-      if (playing) timer = setInterval(step, 1300 / speed);
+      if (playing) timer = setInterval(step, 1200 / speed);
     }
     function exportMarkdown() {
       const summary = summarize(events);
@@ -617,32 +1141,42 @@
       link.click();
       URL.revokeObjectURL(url);
     }
+
     els.playBtn.addEventListener("click", () => setPlaying(!playing));
     els.speedBtn.addEventListener("click", () => {
       speed = speed === 1 ? 2 : speed === 2 ? 4 : 1;
       els.speedBtn.textContent = `${speed}x`;
       if (playing) setPlaying(true);
     });
-    els.rangeSelect.addEventListener("change", () => { activeIndex = 0; render(); });
+    els.progressInput.addEventListener("input", () => {
+      activeIndex = Number(els.progressInput.value || 0);
+      render();
+    });
+    els.rangeSelect.addEventListener("change", () => {
+      els.toolbar.classList.toggle("custom", els.rangeSelect.value === "custom");
+      activeIndex = 0;
+      render();
+    });
+    els.fromDate.addEventListener("change", () => { activeIndex = 0; render(); });
+    els.toDate.addEventListener("change", () => { activeIndex = 0; render(); });
+    els.sortSelect.addEventListener("change", renderEventList);
     els.exportBtn.addEventListener("click", exportMarkdown);
-    els.orbit.addEventListener("click", event => {
+    document.addEventListener("click", event => {
       const button = event.target.closest("[data-index]");
       if (!button) return;
       activeIndex = Number(button.dataset.index || 0);
       render();
     });
-    els.timeline.addEventListener("click", event => {
-      const button = event.target.closest("[data-index]");
-      if (!button) return;
-      activeIndex = Number(button.dataset.index || 0);
-      render();
-    });
+
     loadData().then(records => {
       rawRecords = records;
+      const dates = rawRecords.map(record => record.date).sort();
+      els.fromDate.value = dates[0] || todayString(-6);
+      els.toDate.value = dates[dates.length - 1] || todayString();
       render();
     }).catch(error => {
       els.sourceText.textContent = "数据加载失败";
-      els.orbit.innerHTML = `<div class="empty">${escapeHtml(error.message || "无法读取数据，请回到主看板导入。")}</div>`;
+      els.lanes.innerHTML = `<div class="empty">${escapeHtml(error.message || "无法读取数据，请回到主看板导入。")}</div>`;
     });
   </script>
 </body>
