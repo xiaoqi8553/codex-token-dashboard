@@ -25,6 +25,7 @@
 - 2026-06-03: The cache hit trend chart used too much vertical space for too little information. Trend modules should show richer multi-metric usage data with tooltips and compact layout.
 - 2026-06-03: GitHub Pages deployment failure was initially treated like workflow code alone could solve it. First-time Pages deploys also require repository Pages to be enabled and set to GitHub Actions in GitHub settings.
 - 2026-06-03: GitHub Actions runtime warnings were over-corrected by bumping action tags too aggressively. Prefer stable documented action versions first; warnings are not deployment failures unless logs say so.
+- 2026-06-03: 0.5.0 release metadata was updated in package and changelog but left stale hardcoded values in `index.html`. Release work must search for old visible version strings and snapshot metadata before deploy.
 - 2026-06-03: Public static import UI exposed single-file import too prominently and hid the `sessions` folder path. GitHub Pages and Netlify must both provide an obvious folder import action.
 - 2026-06-03: Location/weather fixes missed deployment response headers. If geolocation is used, check both button logic and static host `Permissions-Policy`.
 - 2026-06-03: RightCode usage can appear as Codex provider `custom`; source classification must treat `custom` as relay instead of leaving it in `unknown`.
