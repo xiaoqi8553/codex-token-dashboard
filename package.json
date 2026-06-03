@@ -9,7 +9,10 @@
     "scan": "node server.js --scan",
     "build": "node scripts/build-static.js",
     "visual:shot": "node scripts/visual-check.js --shot",
-    "visual:test": "node scripts/visual-check.js --test"
+    "visual:test": "node scripts/visual-check.js --test",
+    "ui:shot": "node scripts/ui-review.js --shot",
+    "ui:audit": "node scripts/ui-review.js --audit",
+    "ui:report": "node scripts/ui-review.js --report"
   },
   "engines": {
     "node": ">=18"

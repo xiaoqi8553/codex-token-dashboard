@@ -11,6 +11,9 @@
 - Added clearer replay metrics, a wider selected-session detail panel, structured task distribution, and a stronger replay summary area.
 - Added safe display cleanup so object-shaped titles or ids do not render as `[object Object]` in the replay page.
 - Improved task classification with weighted field matching and safer Latin keyword boundaries so rightcode no longer causes broad "写代码" misclassification.
+- Added `npm run ui:shot`, `npm run ui:audit`, and `npm run ui:report` for screenshot-based UI self-review.
+- Added `docs/ui-audit-report.json` and `docs/UI_REVIEW_REPORT.md` outputs for repeatable visual acceptance reporting.
+- Improved mobile header density and added collapsed mobile filters so the first screen is not dominated by controls.
 - Included Work Replay in static builds and visual acceptance screenshots.
 
 ## 0.4.9 - 2026-06-03

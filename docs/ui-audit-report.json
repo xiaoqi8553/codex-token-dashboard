@@ -1,0 +1,631 @@
+{
+  "generatedAt": "2026-06-04T01:33:03.486Z",
+  "baseUrl": "http://127.0.0.1:8787",
+  "screenshotsDir": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current",
+  "pages": [
+    {
+      "page": "overview",
+      "name": "总览页",
+      "viewport": "1920",
+      "width": 1920,
+      "height": 1080,
+      "screenshot": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current\\overview-1920.png",
+      "warnings": [
+        {
+          "code": "many-cards",
+          "message": "首屏卡片数量超过 12 个",
+          "detail": {
+            "count": 17
+          }
+        }
+      ],
+      "failures": [],
+      "metrics": {
+        "scrollWidth": 1920,
+        "clientWidth": 1920,
+        "headerHeight": 62,
+        "occupiedHeight": 202,
+        "viewportHeight": 1080,
+        "filtersVisible": true,
+        "charts": [
+          {
+            "selector": "#trendChart",
+            "height": 308,
+            "hasGraphic": true,
+            "hasEmpty": false
+          },
+          {
+            "selector": "#ratioChart",
+            "height": 308,
+            "hasGraphic": true,
+            "hasEmpty": false
+          },
+          {
+            "selector": "#cacheTrendChart",
+            "height": 300,
+            "hasGraphic": true,
+            "hasEmpty": false
+          }
+        ],
+        "cards": 17,
+        "h1Count": 1,
+        "activeNav": "◎总览",
+        "replay": null
+      }
+    },
+    {
+      "page": "calendar",
+      "name": "AI 使用日历",
+      "viewport": "1920",
+      "width": 1920,
+      "height": 1080,
+      "screenshot": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current\\calendar-1920.png",
+      "warnings": [],
+      "failures": [],
+      "metrics": {
+        "scrollWidth": 1920,
+        "clientWidth": 1920,
+        "headerHeight": 62,
+        "occupiedHeight": 204,
+        "viewportHeight": 1080,
+        "filtersVisible": true,
+        "charts": [
+          {
+            "selector": ".calendar-heatmap",
+            "height": 240,
+            "hasGraphic": true,
+            "hasEmpty": false
+          }
+        ],
+        "cards": 7,
+        "h1Count": 1,
+        "activeNav": "▦AI 日历",
+        "replay": null
+      }
+    },
+    {
+      "page": "tasks",
+      "name": "任务复盘",
+      "viewport": "1920",
+      "width": 1920,
+      "height": 1080,
+      "screenshot": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current\\tasks-1920.png",
+      "warnings": [],
+      "failures": [],
+      "metrics": {
+        "scrollWidth": 1920,
+        "clientWidth": 1920,
+        "headerHeight": 62,
+        "occupiedHeight": 250,
+        "viewportHeight": 1080,
+        "filtersVisible": true,
+        "charts": [
+          {
+            "selector": ".task-layout",
+            "height": 723.875,
+            "hasGraphic": true,
+            "hasEmpty": true
+          }
+        ],
+        "cards": 12,
+        "h1Count": 1,
+        "activeNav": "◇任务复盘",
+        "replay": null
+      }
+    },
+    {
+      "page": "details",
+      "name": "明细表",
+      "viewport": "1920",
+      "width": 1920,
+      "height": 1080,
+      "screenshot": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current\\details-1920.png",
+      "warnings": [],
+      "failures": [],
+      "metrics": {
+        "scrollWidth": 1920,
+        "clientWidth": 1920,
+        "headerHeight": 62,
+        "occupiedHeight": 251,
+        "viewportHeight": 1080,
+        "filtersVisible": true,
+        "charts": [],
+        "cards": 2,
+        "h1Count": 1,
+        "activeNav": "≡明细",
+        "replay": null
+      }
+    },
+    {
+      "page": "settings",
+      "name": "设置 / 关于",
+      "viewport": "1920",
+      "width": 1920,
+      "height": 1080,
+      "screenshot": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current\\settings-1920.png",
+      "warnings": [],
+      "failures": [],
+      "metrics": {
+        "scrollWidth": 1920,
+        "clientWidth": 1920,
+        "headerHeight": 62,
+        "occupiedHeight": 101,
+        "viewportHeight": 1080,
+        "filtersVisible": false,
+        "charts": [],
+        "cards": 7,
+        "h1Count": 1,
+        "activeNav": "?设置",
+        "replay": null
+      }
+    },
+    {
+      "page": "work-replay",
+      "name": "Work Replay",
+      "viewport": "1920",
+      "width": 1920,
+      "height": 1080,
+      "screenshot": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current\\work-replay-1920.png",
+      "warnings": [],
+      "failures": [],
+      "metrics": {
+        "scrollWidth": 1920,
+        "clientWidth": 1920,
+        "headerHeight": 96.421875,
+        "occupiedHeight": 96.421875,
+        "viewportHeight": 1080,
+        "filtersVisible": false,
+        "charts": [
+          {
+            "selector": ".timeline-board",
+            "height": 749.71875,
+            "hasGraphic": true,
+            "hasEmpty": false
+          }
+        ],
+        "cards": 8,
+        "h1Count": 1,
+        "activeNav": "",
+        "replay": {
+          "hasTimeline": true,
+          "nodeCount": 16,
+          "sideWidth": 430,
+          "hasGlow": false,
+          "hasControls": true
+        }
+      }
+    },
+    {
+      "page": "overview",
+      "name": "总览页",
+      "viewport": "1366",
+      "width": 1366,
+      "height": 768,
+      "screenshot": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current\\overview-1366.png",
+      "warnings": [
+        {
+          "code": "many-cards",
+          "message": "首屏卡片数量超过 12 个",
+          "detail": {
+            "count": 17
+          }
+        }
+      ],
+      "failures": [],
+      "metrics": {
+        "scrollWidth": 1366,
+        "clientWidth": 1366,
+        "headerHeight": 62,
+        "occupiedHeight": 202,
+        "viewportHeight": 768,
+        "filtersVisible": true,
+        "charts": [
+          {
+            "selector": "#trendChart",
+            "height": 308,
+            "hasGraphic": true,
+            "hasEmpty": false
+          },
+          {
+            "selector": "#ratioChart",
+            "height": 308,
+            "hasGraphic": true,
+            "hasEmpty": false
+          },
+          {
+            "selector": "#cacheTrendChart",
+            "height": 300,
+            "hasGraphic": true,
+            "hasEmpty": false
+          }
+        ],
+        "cards": 17,
+        "h1Count": 1,
+        "activeNav": "◎总览",
+        "replay": null
+      }
+    },
+    {
+      "page": "calendar",
+      "name": "AI 使用日历",
+      "viewport": "1366",
+      "width": 1366,
+      "height": 768,
+      "screenshot": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current\\calendar-1366.png",
+      "warnings": [],
+      "failures": [],
+      "metrics": {
+        "scrollWidth": 1366,
+        "clientWidth": 1366,
+        "headerHeight": 62,
+        "occupiedHeight": 204,
+        "viewportHeight": 768,
+        "filtersVisible": true,
+        "charts": [
+          {
+            "selector": ".calendar-heatmap",
+            "height": 240,
+            "hasGraphic": true,
+            "hasEmpty": false
+          }
+        ],
+        "cards": 7,
+        "h1Count": 1,
+        "activeNav": "▦AI 日历",
+        "replay": null
+      }
+    },
+    {
+      "page": "tasks",
+      "name": "任务复盘",
+      "viewport": "1366",
+      "width": 1366,
+      "height": 768,
+      "screenshot": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current\\tasks-1366.png",
+      "warnings": [],
+      "failures": [],
+      "metrics": {
+        "scrollWidth": 1366,
+        "clientWidth": 1366,
+        "headerHeight": 62,
+        "occupiedHeight": 250,
+        "viewportHeight": 768,
+        "filtersVisible": true,
+        "charts": [
+          {
+            "selector": ".task-layout",
+            "height": 723.875,
+            "hasGraphic": true,
+            "hasEmpty": true
+          }
+        ],
+        "cards": 12,
+        "h1Count": 1,
+        "activeNav": "◇任务复盘",
+        "replay": null
+      }
+    },
+    {
+      "page": "details",
+      "name": "明细表",
+      "viewport": "1366",
+      "width": 1366,
+      "height": 768,
+      "screenshot": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current\\details-1366.png",
+      "warnings": [],
+      "failures": [],
+      "metrics": {
+        "scrollWidth": 1366,
+        "clientWidth": 1366,
+        "headerHeight": 62,
+        "occupiedHeight": 251,
+        "viewportHeight": 768,
+        "filtersVisible": true,
+        "charts": [],
+        "cards": 2,
+        "h1Count": 1,
+        "activeNav": "≡明细",
+        "replay": null
+      }
+    },
+    {
+      "page": "settings",
+      "name": "设置 / 关于",
+      "viewport": "1366",
+      "width": 1366,
+      "height": 768,
+      "screenshot": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current\\settings-1366.png",
+      "warnings": [],
+      "failures": [],
+      "metrics": {
+        "scrollWidth": 1366,
+        "clientWidth": 1366,
+        "headerHeight": 62,
+        "occupiedHeight": 101,
+        "viewportHeight": 768,
+        "filtersVisible": false,
+        "charts": [],
+        "cards": 7,
+        "h1Count": 1,
+        "activeNav": "?设置",
+        "replay": null
+      }
+    },
+    {
+      "page": "work-replay",
+      "name": "Work Replay",
+      "viewport": "1366",
+      "width": 1366,
+      "height": 768,
+      "screenshot": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current\\work-replay-1366.png",
+      "warnings": [],
+      "failures": [],
+      "metrics": {
+        "scrollWidth": 1366,
+        "clientWidth": 1366,
+        "headerHeight": 90.796875,
+        "occupiedHeight": 90.796875,
+        "viewportHeight": 768,
+        "filtersVisible": false,
+        "charts": [
+          {
+            "selector": ".timeline-board",
+            "height": 729.421875,
+            "hasGraphic": true,
+            "hasEmpty": false
+          }
+        ],
+        "cards": 8,
+        "h1Count": 1,
+        "activeNav": "",
+        "replay": {
+          "hasTimeline": true,
+          "nodeCount": 16,
+          "sideWidth": 430,
+          "hasGlow": false,
+          "hasControls": true
+        }
+      }
+    },
+    {
+      "page": "overview",
+      "name": "总览页",
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "screenshot": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current\\overview-mobile.png",
+      "warnings": [
+        {
+          "code": "many-cards",
+          "message": "首屏卡片数量超过 12 个",
+          "detail": {
+            "count": 17
+          }
+        },
+        {
+          "code": "mobile-buttons-crowded",
+          "message": "移动端多个按钮过窄或过矮",
+          "detail": {
+            "count": 11
+          }
+        }
+      ],
+      "failures": [],
+      "metrics": {
+        "scrollWidth": 390,
+        "clientWidth": 390,
+        "headerHeight": 114,
+        "occupiedHeight": 230,
+        "viewportHeight": 844,
+        "filtersVisible": true,
+        "charts": [
+          {
+            "selector": "#trendChart",
+            "height": 308,
+            "hasGraphic": true,
+            "hasEmpty": false
+          },
+          {
+            "selector": "#ratioChart",
+            "height": 323,
+            "hasGraphic": true,
+            "hasEmpty": false
+          },
+          {
+            "selector": "#cacheTrendChart",
+            "height": 310,
+            "hasGraphic": true,
+            "hasEmpty": false
+          }
+        ],
+        "cards": 17,
+        "h1Count": 1,
+        "activeNav": "◎总览",
+        "replay": null
+      }
+    },
+    {
+      "page": "calendar",
+      "name": "AI 使用日历",
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "screenshot": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current\\calendar-mobile.png",
+      "warnings": [
+        {
+          "code": "mobile-buttons-crowded",
+          "message": "移动端多个按钮过窄或过矮",
+          "detail": {
+            "count": 102
+          }
+        }
+      ],
+      "failures": [],
+      "metrics": {
+        "scrollWidth": 390,
+        "clientWidth": 390,
+        "headerHeight": 114,
+        "occupiedHeight": 230,
+        "viewportHeight": 844,
+        "filtersVisible": true,
+        "charts": [
+          {
+            "selector": ".calendar-heatmap",
+            "height": 240,
+            "hasGraphic": true,
+            "hasEmpty": false
+          }
+        ],
+        "cards": 7,
+        "h1Count": 1,
+        "activeNav": "▦AI 日历",
+        "replay": null
+      }
+    },
+    {
+      "page": "tasks",
+      "name": "任务复盘",
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "screenshot": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current\\tasks-mobile.png",
+      "warnings": [
+        {
+          "code": "mobile-buttons-crowded",
+          "message": "移动端多个按钮过窄或过矮",
+          "detail": {
+            "count": 4
+          }
+        }
+      ],
+      "failures": [],
+      "metrics": {
+        "scrollWidth": 390,
+        "clientWidth": 390,
+        "headerHeight": 114,
+        "occupiedHeight": 230,
+        "viewportHeight": 844,
+        "filtersVisible": true,
+        "charts": [
+          {
+            "selector": ".task-layout",
+            "height": 1361.125,
+            "hasGraphic": true,
+            "hasEmpty": true
+          }
+        ],
+        "cards": 12,
+        "h1Count": 1,
+        "activeNav": "◇任务复盘",
+        "replay": null
+      }
+    },
+    {
+      "page": "details",
+      "name": "明细表",
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "screenshot": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current\\details-mobile.png",
+      "warnings": [
+        {
+          "code": "mobile-buttons-crowded",
+          "message": "移动端多个按钮过窄或过矮",
+          "detail": {
+            "count": 109
+          }
+        }
+      ],
+      "failures": [],
+      "metrics": {
+        "scrollWidth": 390,
+        "clientWidth": 390,
+        "headerHeight": 114,
+        "occupiedHeight": 230,
+        "viewportHeight": 844,
+        "filtersVisible": true,
+        "charts": [],
+        "cards": 2,
+        "h1Count": 1,
+        "activeNav": "≡明细",
+        "replay": null
+      }
+    },
+    {
+      "page": "settings",
+      "name": "设置 / 关于",
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "screenshot": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current\\settings-mobile.png",
+      "warnings": [
+        {
+          "code": "mobile-buttons-crowded",
+          "message": "移动端多个按钮过窄或过矮",
+          "detail": {
+            "count": 4
+          }
+        }
+      ],
+      "failures": [],
+      "metrics": {
+        "scrollWidth": 390,
+        "clientWidth": 390,
+        "headerHeight": 114,
+        "occupiedHeight": 153,
+        "viewportHeight": 844,
+        "filtersVisible": false,
+        "charts": [],
+        "cards": 7,
+        "h1Count": 1,
+        "activeNav": "?设置",
+        "replay": null
+      }
+    },
+    {
+      "page": "work-replay",
+      "name": "Work Replay",
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "screenshot": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current\\work-replay-mobile.png",
+      "warnings": [
+        {
+          "code": "mobile-buttons-crowded",
+          "message": "移动端多个按钮过窄或过矮",
+          "detail": {
+            "count": 10
+          }
+        }
+      ],
+      "failures": [],
+      "metrics": {
+        "scrollWidth": 390,
+        "clientWidth": 390,
+        "headerHeight": 114.40625,
+        "occupiedHeight": 114.40625,
+        "viewportHeight": 844,
+        "filtersVisible": false,
+        "charts": [
+          {
+            "selector": ".timeline-board",
+            "height": 382.84375,
+            "hasGraphic": true,
+            "hasEmpty": false
+          }
+        ],
+        "cards": 8,
+        "h1Count": 1,
+        "activeNav": "",
+        "replay": {
+          "hasTimeline": true,
+          "nodeCount": 16,
+          "sideWidth": 374,
+          "hasGlow": false,
+          "hasControls": true
+        }
+      }
+    }
+  ],
+  "consoleErrors": []
+}

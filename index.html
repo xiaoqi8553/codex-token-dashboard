@@ -504,6 +504,8 @@
       white-space: nowrap;
     }
 
+    .mobile-filter-toggle { display: none; }
+
     .filter-row {
       display: flex;
       flex-wrap: wrap;
@@ -531,7 +533,7 @@
 
     .filter-row.secondary #clearFiltersBtn {
       flex: 0 0 auto;
-      min-width: 112px;
+      min-width: 120px;
     }
 
     .range-filter {
@@ -1463,6 +1465,7 @@
       background:
         linear-gradient(180deg, color-mix(in srgb, var(--panel) 96%, transparent), var(--panel-2));
       padding: 14px;
+      min-height: 240px;
       overflow: auto;
     }
 
@@ -1835,27 +1838,82 @@
 
     @media (max-width: 820px) {
       .app { padding: 10px; }
-      .header { grid-template-columns: 1fr; align-items: start; }
-      .toolbar { justify-content: start; }
-      .toolbar-group {
-        width: 100%;
-        flex-wrap: wrap;
-        align-items: flex-start;
+      .header {
+        grid-template-columns: 1fr;
+        align-items: start;
+        gap: 6px;
+        padding: 6px;
       }
-      .toolbar-group .segmented { flex: 1 1 220px; }
+      .brand { grid-template-columns: 30px minmax(0, 1fr); gap: 8px; }
+      .brand-icon { width: 30px; height: 30px; border-radius: 8px; }
+      h1 { font-size: 18px; }
+      .title-line { gap: 6px; }
+      .meta { display: none; }
+      .pill { padding: 3px 7px; font-size: 11px; }
+      .toolbar {
+        width: 100%;
+        justify-content: start;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding-bottom: 2px;
+        scrollbar-width: thin;
+      }
+      .toolbar .btn,
+      .toolbar select,
+      .toolbar button,
+      .segmented button {
+        min-height: 32px;
+        padding: 5px 8px;
+        font-size: 12px;
+      }
+      .toolbar-group {
+        width: auto;
+        flex: 0 0 auto;
+        flex-wrap: nowrap;
+        align-items: flex-start;
+        padding: 4px;
+      }
+      .toolbar-group .segmented { flex: 0 0 auto; }
       .toolbar-group .btn {
-        flex: 1 1 96px;
-        min-width: 88px;
+        flex: 0 0 auto;
+        min-width: 74px;
         white-space: normal;
         line-height: 1.2;
       }
-      .toolbar-group.theme-control .segmented { flex: 1 1 100%; }
-      .group-label { flex: 0 0 100%; }
+      .toolbar-group.theme-control .segmented { flex: 0 0 auto; }
+      .data-actions { flex-wrap: nowrap; }
+      .group-label { display: none; }
+      .page-nav {
+        display: flex;
+        flex-wrap: nowrap;
+        justify-content: flex-start;
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding: 7px;
+        scrollbar-width: thin;
+      }
+      .page-nav button {
+        flex: 0 0 auto;
+        min-width: 88px;
+      }
       .metrics { grid-template-columns: 1fr; }
       .today-status, .story-grid { grid-template-columns: 1fr; }
       .today-metrics, .calendar-stats, .task-stats { grid-template-columns: 1fr; }
       .static-panel.show { grid-template-columns: 1fr; }
       .filter-head { align-items: flex-start; flex-direction: column; gap: 4px; }
+      .filter-hint { display: none; }
+      .mobile-filter-toggle {
+        display: inline-flex;
+        width: 100%;
+        justify-content: center;
+      }
+      .filters {
+        padding: 10px;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+      .filters:not(.mobile-open) .filter-row { display: none; }
       .filter-row {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1881,9 +1939,6 @@
       .cache-y-label, .cache-x-axis { font-size: 12px; }
       .donut-row { grid-template-columns: 1fr; justify-items: center; }
       .detail-grid, .detail-mini { grid-template-columns: 1fr 1fr; }
-      .brand { grid-template-columns: 44px minmax(0, 1fr); }
-      .brand-icon { width: 44px; height: 44px; }
-      h1 { font-size: clamp(28px, 8vw, 38px); }
     }
 
     @media (max-width: 560px) {
@@ -2005,6 +2060,7 @@
       <div class="filter-head">
         <div class="filter-title">筛选条件</div>
         <div class="filter-hint">筛选会同步影响卡片、图表和明细表</div>
+        <button class="btn mobile-filter-toggle" id="mobileFilterToggle" type="button">展开筛选</button>
       </div>
       <div class="filter-row primary">
         <div class="segmented range-filter" id="rangeButtons">
@@ -3282,6 +3338,7 @@
     function syncFilterPresentation() {
       const view = state.view;
       els.filters.className = `filters shell mode-${view === "tasks" ? "tasks" : view} ${state.overviewAdvanced ? "advanced-open" : ""}`;
+      if (els.filters.dataset.mobileOpen === "true") els.filters.classList.add("mobile-open");
       const copy = {
         overview: ["总览筛选", "默认只保留时间范围，更多条件可展开"],
         calendar: ["日历范围", "选择日期范围后，日历仍以完整矩阵展示使用强度"],
@@ -4369,6 +4426,11 @@
 
     function setActiveView(view) {
       state.view = view;
+      if (els.filters) {
+        els.filters.dataset.mobileOpen = "false";
+        els.filters.classList.remove("mobile-open");
+        document.querySelector("#mobileFilterToggle").textContent = "展开筛选";
+      }
       document.querySelectorAll("#viewTabs button").forEach(button => button.classList.toggle("active", button.dataset.view === view));
       if (state.data) render(state.data);
     }
@@ -4448,6 +4510,12 @@
     document.querySelector("#advancedFiltersBtn").addEventListener("click", () => {
       state.overviewAdvanced = !state.overviewAdvanced;
       syncFilterPresentation();
+    });
+    document.querySelector("#mobileFilterToggle").addEventListener("click", () => {
+      const open = els.filters.dataset.mobileOpen !== "true";
+      els.filters.dataset.mobileOpen = open ? "true" : "false";
+      els.filters.classList.toggle("mobile-open", open);
+      document.querySelector("#mobileFilterToggle").textContent = open ? "收起筛选" : "展开筛选";
     });
     els.statusToggleBtn.addEventListener("click", () => {
       els.statusDrawer.classList.toggle("show");

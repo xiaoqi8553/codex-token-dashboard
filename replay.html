@@ -597,11 +597,39 @@
     }
     @media (max-width: 760px) {
       .app { width: min(100vw - 16px, 1520px); padding-top: 8px; }
-      .topbar { position: static; }
+      .topbar {
+        position: static;
+        gap: 6px;
+        padding: 7px;
+      }
+      .brand { grid-template-columns: 28px minmax(0, 1fr); gap: 7px; }
+      .mark { width: 28px; height: 28px; border-radius: 8px; font-size: 11px; }
+      h1 { font-size: 17px; }
+      .sub { gap: 5px; font-size: 12px; }
+      .source-pill { display: none; }
+      .toolbar {
+        width: 100%;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding-bottom: 2px;
+        scrollbar-width: thin;
+      }
+      .toolbar > * { flex: 0 0 auto; }
+      .toolbar button,
+      .toolbar select,
+      .toolbar input {
+        min-height: 32px;
+        padding: 5px 8px;
+        font-size: 12px;
+      }
+      .progress-wrap {
+        min-width: 210px;
+        width: 210px;
+      }
       .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .stat-card { min-height: 104px; }
-      .progress-wrap { width: 100%; min-width: 0; }
-      input[type="range"] { width: 100%; }
+      input[type="range"] { width: 120px; }
       .stage { padding: 13px; min-height: 620px; }
       .section-head { display: grid; }
       .timeline-board { overflow: auto; }

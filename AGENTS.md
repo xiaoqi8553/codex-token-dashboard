@@ -3,7 +3,7 @@
 ## Project Rules
 
 - Do not change token parsing, dedupe, import, export, or snapshot logic unless the task explicitly asks for data behavior changes.
-- UI changes require visual verification with `npm run visual:test` or the bundled Node equivalent.
+- UI changes require visual verification with `npm run ui:shot`, `npm run ui:audit`, and `npm run ui:report`; `npm run visual:test` remains useful as an additional smoke test.
 - Keep public/static mode, browser import mode, and local Node mode working after every change.
 - Do not hide estimated data from the product. It may be moved out of the header, but it must remain visible in metric cards, details, exports, or settings where relevant.
 
@@ -31,10 +31,12 @@
 - 2026-06-03: RightCode usage can appear as Codex provider `custom`; source classification must treat `custom` as relay instead of leaving it in `unknown`.
 - 2026-06-03: Task classification was too broad because short Latin keywords such as `code`, `js`, and `css` matched inside unrelated strings and paths. Use weighted field matching and word boundaries for Latin keywords.
 - 2026-06-03: The first Work Replay page overused sci-fi orbit visuals and underused business structure. Replay pages should prioritize timeline, session detail, task lanes, and summary insight over decorative effects.
+- 2026-06-03: UI audit rules initially over-reported false P0s by treating custom HTML charts as empty and counting compact range buttons as failed filters. Audit heuristics must match the actual component patterns before judging UI quality.
+- 2026-06-04: `npm run ui:shot` and `npm run ui:audit` were run in parallel, causing a local server port race and a false `ERR_CONNECTION_REFUSED`. UI review commands must run sequentially: shot, audit, report.
 
 ## Before Finishing
 
 - Run build.
-- Run visual test screenshots.
+- Run `npm run ui:shot`, `npm run ui:audit`, and `npm run ui:report`.
 - Inspect at least Overview and Task Review screenshots manually.
 - Update `CHANGELOG.md` and version metadata when the visible product changes.
