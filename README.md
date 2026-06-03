@@ -7,7 +7,7 @@
 ![Codex Token Dashboard cover](screenshots/project-cover.svg)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-0f766e.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.4.9-111827.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.5.0-111827.svg)](CHANGELOG.md)
 [![Netlify Demo](https://img.shields.io/badge/demo-codetoken.netlify.app-2f6fed.svg)](https://codetoken.netlify.app/)
 [![GitHub Pages](https://img.shields.io/badge/pages-github.io-111827.svg)](https://xiaoqi8553.github.io/codex-token-dashboard/)
 
@@ -33,6 +33,7 @@
 - 支持总览卡片、今日状态卡、每日趋势、输入/输出/缓存占比、缓存命中率趋势、Top 会话、按模型统计。
 - 支持 AI 使用日历，用热力图查看每日 Token、active tokens、输出、缓存命中率和记录数。
 - 支持任务复盘，用本地规则识别写代码、调试、前端 UI、文档、部署、数据分析、重构、项目规划等任务类型。
+- 支持 Codex Work Replay 子页面，把 session 聚合成可播放的 AI 工作回放。
 - 今日状态卡支持手动授权定位后查询 Open-Meteo 天气；不会自动读取位置。
 - 明细表支持搜索、筛选、排序、分页、多选、选中导出 CSV / JSON。
 - 支持脱敏快照 JSON / HTML，适合公开分享。
@@ -108,6 +109,7 @@ npm run visual:test  # 生成截图并自动检查明显视觉问题
 0.4.0 之后，看板按页面组织：
 
 - **总览**：大数字卡片、今日状态卡、数据故事、每日 Token 趋势、Token 构成、缓存命中率、Top 会话和模型统计。
+- **工作回放**：通过 `replay.html` 打开沉浸式 AI 工作回放。节点大小代表 Token，颜色代表任务类型，边框代表官方 Plus / 中转站 / unknown。
 - **AI 使用日历**：类似 GitHub contribution graph 的热力图，可切换总 Token、active tokens、输出 Token、缓存命中率、记录数。点击日期会自动筛选明细表到当天。
 - **任务复盘**：基于本地规则识别任务类型，并统计各类任务消耗。识别结果仅供参考，用户可以在页面里手动修正，修正结果只保存在浏览器 `localStorage`。
 - **明细表**：逐条 usage 记录，支持排序、搜索、筛选、分页、多选和导出。

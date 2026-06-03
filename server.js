@@ -9,7 +9,7 @@ const ROOT = __dirname;
 const DATA_DIR = path.join(ROOT, "data");
 const IMPORT_DIR = path.join(DATA_DIR, "imports");
 const INDEX_PATH = path.join(DATA_DIR, "usage-index.json");
-const INDEX_VERSION = 3;
+const INDEX_VERSION = 4;
 const SUPPORTED_SESSION_EXTENSIONS = new Set([".jsonl", ".json", ".log", ".txt"]);
 
 loadDotEnv();
@@ -271,6 +271,46 @@ function usageFromObject(item) {
   };
 }
 
+function textFromMessagePayload(payload) {
+  const content = payload?.content;
+  if (typeof content === "string") return content;
+  if (!Array.isArray(content)) return "";
+  return content
+    .map(entry => {
+      if (typeof entry === "string") return entry;
+      return entry?.text || entry?.input_text || "";
+    })
+    .filter(Boolean)
+    .join(" ");
+}
+
+function isLowValueTitle(value) {
+  const text = String(value || "").trim().toLowerCase();
+  return !text ||
+    text.startsWith("<environment_context>") ||
+    text.includes("# agents.md instructions") ||
+    text.includes("current_date") ||
+    text.includes("<cwd>") ||
+    text.length < 8;
+}
+
+function cleanSessionTitle(value) {
+  const text = String(value || "").replace(/\s+/g, " ").trim();
+  if (!text) return "";
+  const requestMarker = text.match(/(?:my request for codex:|我的请求[:：]|请你|现在我|我现在|还有几个问题|版本即将)/i);
+  const trimmed = requestMarker ? text.slice(requestMarker.index).trim() : text;
+  return trimmed
+    .replace(/^my request for codex:\s*/i, "")
+    .replace(/^我的请求[:：]\s*/i, "")
+    .slice(0, 180);
+}
+
+function considerSessionTitle(meta, candidate) {
+  const title = cleanSessionTitle(candidate);
+  if (!title || isLowValueTitle(title)) return;
+  if (isLowValueTitle(meta.title) || title.length > String(meta.title || "").length) meta.title = title;
+}
+
 function applySessionMetaLine(line, meta) {
   if (!line.includes("session_meta")) return;
   const provider = extractRawField(line, "model_provider");
@@ -419,9 +459,11 @@ function parseSessionFile(filePath) {
       meta.cwd = payload.cwd || meta.cwd;
     }
 
-    if (!meta.title && item.type === "response_item" && payload.type === "message" && payload.role === "user") {
-      const part = payload.content?.find(entry => entry.type === "input_text" || entry.type === "text");
-      if (part?.text) meta.title = part.text.trim().replace(/\s+/g, " ").slice(0, 160);
+    if (item.type === "response_item" && payload.type === "message" && payload.role === "user") {
+      considerSessionTitle(meta, textFromMessagePayload(payload));
+    }
+    if (payload.role === "user" || item.role === "user") {
+      considerSessionTitle(meta, textFromMessagePayload(payload) || textFromMessagePayload(item));
     }
 
     const usage = usageFromObject(item);
@@ -478,6 +520,12 @@ function parseSessionFile(filePath) {
       sessionTitle: meta.title || path.basename(filePath),
       detailText: text.slice(0, 2000)
     }));
+  }
+
+  if (!isLowValueTitle(meta.title)) {
+    for (const record of records) {
+      if (isLowValueTitle(record.sessionTitle)) record.sessionTitle = meta.title;
+    }
   }
 
   return {

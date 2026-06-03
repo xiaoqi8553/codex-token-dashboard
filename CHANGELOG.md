@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.5.0 - 2026-06-03
+
+- Added `replay.html`, a standalone Codex Work Replay experience that turns usage records into a playable AI work timeline.
+- Added a main dashboard entry button for opening Work Replay without crowding the existing dashboard pages.
+- Work Replay supports local Node data, browser-import cached data, and public demo data fallback.
+- Work Replay visualizes session events by token size, task type color, and official Plus / relay / unknown source borders.
+- Added Markdown export for replay summaries.
+- Improved task classification with weighted field matching and safer Latin keyword boundaries so `rightcode` no longer causes broad "写代码" misclassification.
+- Included Work Replay in static builds and visual acceptance screenshots.
+
 ## 0.4.9 - 2026-06-03
 
 - Aligned the Overview top status row and metric row to the same four-column grid.

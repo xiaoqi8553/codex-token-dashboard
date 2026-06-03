@@ -28,6 +28,7 @@
 - 2026-06-03: Public static import UI exposed single-file import too prominently and hid the `sessions` folder path. GitHub Pages and Netlify must both provide an obvious folder import action.
 - 2026-06-03: Location/weather fixes missed deployment response headers. If geolocation is used, check both button logic and static host `Permissions-Policy`.
 - 2026-06-03: RightCode usage can appear as Codex provider `custom`; source classification must treat `custom` as relay instead of leaving it in `unknown`.
+- 2026-06-03: Task classification was too broad because short Latin keywords such as `code`, `js`, and `css` matched inside unrelated strings and paths. Use weighted field matching and word boundaries for Latin keywords.
 
 ## Before Finishing
 

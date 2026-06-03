@@ -16,7 +16,8 @@ const pages = [
   { name: "calendar", label: "AI 使用日历", view: "calendar", file: "calendar" },
   { name: "review", label: "任务复盘", view: "tasks", file: "review" },
   { name: "details", label: "明细表", view: "details", file: "details" },
-  { name: "settings", label: "设置 / 关于", view: "settings", file: "settings" }
+  { name: "settings", label: "设置 / 关于", view: "settings", file: "settings" },
+  { name: "replay", label: "工作回放", view: "replay", file: "replay", url: `${baseUrl}/replay.html` }
 ];
 
 const viewports = [
@@ -105,6 +106,11 @@ async function ensureServer() {
 }
 
 async function clickView(page, view) {
+  if (view === "replay") {
+    await page.goto(`${baseUrl}/replay.html`, { waitUntil: "networkidle" });
+    await page.waitForTimeout(500);
+    return;
+  }
   await page.goto(baseUrl, { waitUntil: "networkidle" });
   if (view !== "overview") {
     await page.locator(`[data-view="${view}"]`).click();
@@ -142,8 +148,10 @@ async function collectChecks(page, pageInfo, viewport) {
       return { right: rect.right, left: rect.left, width: rect.width };
     });
     return {
-      titlePresent: Boolean(document.querySelector("h1")?.textContent.includes("Codex Token")),
-      activeNavPresent: Boolean(activeNav && activeNav.dataset.view === view),
+      titlePresent: view === "replay"
+        ? Boolean(document.querySelector("h1")?.textContent.includes("Codex Work Replay"))
+        : Boolean(document.querySelector("h1")?.textContent.includes("Codex Token")),
+      activeNavPresent: view === "replay" ? true : Boolean(activeNav && activeNav.dataset.view === view),
       horizontalScroll: document.documentElement.scrollWidth > document.documentElement.clientWidth + 2,
       overflowCards: cards.filter(rect => rect.right > window.innerWidth + 2 || rect.left < -2).length,
       bodyFont: getComputedStyle(document.body).fontFamily,
@@ -176,6 +184,17 @@ async function collectChecks(page, pageInfo, viewport) {
       if ((chart.rect?.height || 0) < 260) failures.push(`${chart.selector} height is below 260px`);
       if (!chart.text && chart.selector !== "#cacheTrendChart") failures.push(`${chart.selector} has no rendered content`);
     }
+  }
+
+  if (pageInfo.view === "replay") {
+    const replayOk = await page.evaluate(() => {
+      const stage = document.querySelector(".stage")?.getBoundingClientRect();
+      const nodes = document.querySelectorAll(".node").length;
+      const timeline = document.querySelector("#timeline")?.textContent.trim() || "";
+      return { stageHeight: stage?.height || 0, nodes, timeline };
+    });
+    if (replayOk.stageHeight < 420) failures.push("replay stage is too short");
+    if (!replayOk.nodes && !/暂无|没有/.test(replayOk.timeline)) failures.push("replay has no nodes and no empty state");
   }
 
   if (viewport.width <= 480 && !result.activeNavPresent) failures.push("mobile nav is not visible");

@@ -1937,6 +1937,7 @@
         </div>
         <div class="toolbar-group data-actions">
           <span class="group-label">数据</span>
+          <button class="btn" id="replayBtn" type="button">工作回放</button>
           <button class="btn" id="importBtn" type="button" aria-haspopup="menu" aria-expanded="false">导入数据</button>
           <div class="import-menu" id="importMenu" role="menu" aria-label="导入数据">
             <button class="btn import-option" id="importFileBtn" type="button" role="menuitem">
@@ -2217,14 +2218,14 @@
     };
 
     const taskTypes = [
-      { id: "coding", label: "写代码", icon: "⌘", keywords: ["function", "api", "test", "class", "code", "coding", "implement", "feature", "js", "py", "ts", "tsx", "jsx", "html", "css", "组件", "函数", "代码", "实现", "接口", "测试"] },
-      { id: "debug", label: "调试报错", icon: "!", keywords: ["debug", "bug", "error", "failed", "failure", "fix", "stack trace", "exception", "报错", "修复", "异常", "失败", "错误", "崩溃"] },
-      { id: "frontend", label: "前端 UI", icon: "◫", keywords: ["ui", "ux", "frontend", "css", "html", "layout", "button", "chart", "page", "界面", "页面", "视觉", "样式", "布局", "前端", "按钮", "图表", "看板"] },
-      { id: "docs", label: "文档 / README", icon: "¶", keywords: ["readme", "docs", "document", "markdown", "article", "文档", "说明", "文章", "changelog", "总结", "复盘"] },
-      { id: "deploy", label: "部署 / 运维", icon: "⇧", keywords: ["deploy", "netlify", "vercel", "github", "ci", "build", "server", "port", "npm", "部署", "发布", "运维", "端口", "启动", "构建"] },
-      { id: "data", label: "数据分析", icon: "∑", keywords: ["data", "token", "csv", "json", "chart", "table", "统计", "数据", "分析", "图表", "表格", "导入", "导出"] },
-      { id: "refactor", label: "重构", icon: "↻", keywords: ["refactor", "cleanup", "extract", "重构", "抽象", "整理", "优化结构", "抽离"] },
-      { id: "planning", label: "项目规划", icon: "◇", keywords: ["roadmap", "plan", "architecture", "design", "规划", "计划", "方案", "架构", "设计"] },
+      { id: "debug", label: "调试报错", icon: "!", priority: 92, keywords: ["debug", "bug", "error", "failed", "failure", "stack trace", "exception", "traceback", "报错", "修复报错", "异常", "失败", "错误", "崩溃", "排错"] },
+      { id: "deploy", label: "部署 / 运维", icon: "⇧", priority: 88, keywords: ["deploy", "deployment", "netlify", "vercel", "github pages", "github actions", "ci", "build", "server", "port", "npm", "部署", "发布", "运维", "端口", "启动", "构建", "上线"] },
+      { id: "frontend", label: "前端 UI", icon: "◫", priority: 82, keywords: ["ui", "ux", "frontend", "layout", "button", "chart", "page", "dashboard", "visual", "responsive", "界面", "页面", "视觉", "样式", "布局", "前端", "按钮", "图表", "看板", "暗色", "明细表"] },
+      { id: "docs", label: "文档 / README", icon: "¶", priority: 78, keywords: ["readme", "docs", "document", "markdown", "article", "changelog", "release", "文档", "说明", "文章", "更新日志", "公众号", "总结", "复盘", "开源展示"] },
+      { id: "data", label: "数据分析", icon: "∑", priority: 74, keywords: ["data", "token", "csv", "json", "chart", "table", "analytics", "usage", "统计", "数据", "分析", "图表", "表格", "导入", "导出", "缓存命中"] },
+      { id: "planning", label: "项目规划", icon: "◇", priority: 70, keywords: ["roadmap", "plan", "architecture", "design", "proposal", "规划", "计划", "方案", "架构", "设计", "建议", "计划表", "重大飞跃"] },
+      { id: "refactor", label: "重构", icon: "↻", priority: 66, keywords: ["refactor", "cleanup", "extract", "restructure", "重构", "抽象", "整理", "优化结构", "抽离"] },
+      { id: "coding", label: "写代码", icon: "⌘", priority: 58, keywords: ["function", "class", "component", "module", "api", "test", "implement", "feature", "script", "写代码", "代码实现", "实现功能", "函数", "组件", "接口", "测试"] },
       { id: "other", label: "其他 / 未识别", icon: "?", keywords: [] }
     ];
 
@@ -2309,6 +2310,15 @@
       }[char]));
     }
 
+    function isLowValueTitle(value) {
+      const text = String(value || "").trim().toLowerCase();
+      return !text ||
+        text.startsWith("<environment_context>") ||
+        text.includes("# agents.md instructions") ||
+        text.includes("current_date") ||
+        text.includes("<cwd>");
+    }
+
     function activeTokens(record) {
       return Math.max(Number(record.inputTokens || 0) - Number(record.cachedInputTokens || 0), 0) + Number(record.outputTokens || 0);
     }
@@ -2333,22 +2343,26 @@
       localStorage.setItem(taskOverrideKey, JSON.stringify(state.taskOverrides || {}));
     }
 
-    function taskSearchText(record) {
+    function taskFieldText(record, fields) {
       const stringify = value => {
         if (!value) return "";
         if (typeof value === "string") return value;
         try { return JSON.stringify(value); } catch { return String(value); }
       };
-      return [
-        record.sessionTitle,
-        record.relativePath,
-        record.filePath,
-        record.detailText,
-        record.importBatch,
-        record.model,
-        record.sessionId,
-        record.requestId
-      ].map(stringify).join(" ").toLowerCase();
+      return fields.map(field => stringify(record[field])).join(" ").toLowerCase();
+    }
+
+    function escapeRegExp(value) {
+      return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    }
+
+    function keywordMatches(text, keyword) {
+      const key = String(keyword || "").toLowerCase();
+      if (!key) return false;
+      if (/^[a-z0-9_.-]+$/.test(key)) {
+        return new RegExp(`(^|[^a-z0-9])${escapeRegExp(key)}($|[^a-z0-9])`, "i").test(text);
+      }
+      return text.includes(key);
     }
 
     function classifyTask(record) {
@@ -2359,21 +2373,37 @@
       if (record.providedTaskType && taskTypeMap[record.providedTaskType]) {
         return { taskType: record.providedTaskType, taskLabel: taskTypeMap[record.providedTaskType].label, taskConfidence: "provided", taskKeywords: ["数据字段"] };
       }
-      const text = taskSearchText(record);
+      const titleText = taskFieldText(record, ["sessionTitle"]);
+      const pathText = taskFieldText(record, ["relativePath", "filePath", "importBatch"]);
+      const detailText = taskFieldText(record, ["detailText"]).slice(0, 3000);
       let best = taskTypes[taskTypes.length - 1];
+      let bestScore = 0;
       let bestHits = [];
       for (const type of taskTypes) {
         if (type.id === "other") continue;
-        const hits = type.keywords.filter(keyword => text.includes(keyword.toLowerCase()));
-        if (hits.length > bestHits.length) {
+        const hits = [];
+        let score = 0;
+        for (const keyword of type.keywords) {
+          let keywordScore = 0;
+          if (keywordMatches(titleText, keyword)) keywordScore += 5;
+          if (keywordMatches(pathText, keyword)) keywordScore += 3;
+          if (keywordMatches(detailText, keyword)) keywordScore += 1;
+          if (keywordScore) {
+            score += keywordScore;
+            hits.push(keyword);
+          }
+        }
+        if (score > bestScore || (score === bestScore && score > 0 && (type.priority || 0) > (best.priority || 0))) {
           best = type;
+          bestScore = score;
           bestHits = hits;
         }
       }
+      if (!bestScore) best = taskTypeMap.other;
       return {
         taskType: best.id,
         taskLabel: best.label,
-        taskConfidence: bestHits.length ? "rule" : "unknown",
+        taskConfidence: bestScore ? "rule" : "unknown",
         taskKeywords: bestHits.slice(0, 4)
       };
     }
@@ -2590,7 +2620,7 @@
         filePath: "",
         relativePath: raw.relativePath || raw.relative_path || fallback.relativePath || "",
         lineNumber: toNumber(raw.lineNumber || fallback.lineNumber),
-        sessionTitle: raw.sessionTitle || raw.title || sessionId,
+        sessionTitle: isLowValueTitle(raw.sessionTitle || raw.title) ? (fallback.relativePath || sessionId) : (raw.sessionTitle || raw.title || sessionId),
         providedTaskType: raw.providedTaskType || raw.provided_task_type || raw.taskType || raw.task_type || "",
         detailText: raw.detailText || "",
         imported: Boolean(raw.imported || fallback.imported),
@@ -4437,6 +4467,9 @@
     document.querySelector("#exportJsonBtn").addEventListener("click", () => exportJson());
     document.querySelector("#exportSnapshotBtn").addEventListener("click", exportSnapshotJson);
     document.querySelector("#exportSnapshotHtmlBtn").addEventListener("click", exportSnapshotHtml);
+    document.querySelector("#replayBtn").addEventListener("click", () => {
+      window.open("replay.html", "_blank", "noopener,noreferrer");
+    });
     els.importBtn.addEventListener("click", event => {
       event.stopPropagation();
       toggleImportMenu();
