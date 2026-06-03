@@ -137,6 +137,14 @@
       min-width: 0;
     }
 
+    .title-line {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      min-width: 0;
+    }
+
     .brand-icon {
       width: 36px;
       height: 36px;
@@ -180,7 +188,7 @@
     }
 
     .meta {
-      margin-top: 5px;
+      margin-top: 0;
       display: flex;
       gap: 8px;
       flex-wrap: wrap;
@@ -340,7 +348,7 @@
 
     .notice.show { display: block; }
     #estimateNotice.show {
-      display: inline-flex;
+      display: none;
       align-items: center;
       justify-self: start;
       width: auto;
@@ -1121,6 +1129,119 @@
       font-variant-numeric: tabular-nums;
     }
 
+    .usage-trend-card {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background:
+        linear-gradient(180deg, color-mix(in srgb, var(--panel) 96%, transparent), color-mix(in srgb, var(--panel-2) 92%, transparent));
+      padding: 12px 14px 10px;
+      display: grid;
+      gap: 8px;
+      min-height: 300px;
+    }
+
+    .usage-trend-plot {
+      position: relative;
+      min-height: 232px;
+      border-radius: 10px;
+      overflow: hidden;
+      padding-bottom: 28px;
+    }
+
+    .usage-plot-inner {
+      position: absolute;
+      left: 58px;
+      right: 0;
+      top: 0;
+      bottom: 28px;
+    }
+
+    .usage-trend-svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+    }
+
+    .usage-trend-hit {
+      position: absolute;
+      top: 0;
+      bottom: 28px;
+      border: 0;
+      background: transparent;
+      cursor: crosshair;
+      min-height: 0;
+      padding: 0;
+    }
+
+    .usage-trend-hit::after {
+      content: "";
+      position: absolute;
+      top: 14px;
+      bottom: 4px;
+      left: 50%;
+      width: 1px;
+      background: color-mix(in srgb, var(--ink) 42%, transparent);
+      opacity: 0;
+      pointer-events: none;
+      transform: translateX(-50%);
+    }
+
+    .usage-trend-hit:hover::after { opacity: 1; }
+
+    .usage-y-label {
+      position: absolute;
+      left: 0;
+      width: 48px;
+      text-align: right;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+      transform: translateY(-50%);
+    }
+
+    .usage-x-axis {
+      position: absolute;
+      left: 58px;
+      right: 0;
+      bottom: 0;
+      display: flex;
+      justify-content: space-between;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .usage-legend {
+      display: flex;
+      justify-content: center;
+      gap: 14px;
+      flex-wrap: wrap;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .usage-legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .usage-legend i {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      display: inline-block;
+    }
+
+    .trend-cached { color: var(--cache); }
+    .trend-uncached { color: var(--uncached); }
+    .trend-output { color: var(--output); }
+    .trend-active { color: var(--active); }
+
     .view-tabs {
       border: 1px solid var(--line);
       border-radius: var(--radius);
@@ -1364,14 +1485,24 @@
 
     .task-layout {
       display: grid;
-      grid-template-columns: minmax(420px, .9fr) minmax(0, 1.1fr);
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 10px;
+      align-items: start;
     }
 
     .task-type-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 10px;
+      align-content: start;
+      align-self: start;
+    }
+
+    .task-type-grid.is-compact { grid-template-columns: 1fr; }
+
+    .task-distribution-panel {
+      align-content: start;
+      grid-template-rows: auto auto;
     }
 
     .task-type-grid.compact {
@@ -1383,6 +1514,7 @@
       grid-template-columns: minmax(0, 1fr) auto;
       gap: 10px;
       align-items: center;
+      min-height: 88px;
     }
 
     .task-type-card.is-empty {
@@ -1398,8 +1530,29 @@
 
     .task-type-card .track { grid-column: 1 / -1; }
 
+    .task-empty-note {
+      grid-column: 1 / -1;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel-2);
+      color: var(--muted);
+      padding: 10px 12px;
+      display: grid;
+      gap: 4px;
+      font-size: 12px;
+    }
+
+    .task-empty-note strong {
+      color: var(--muted);
+      font-weight: 650;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
     .task-sample-wrap {
-      max-height: 460px;
+      max-height: 520px;
+      overflow-x: hidden;
     }
 
     .page-title {
@@ -1413,7 +1566,28 @@
     }
 
     .task-table {
-      min-width: 980px;
+      min-width: 0;
+      table-layout: fixed;
+    }
+
+    .task-table th,
+    .task-table td {
+      padding: 10px 8px;
+      font-size: 13px;
+    }
+
+    .task-table th:nth-child(1), .task-table td:nth-child(1) { width: 92px; }
+    .task-table th:nth-child(2), .task-table td:nth-child(2) { width: 118px; }
+    .task-table th:nth-child(3), .task-table td:nth-child(3) { width: 92px; }
+    .task-table th:nth-child(4), .task-table td:nth-child(4) { width: 96px; }
+    .task-table th:nth-child(5), .task-table td:nth-child(5) { width: 86px; }
+    .task-table th:nth-child(6), .task-table td:nth-child(6) { width: auto; }
+    .task-table th:nth-child(7), .task-table td:nth-child(7) { width: 112px; }
+
+    .task-table select {
+      width: 100%;
+      min-width: 0;
+      padding-inline: 8px;
     }
 
     .settings-grid {
@@ -1695,13 +1869,13 @@
       <div class="brand">
         <div class="brand-icon">&gt;_</div>
         <div>
-          <h1>Codex Token 用量</h1>
-          <div class="meta">
-            <span class="pill" id="modeMeta">当前模式：初始化</span>
+          <div class="title-line">
+            <h1>Codex Token 用量</h1>
             <span class="pill" id="updateMeta">最后更新：-</span>
             <button class="btn compact" id="statusToggleBtn" type="button">状态详情</button>
           </div>
           <div class="status-drawer" id="statusDrawer">
+            <span class="pill" id="modeMeta">当前模式：初始化</span>
             <span class="pill" id="pathMeta">数据来源：等待加载</span>
             <span class="pill" id="fileMeta">记录数：-</span>
             <span class="pill" id="scanMeta">隐私状态：本地优先</span>
@@ -1860,8 +2034,8 @@
     <section class="panel overview-only" id="cacheTrendPanel">
       <div class="panel-head">
         <div>
-          <h2>每日缓存命中率趋势</h2>
-          <p class="muted">cache_hit_rate = cached_input_tokens / input_tokens</p>
+          <h2>使用趋势</h2>
+          <p class="muted">输入 / 输出 / 缓存创建 / 缓存命中 / active tokens</p>
         </div>
         <span class="badge" id="cacheTrendSummary">-</span>
       </div>
@@ -1897,6 +2071,7 @@
       overviewAdvanced: false,
       taskOverrides: {},
       locationLabel: localStorage.getItem("codexTokenLocationLabel") || "",
+      weatherLabel: localStorage.getItem("codexTokenWeatherLabel") || "",
       topLimit: 10,
       data: null,
       records: [],
@@ -3084,6 +3259,7 @@
       const weekday = now.toLocaleDateString("zh-CN", { weekday: "long" });
       const clock = now.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false });
       const location = state.locationLabel || "未授权定位";
+      const weather = state.weatherLabel || "天气：等待授权";
       const official = groupByKey(summary.bySource, "official_plus");
       const relay = groupByKey(summary.bySource, "relay");
       els.todayStatus.innerHTML = `
@@ -3102,8 +3278,8 @@
           </div>
           <div class="table-actions">
             <span class="badge">${escapeHtml(location)}</span>
-            <span class="badge">天气：未接入外部 API</span>
-            <button class="btn compact" data-action="request-location" type="button">授权定位</button>
+            <span class="badge">${escapeHtml(weather)}</span>
+            <button class="btn compact" data-action="request-location" type="button">${state.locationLabel ? "更新定位" : "授权定位"}</button>
           </div>
         </article>
         ${metricCard({ title: "总 Token", value: summary.totalTokens, summary, updated, hero: true, icon: "T", note: `${formatInt(summary.records)} 条记录 / ${summary.sessionCount} 个会话` })}
@@ -3237,106 +3413,65 @@
 
     function renderCacheTrend(days) {
       if (!days.length) {
-        els.cacheTrendChart.innerHTML = emptyState("暂无缓存命中率数据。");
+        els.cacheTrendChart.innerHTML = emptyState("暂无使用趋势数据。");
         els.cacheTrendSummary.textContent = "-";
         return;
       }
-      if (days.length === 1) {
-        const day = days[0];
-        const rate = day.inputTokens ? day.cachedInputTokens / day.inputTokens : 0;
-        const uncached = Math.max(day.inputTokens - day.cachedInputTokens, 0);
-        els.cacheTrendSummary.textContent = `单日 ${percent(rate, 1, 1)}%`;
-        els.cacheTrendChart.innerHTML = `
-          <div class="cache-single">
-            <div class="cache-single-main">
-              <span class="badge">${escapeHtml(day.date)} 单日视图</span>
-              <strong>${percent(rate, 1, 1)}%</strong>
-              <div class="cache-gauge" title="缓存命中率 ${percent(rate, 1, 1)}%">
-                <span style="--hit:${percent(rate, 1, 1)}%"></span>
-              </div>
-              <p class="muted">当前筛选只有 1 天数据，无法形成趋势线。切换到 7 天或 30 天可查看完整曲线。</p>
-            </div>
-            <div class="cache-single-grid">
-              <div class="cache-single-cell"><span>cached input</span><strong title="${formatInt(day.cachedInputTokens)}">${formatToken(day.cachedInputTokens)}</strong></div>
-              <div class="cache-single-cell"><span>uncached input</span><strong title="${formatInt(uncached)}">${formatToken(uncached)}</strong></div>
-              <div class="cache-single-cell"><span>input</span><strong title="${formatInt(day.inputTokens)}">${formatToken(day.inputTokens)}</strong></div>
-              <div class="cache-single-cell"><span>output</span><strong title="${formatInt(day.outputTokens)}">${formatToken(day.outputTokens)}</strong></div>
-            </div>
-          </div>
-        `;
-        return;
-      }
       const width = 1000;
-      const height = 280;
-      const padX = 42;
-      const padTop = 34;
-      const padBottom = 46;
-      const rates = days.map(day => day.inputTokens ? day.cachedInputTokens / day.inputTokens : 0);
-      const avg = rates.reduce((sum, rate) => sum + rate, 0) / rates.length;
-      const minRate = Math.min(...rates);
-      const maxRate = Math.max(...rates);
-      const spread = Math.max(maxRate - minRate, 0.12);
-      const yMin = Math.max(0, minRate - spread * 0.24);
-      const yMax = Math.min(1, maxRate + spread * 0.24);
-      const scaleY = rate => {
-        const normalized = (rate - yMin) / Math.max(yMax - yMin, 0.01);
-        return height - padBottom - normalized * (height - padTop - padBottom);
-      };
-      const points = rates.map((rate, index) => {
-        const x = days.length === 1 ? width / 2 : padX + index * ((width - padX * 2) / (days.length - 1));
-        const y = scaleY(rate);
-        return [x, y, rate];
+      const height = 232;
+      const padTop = 16;
+      const padBottom = 22;
+      const usableHeight = height - padTop - padBottom;
+      const series = [
+        { key: "input", label: "输入", color: "var(--uncached)", values: days.map(day => day.inputTokens || 0) },
+        { key: "output", label: "输出", color: "var(--output)", values: days.map(day => day.outputTokens || 0) },
+        { key: "uncached", label: "缓存创建", color: "var(--cache)", values: days.map(day => day.uncachedInputTokens || 0) },
+        { key: "cached", label: "缓存命中", color: "#9654df", values: days.map(day => day.cachedInputTokens || 0) },
+        { key: "active", label: "active", color: "var(--active)", values: days.map(day => day.activeTokens || 0) }
+      ];
+      const max = Math.max(...series.flatMap(item => item.values), 1);
+      const scaleX = index => days.length === 1 ? width / 2 : index * (width / (days.length - 1));
+      const scaleY = value => padTop + (1 - value / max) * usableHeight;
+      const yTicks = [1, .75, .5, .25, 0].map(ratio => {
+        const value = max * ratio;
+        return { value, y: scaleY(value), top: scaleY(value) / height * 100 };
       });
-      const bestIndex = rates.indexOf(maxRate);
-      const worstIndex = rates.indexOf(minRate);
-      const linePath = points.map((point, index) => `${index ? "L" : "M"} ${point[0].toFixed(1)} ${point[1].toFixed(1)}`).join(" ");
-      const areaPath = `${linePath} L ${points[points.length - 1][0].toFixed(1)} ${height - padBottom} L ${points[0][0].toFixed(1)} ${height - padBottom} Z`;
-      const grid = [0, .25, .5, .75, 1].map(step => {
-        const rate = yMin + (yMax - yMin) * step;
-        const y = scaleY(rate);
-        return { rate, y, label: `${percent(rate, 1, 0)}%`, top: y / height * 100 };
-      });
-      const gridLines = grid.map(item => `<line x1="0" y1="${item.y.toFixed(1)}" x2="${width}" y2="${item.y.toFixed(1)}" stroke="var(--line)" stroke-opacity="${item.rate === yMin ? .8 : .42}" vector-effect="non-scaling-stroke" />`).join("");
+      const paths = series.map(item => {
+        const path = item.values.map((value, index) => `${index ? "L" : "M"} ${scaleX(index).toFixed(1)} ${scaleY(value).toFixed(1)}`).join(" ");
+        return `<path d="${path}" fill="none" stroke="${item.color}" stroke-width="${item.key === "input" ? 3 : 2.2}" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" />`;
+      }).join("");
+      const gridLines = yTicks.map(item => `<line x1="0" y1="${item.y.toFixed(1)}" x2="${width}" y2="${item.y.toFixed(1)}" stroke="var(--line)" stroke-opacity=".5" vector-effect="non-scaling-stroke" />`).join("");
+      const hitRateValues = days.map(day => day.inputTokens ? day.cachedInputTokens / day.inputTokens : 0);
+      const avgHit = hitRateValues.reduce((sum, value) => sum + value, 0) / hitRateValues.length;
+      const peakInput = days.reduce((best, day) => !best || day.inputTokens > best.inputTokens ? day : best, null);
       const xLabels = days.length > 2
         ? [days[0].date.slice(5), days[Math.floor(days.length / 2)].date.slice(5), days[days.length - 1].date.slice(5)]
         : [days[0].date.slice(5), days[days.length - 1].date.slice(5)];
-      els.cacheTrendSummary.textContent = `平均 ${percent(avg, 1, 1)}% / 峰值 ${percent(maxRate, 1, 1)}%`;
+      els.cacheTrendSummary.textContent = `缓存命中 ${percent(avgHit, 1, 1)}% / 峰值输入 ${formatToken(peakInput?.inputTokens || 0)}`;
       els.cacheTrendChart.innerHTML = `
-        <div class="cache-trend-wrap">
-          <div class="cache-plot">
-            <div class="cache-y-axis">
-              ${grid.map(item => `<span class="cache-y-label" style="top:${item.top.toFixed(2)}%">${item.label}</span>`).join("")}
-            </div>
-            <div class="cache-svg-wrap">
-              <svg class="cache-line" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" role="img" aria-label="每日缓存命中率趋势">
-                <defs>
-                  <linearGradient id="cacheAreaGradient" x1="0" x2="0" y1="0" y2="1">
-                    <stop offset="0%" stop-color="var(--cache)" stop-opacity=".34" />
-                    <stop offset="72%" stop-color="var(--cache)" stop-opacity=".08" />
-                    <stop offset="100%" stop-color="var(--cache)" stop-opacity="0" />
-                  </linearGradient>
-                  <filter id="cacheLineGlow" x="-10%" y="-40%" width="120%" height="180%">
-                    <feDropShadow dx="0" dy="5" stdDeviation="5" flood-color="var(--cache)" flood-opacity=".22" />
-                  </filter>
-                </defs>
+        <div class="usage-trend-card">
+          <div class="usage-trend-plot">
+            ${yTicks.map(item => `<span class="usage-y-label" style="top:${item.top.toFixed(2)}%">${formatToken(item.value)}</span>`).join("")}
+            <div class="usage-plot-inner">
+              <svg class="usage-trend-svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" role="img" aria-label="每日使用趋势">
                 ${gridLines}
-                <path d="${areaPath}" fill="url(#cacheAreaGradient)" />
-                <path d="${linePath}" fill="none" stroke="var(--cache)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" filter="url(#cacheLineGlow)" vector-effect="non-scaling-stroke" />
+                ${paths}
               </svg>
-              ${points.map((point, index) => {
-                const featured = index === bestIndex || index === worstIndex || index === points.length - 1;
-                return `<button class="cache-point ${featured ? "featured" : ""}" type="button" aria-label="${escapeHtml(days[index].date)} 缓存命中率 ${percent(point[2], 1, 1)}%" data-date="${days[index].date}" data-rate="${percent(point[2], 1, 1)}" data-cached="${formatInt(days[index].cachedInputTokens)}" data-input="${formatInt(days[index].inputTokens)}" data-output="${formatInt(days[index].outputTokens)}" data-total="${formatInt(days[index].totalTokens)}" style="left:${(point[0] / width * 100).toFixed(3)}%;top:${(point[1] / height * 100).toFixed(3)}%"></button>`;
+              ${days.map((day, index) => {
+                const center = scaleX(index) / width * 100;
+                const segment = days.length > 1 ? 100 / days.length : 100;
+                const start = Math.max(0, center - segment / 2);
+                const widthPct = days.length > 1 ? Math.min(segment, 100 - start) : 100;
+                return `<button class="usage-trend-hit" type="button" style="left:${start.toFixed(3)}%;width:${widthPct.toFixed(3)}%" data-date="${day.date}" data-input="${formatInt(day.inputTokens)}" data-output="${formatInt(day.outputTokens)}" data-uncached="${formatInt(day.uncachedInputTokens)}" data-cached="${formatInt(day.cachedInputTokens)}" data-active="${formatInt(day.activeTokens)}" data-hit="${percent(day.cachedInputTokens, day.inputTokens, 1)}"></button>`;
               }).join("")}
             </div>
-            <div class="cache-x-axis">
+            <div class="usage-x-axis">
               ${xLabels.map(label => `<span>${escapeHtml(label)}</span>`).join("")}
             </div>
           </div>
-        </div>
-        <div class="chart-caption-row">
-          <div class="chart-chip"><span>平均命中率</span><strong>${percent(avg, 1, 1)}%</strong></div>
-          <div class="chart-chip"><span>峰值日期</span><strong>${days[bestIndex].date.slice(5)} / ${percent(maxRate, 1, 1)}%</strong></div>
-          <div class="chart-chip"><span>低点日期</span><strong>${days[worstIndex].date.slice(5)} / ${percent(minRate, 1, 1)}%</strong></div>
+          <div class="usage-legend">
+            ${series.map(item => `<span class="trend-${item.key}"><i style="background:${item.color}"></i>${escapeHtml(item.label)}</span>`).join("")}
+          </div>
         </div>
       `;
     }
@@ -3537,7 +3672,7 @@
       const max = Math.max(...taskGroups.map(group => taskMetricValue(group, state.taskMetric)), 1);
       const activeGroups = taskGroups.filter(group => group.records > 0);
       const emptyGroups = taskGroups.filter(group => !group.records);
-      const displayGroups = [...activeGroups, ...emptyGroups];
+      const displayGroups = activeGroups.length ? activeGroups : taskGroups.slice(0, 4);
       const recognizedSessions = activeGroups.filter(group => group.taskType !== "other").reduce((sum, group) => sum + group.sessions, 0);
       const unknownSessions = groupByKey(activeGroups, "other").sessions || 0;
       const manualRecords = state.records.filter(record => record.taskConfidence === "manual").length;
@@ -3572,9 +3707,9 @@
             </div>
           </article>
           <section class="task-layout">
-            <article class="panel">
+            <article class="panel task-distribution-panel">
               <div class="panel-head"><h2>任务类型分布</h2><span class="muted">${taskMetricLabel(state.taskMetric)}</span></div>
-              <div class="task-type-grid">
+              <div class="task-type-grid ${displayGroups.length <= 2 ? "is-compact" : ""}">
                 ${displayGroups.map(group => {
                   const type = taskTypeMap[group.taskType] || taskTypeMap.other;
                   const value = taskMetricValue(group, state.taskMetric);
@@ -3587,6 +3722,12 @@
                     </div>
                   `;
                 }).join("")}
+                ${emptyGroups.length && activeGroups.length ? `
+                  <div class="task-empty-note">
+                    <span>${formatInt(emptyGroups.length)} 个任务类型暂无数据</span>
+                    <strong>${emptyGroups.map(group => taskTypeMap[group.taskType]?.label || group.label).join(" / ")}</strong>
+                  </div>
+                ` : ""}
               </div>
             </article>
             <article class="panel">
@@ -3652,7 +3793,7 @@
                 <h2>设置 / 关于</h2>
                 <p class="muted">这个页面说明当前运行方式、隐私边界和开源展示口径。</p>
               </div>
-              <span class="badge">版本 0.4.3</span>
+              <span class="badge">版本 0.4.4</span>
             </div>
             <div class="settings-grid">
               <div class="settings-card">
@@ -3678,7 +3819,7 @@
                 <div class="privacy-list">
                   <span>时间来自浏览器本机时钟。</span>
                   <span>定位必须点击授权才会读取，只保存粗略经纬度文本到 localStorage。</span>
-                  <span>天气未接入外部 API，所以不会向第三方发送位置。</span>
+                  <span>天气只会在你点击授权后按粗略经纬度请求 Open-Meteo，不会自动读取或上传 sessions。</span>
                 </div>
               </div>
               <div class="settings-card">
@@ -4043,7 +4184,7 @@
       const summary = summarize(safeRecords.map(record => ({ ...record, activeTokens: activeTokens(record), uncachedInputTokens: uncachedInputTokens(record), hitRate: cacheHitRateOf(record) })));
       return {
         snapshotVersion: 1,
-        appVersion: "0.4.3",
+        appVersion: "0.4.4",
         generatedAt: new Date().toISOString(),
         privacy: {
           anonymized: true,
@@ -4401,17 +4542,19 @@
       if (actionButton) handlePanelAction(actionButton.dataset.action);
     });
     document.querySelector("#cacheTrendChart").addEventListener("mousemove", event => {
-      const point = event.target.closest(".cache-point");
+      const point = event.target.closest(".usage-trend-hit");
       if (!point) {
         hideChartTooltip();
         return;
       }
       showChartTooltip(event, `
-        <strong>${escapeHtml(point.dataset.date)} 缓存命中率 ${escapeHtml(point.dataset.rate)}%</strong>
-        <div><span>cached input</span><b>${escapeHtml(point.dataset.cached)}</b></div>
-        <div><span>input</span><b>${escapeHtml(point.dataset.input)}</b></div>
+        <strong>${escapeHtml(point.dataset.date)} 使用趋势</strong>
+        <div><span>输入</span><b>${escapeHtml(point.dataset.input)}</b></div>
         <div><span>output</span><b>${escapeHtml(point.dataset.output)}</b></div>
-        <div><span>total</span><b>${escapeHtml(point.dataset.total)}</b></div>
+        <div><span>缓存创建</span><b>${escapeHtml(point.dataset.uncached)}</b></div>
+        <div><span>缓存命中</span><b>${escapeHtml(point.dataset.cached)}</b></div>
+        <div><span>active</span><b>${escapeHtml(point.dataset.active)}</b></div>
+        <div><span>命中率</span><b>${escapeHtml(point.dataset.hit)}%</b></div>
       `);
     });
     document.querySelector("#cacheTrendChart").addEventListener("mouseleave", hideChartTooltip);
@@ -4436,21 +4579,65 @@
       if (action === "request-location") requestLocation();
     }
 
-    function requestLocation() {
+    function weatherCodeLabel(code) {
+      const labels = {
+        0: "晴", 1: "多云", 2: "多云", 3: "阴",
+        45: "雾", 48: "雾凇",
+        51: "小毛毛雨", 53: "毛毛雨", 55: "强毛毛雨",
+        61: "小雨", 63: "中雨", 65: "大雨",
+        71: "小雪", 73: "中雪", 75: "大雪",
+        80: "阵雨", 81: "阵雨", 82: "强阵雨",
+        95: "雷暴", 96: "雷暴冰雹", 99: "强雷暴冰雹"
+      };
+      return labels[Number(code)] || "天气未知";
+    }
+
+    async function fetchWeather(latitude, longitude) {
+      const url = `https://api.open-meteo.com/v1/forecast?latitude=${encodeURIComponent(latitude)}&longitude=${encodeURIComponent(longitude)}&current=temperature_2m,weather_code&timezone=auto`;
+      const response = await fetch(url, { cache: "no-store" });
+      if (!response.ok) throw new Error(`天气请求失败：${response.status}`);
+      const payload = await response.json();
+      const current = payload.current || {};
+      const temp = Number(current.temperature_2m);
+      const label = weatherCodeLabel(current.weather_code);
+      return Number.isFinite(temp) ? `天气：${label} ${temp.toFixed(0)}°C` : `天气：${label}`;
+    }
+
+    async function requestLocation() {
       if (!navigator.geolocation) {
         setStatus("当前浏览器不支持定位能力。", "error");
         return;
       }
+      if (!window.isSecureContext && location.hostname !== "localhost" && location.hostname !== "127.0.0.1") {
+        setStatus("定位需要 HTTPS 或 localhost 环境。请使用 Netlify 网址或本地服务地址。", "error");
+        return;
+      }
       setStatus("正在请求浏览器定位授权...");
-      navigator.geolocation.getCurrentPosition(position => {
+      navigator.geolocation.getCurrentPosition(async position => {
         const lat = position.coords.latitude.toFixed(2);
         const lng = position.coords.longitude.toFixed(2);
         state.locationLabel = `定位：${lat}, ${lng}`;
         localStorage.setItem("codexTokenLocationLabel", state.locationLabel);
-        setStatus("定位已保存到浏览器本地。天气未接入外部 API，不会发送位置。");
+        state.weatherLabel = "天气：读取中";
+        localStorage.setItem("codexTokenWeatherLabel", state.weatherLabel);
+        if (state.data) render(state.data);
+        try {
+          state.weatherLabel = await fetchWeather(lat, lng);
+          localStorage.setItem("codexTokenWeatherLabel", state.weatherLabel);
+          setStatus("定位和天气已更新。天气数据来自 Open-Meteo，仅在点击授权后请求。");
+        } catch (error) {
+          state.weatherLabel = "天气：获取失败";
+          localStorage.setItem("codexTokenWeatherLabel", state.weatherLabel);
+          setStatus(error.message || "天气获取失败，但定位已保存。", "error");
+        }
         if (state.data) render(state.data);
       }, error => {
-        setStatus(error.message || "定位授权失败。", "error");
+        const message = error.code === 1
+          ? "定位权限被拒绝。请在浏览器地址栏权限设置中允许位置访问后重试。"
+          : error.code === 2
+            ? "浏览器无法获取当前位置，请检查系统定位服务。"
+            : "定位请求超时，请稍后重试。";
+        setStatus(message, "error");
       }, { enableHighAccuracy: false, timeout: 8000, maximumAge: 3600000 });
     }
     els.importFile.addEventListener("change", async () => {

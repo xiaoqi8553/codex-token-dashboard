@@ -7,7 +7,7 @@
 ![Codex Token Dashboard cover](screenshots/project-cover.svg)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-0f766e.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.4.3-111827.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.4.4-111827.svg)](CHANGELOG.md)
 [![Netlify Demo](https://img.shields.io/badge/demo-codetoken.netlify.app-2f6fed.svg)](https://codetoken.netlify.app/)
 
 ## 在线演示
@@ -31,6 +31,7 @@
 - 支持总览卡片、今日状态卡、每日趋势、输入/输出/缓存占比、缓存命中率趋势、Top 会话、按模型统计。
 - 支持 AI 使用日历，用热力图查看每日 Token、active tokens、输出、缓存命中率和记录数。
 - 支持任务复盘，用本地规则识别写代码、调试、前端 UI、文档、部署、数据分析、重构、项目规划等任务类型。
+- 今日状态卡支持手动授权定位后查询 Open-Meteo 天气；不会自动读取位置。
 - 明细表支持搜索、筛选、排序、分页、多选、选中导出 CSV / JSON。
 - 支持脱敏快照 JSON / HTML，适合公开分享。
 - 支持本地 Node 模式、浏览器导入模式、Netlify 静态演示版。

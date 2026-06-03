@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.4.4 - 2026-06-03
+
+- Added `AGENTS.md` with project rules, UI acceptance requirements, and a mistake log for repeated UI and interaction issues.
+- Fixed the Today Status location/weather flow with explicit geolocation permission handling, HTTPS/local checks, Open-Meteo weather lookup, local caching, and user-visible error states.
+- Simplified the header by moving current mode into Status Details, placing the last update next to the title, and hiding the global estimated-data badge from the top-level layout.
+- Reworked Task Review alignment so distribution and sample panels use balanced columns, muted empty-task summaries, and a compact no-horizontal-scroll sample table.
+- Replaced the oversized cache hit rate trend with a compact multi-series usage trend for input, output, cache creation, cache hit, and active tokens.
+- Updated Settings/About privacy text to reflect that weather requests only happen after explicit location authorization.
+
 ## 0.4.3 - 2026-06-02
 
 - Tightened the dashboard density by reducing header height, card padding, oversized status blocks, and the desktop wrapping breakpoint.
