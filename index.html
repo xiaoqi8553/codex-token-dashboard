@@ -252,6 +252,47 @@
       gap: 6px;
       flex-wrap: wrap;
       justify-content: flex-end;
+      position: relative;
+    }
+
+    .import-menu {
+      position: absolute;
+      top: calc(100% + 8px);
+      right: 0;
+      z-index: 30;
+      width: min(360px, calc(100vw - 28px));
+      display: none;
+      gap: 8px;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: color-mix(in srgb, var(--panel) 96%, transparent);
+      box-shadow: var(--shadow);
+    }
+
+    .import-menu.show { display: grid; }
+
+    .import-option {
+      width: 100%;
+      justify-content: flex-start;
+      align-items: flex-start;
+      text-align: left;
+      padding: 10px;
+      min-height: 58px;
+    }
+
+    .import-option strong {
+      display: block;
+      font-size: 13px;
+      color: var(--ink);
+    }
+
+    .import-option span {
+      display: block;
+      margin-top: 3px;
+      font-size: 12px;
+      line-height: 1.35;
+      color: var(--muted);
     }
 
     .header .toolbar-group {
@@ -1894,7 +1935,21 @@
         </div>
         <div class="toolbar-group data-actions">
           <span class="group-label">数据</span>
-          <button class="btn" id="importBtn" type="button">导入数据</button>
+          <button class="btn" id="importBtn" type="button" aria-haspopup="menu" aria-expanded="false">导入数据</button>
+          <div class="import-menu" id="importMenu" role="menu" aria-label="导入数据">
+            <button class="btn import-option" id="importFileBtn" type="button" role="menuitem">
+              <span>
+                <strong>导入文件</strong>
+                <span>usage-index / 脱敏快照 / 中转站 CSV 或 JSON</span>
+              </span>
+            </button>
+            <button class="btn import-option" id="importFolderBtn" type="button" role="menuitem">
+              <span>
+                <strong>选择 sessions 文件夹</strong>
+                <span>直接选择本机 .codex/sessions，浏览器本地解析</span>
+              </span>
+            </button>
+          </div>
           <button class="btn" id="exportCsvBtn" type="button">导出 CSV</button>
           <button class="btn" id="exportJsonBtn" type="button">导出 JSON</button>
           <button class="btn" id="exportSnapshotBtn" type="button">脱敏快照</button>
@@ -2121,6 +2176,8 @@
       cacheTrendChart: document.querySelector("#cacheTrendChart"),
       cacheTrendSummary: document.querySelector("#cacheTrendSummary"),
       viewPanel: document.querySelector("#viewPanel"),
+      importBtn: document.querySelector("#importBtn"),
+      importMenu: document.querySelector("#importMenu"),
       importFile: document.querySelector("#importFile"),
       detailDialog: document.querySelector("#detailDialog"),
       detailGrid: document.querySelector("#detailGrid"),
@@ -2385,6 +2442,27 @@
       if (isLoading) setStatus(state.dataMode === "server" ? "正在扫描 sessions 和导入数据..." : "正在加载浏览器本地数据...");
     }
 
+    function closeImportMenu() {
+      els.importMenu.classList.remove("show");
+      els.importBtn.setAttribute("aria-expanded", "false");
+    }
+
+    function toggleImportMenu() {
+      const open = !els.importMenu.classList.contains("show");
+      els.importMenu.classList.toggle("show", open);
+      els.importBtn.setAttribute("aria-expanded", String(open));
+    }
+
+    function chooseImportFile() {
+      closeImportMenu();
+      els.importFile.click();
+    }
+
+    function chooseImportSessionsFolder() {
+      closeImportMenu();
+      chooseSessionsDirectory();
+    }
+
     function emptyState(message, detail = "") {
       return `
         <div class="empty">
@@ -2395,7 +2473,8 @@
           <div class="empty-actions">
             <button class="btn compact" data-action="load-demo" type="button">加载示例数据</button>
             <button class="btn compact" data-action="clear-filters" type="button">清空筛选</button>
-            <button class="btn compact" data-action="import-data" type="button">导入数据</button>
+            <button class="btn compact" data-action="import-file" type="button">导入文件</button>
+            <button class="btn compact" data-action="import-sessions" type="button">选择 sessions 文件夹</button>
           </div>
         </div>
       `;
@@ -4349,9 +4428,14 @@
     document.querySelector("#exportJsonBtn").addEventListener("click", () => exportJson());
     document.querySelector("#exportSnapshotBtn").addEventListener("click", exportSnapshotJson);
     document.querySelector("#exportSnapshotHtmlBtn").addEventListener("click", exportSnapshotHtml);
-    document.querySelector("#importBtn").addEventListener("click", () => els.importFile.click());
-    document.querySelector("#importIndexBtn").addEventListener("click", () => els.importFile.click());
-    document.querySelector("#importSessionsBtn").addEventListener("click", chooseSessionsDirectory);
+    els.importBtn.addEventListener("click", event => {
+      event.stopPropagation();
+      toggleImportMenu();
+    });
+    document.querySelector("#importFileBtn").addEventListener("click", chooseImportFile);
+    document.querySelector("#importFolderBtn").addEventListener("click", chooseImportSessionsFolder);
+    document.querySelector("#importIndexBtn").addEventListener("click", chooseImportFile);
+    document.querySelector("#importSessionsBtn").addEventListener("click", chooseImportSessionsFolder);
     document.querySelector("#sampleBtn").addEventListener("click", async () => {
       try {
         await loadDemoData("已加载示例数据。");
@@ -4360,8 +4444,8 @@
       }
     });
     document.querySelector("#welcomeSampleBtn").addEventListener("click", () => document.querySelector("#sampleBtn").click());
-    document.querySelector("#welcomeImportBtn").addEventListener("click", () => els.importFile.click());
-    document.querySelector("#welcomeSessionsBtn").addEventListener("click", chooseSessionsDirectory);
+    document.querySelector("#welcomeImportBtn").addEventListener("click", chooseImportFile);
+    document.querySelector("#welcomeSessionsBtn").addEventListener("click", chooseImportSessionsFolder);
     document.querySelector("#clearBrowserDataBtn").addEventListener("click", () => {
       localStorage.removeItem("codexTokenStaticPayload");
       clearSessionsDirectoryHandle();
@@ -4371,6 +4455,12 @@
       renderStaticUsage("浏览器缓存和已记住的 sessions 文件夹已清除。");
     });
     document.querySelector("#closeDialogBtn").addEventListener("click", () => els.detailDialog.close());
+    document.addEventListener("click", event => {
+      if (!event.target.closest("#importMenu") && !event.target.closest("#importBtn")) closeImportMenu();
+    });
+    document.addEventListener("keydown", event => {
+      if (event.key === "Escape") closeImportMenu();
+    });
     document.querySelector("#viewTabs").addEventListener("click", event => {
       const button = event.target.closest("button[data-view]");
       if (button) setActiveView(button.dataset.view);
@@ -4575,7 +4665,9 @@
         loadDemoData("已重新加载示例数据。").catch(error => setStatus(error.message || "示例数据加载失败", "error"));
       }
       if (action === "clear-filters") clearFilters();
-      if (action === "import-data") els.importFile.click();
+      if (action === "import-data") toggleImportMenu();
+      if (action === "import-file") chooseImportFile();
+      if (action === "import-sessions") chooseImportSessionsFolder();
       if (action === "request-location") requestLocation();
     }
 

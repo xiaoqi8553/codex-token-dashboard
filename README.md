@@ -7,15 +7,17 @@
 ![Codex Token Dashboard cover](screenshots/project-cover.svg)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-0f766e.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.4.4-111827.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.4.8-111827.svg)](CHANGELOG.md)
 [![Netlify Demo](https://img.shields.io/badge/demo-codetoken.netlify.app-2f6fed.svg)](https://codetoken.netlify.app/)
+[![GitHub Pages](https://img.shields.io/badge/pages-github.io-111827.svg)](https://xiaoqi8553.github.io/codex-token-dashboard/)
 
 ## 在线演示
 
-- Demo: https://codetoken.netlify.app/
+- Netlify Demo: https://codetoken.netlify.app/
+- GitHub Pages Demo: https://xiaoqi8553.github.io/codex-token-dashboard/
 - GitHub: https://github.com/xiaoqi8553/codex-token-dashboard
 
-公开演示站默认加载模拟数据，不会读取访问者电脑。用户可以手动导入自己的 `usage-index.json`、脱敏快照、`.codex/sessions` 文件夹或中转站 CSV/JSON。
+公开演示站默认加载模拟数据，不会读取访问者电脑。用户可以通过顶部“导入数据”菜单选择自己的 `usage-index.json`、脱敏快照、中转站 CSV/JSON，也可以直接选择整个 `.codex/sessions` 文件夹。所有解析都发生在浏览器本地。
 
 ## 界面预览
 
@@ -99,7 +101,7 @@ npm run visual:test  # 生成截图并自动检查明显视觉问题
 
 文件通过浏览器 File API 在本地解析，不会自动上传。
 
-在 Chrome / Edge 等支持 File System Access API 的浏览器里，选择 `sessions` 文件夹后，页面会把文件夹授权句柄保存在浏览器 IndexedDB 中。下次打开同一个网址时会尝试恢复该文件夹；如果浏览器权限仍有效，点击“刷新”即可重新扫描。浏览器仍可能要求再次授权，这是浏览器安全策略。
+在 Chrome / Edge 等支持 File System Access API 的浏览器里，打开 Netlify 或 GitHub Pages 公开站后，点击顶部“导入数据” -> “选择 sessions 文件夹”，选择你的 `.codex/sessions`。页面会把文件夹授权句柄保存在浏览器 IndexedDB 中。下次打开同一个网址时会尝试恢复该文件夹；如果浏览器权限仍有效，点击“刷新”即可重新扫描。浏览器仍可能要求再次授权，这是浏览器安全策略。
 
 ## 页面模块
 

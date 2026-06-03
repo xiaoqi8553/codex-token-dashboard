@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.8 - 2026-06-03
+
+- Improved the public static import experience for GitHub Pages and Netlify.
+- Changed the header import button into an explicit import menu with separate file import and `sessions` folder import actions.
+- Added direct `sessions` folder actions to empty states so users do not get trapped in the single-file picker.
+- Reused the existing browser-local session parsing and directory permission logic; token parsing and data aggregation were not changed.
+
 ## 0.4.7 - 2026-06-03
 
 - Reverted the GitHub Pages workflow to stable official action versions.

@@ -25,6 +25,7 @@
 - 2026-06-03: The cache hit trend chart used too much vertical space for too little information. Trend modules should show richer multi-metric usage data with tooltips and compact layout.
 - 2026-06-03: GitHub Pages deployment failure was initially treated like workflow code alone could solve it. First-time Pages deploys also require repository Pages to be enabled and set to GitHub Actions in GitHub settings.
 - 2026-06-03: GitHub Actions runtime warnings were over-corrected by bumping action tags too aggressively. Prefer stable documented action versions first; warnings are not deployment failures unless logs say so.
+- 2026-06-03: Public static import UI exposed single-file import too prominently and hid the `sessions` folder path. GitHub Pages and Netlify must both provide an obvious folder import action.
 
 ## Before Finishing
 
