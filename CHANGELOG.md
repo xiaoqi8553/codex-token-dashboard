@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.5 - 2026-06-03
+
+- Added GitHub Pages deployment workflow as a Netlify-free static hosting option.
+- The workflow builds the existing static dashboard with `npm run build` and publishes `dist/`.
+- No token parsing, import/export, snapshot, or dashboard data logic changed.
+
 ## 0.4.4 - 2026-06-03
 
 - Added `AGENTS.md` with project rules, UI acceptance requirements, and a mistake log for repeated UI and interaction issues.
