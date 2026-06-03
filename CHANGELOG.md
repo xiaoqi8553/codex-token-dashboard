@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.7 - 2026-06-03
+
+- Reverted the GitHub Pages workflow to stable official action versions.
+- Added `enablement: true` to `actions/configure-pages` so first-time Pages setup can be enabled by the workflow when permissions allow it.
+- Kept the static build path unchanged; dashboard runtime and data logic were not changed.
+
 ## 0.4.6 - 2026-06-03
 
 - Adjusted the GitHub Pages workflow to match the recommended build/deploy structure.
