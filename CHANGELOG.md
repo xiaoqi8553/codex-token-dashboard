@@ -1,151 +1,184 @@
-﻿# Changelog
+# 更新日志
 
 ## 0.5.0 - 2026-06-03
 
-- Added `replay.html`, a standalone Codex Work Replay experience that turns usage records into a playable AI work timeline.
-- Added a main dashboard entry button for opening Work Replay without crowding the existing dashboard pages.
-- Work Replay supports local Node data, browser-import cached data, and public demo data fallback.
-- Work Replay visualizes session events by token size, task type color, and official Plus / relay / unknown source borders.
-- Added Markdown export for replay summaries.
-- Redesigned Work Replay from a decorative orbit view into a product-style timeline and task-lane replay page.
-- Added clearer replay metrics, a wider selected-session detail panel, structured task distribution, and a stronger replay summary area.
-- Added safe display cleanup so object-shaped titles or ids do not render as `[object Object]` in the replay page.
-- Improved task classification with weighted field matching and safer Latin keyword boundaries so rightcode no longer causes broad "写代码" misclassification.
-- Added `npm run ui:shot`, `npm run ui:audit`, and `npm run ui:report` for screenshot-based UI self-review.
-- Added `docs/ui-audit-report.json` and `docs/UI_REVIEW_REPORT.md` outputs for repeatable visual acceptance reporting.
-- Improved mobile header density and added collapsed mobile filters so the first screen is not dominated by controls.
-- Included Work Replay in static builds and visual acceptance screenshots.
+- 新增 `replay.html` 工作回放子页面，把 usage 记录组织成可播放的 AI 工作时间线。
+- 在主看板顶部新增“工作回放”入口，不挤占原有总览、AI 日历、任务复盘、明细和设置页面。
+- 工作回放支持三种数据来源：本地 Node 服务数据、浏览器导入后缓存的数据、公开演示数据。
+- 工作回放会按 token 体量、任务类型、官方 Plus / 中转站 / unknown 来源展示会话节点。
+- 新增工作回放 Markdown 总结导出。
+- 重做工作回放视觉，从旧的装饰性轨道图改成更接近正式产品的时间线和任务泳道。
+- 增加更清楚的回放指标、选中会话详情面板、任务分布和回放总结区域。
+- 修复工作回放里对象类型标题或 ID 显示成 `[object Object]` 的问题。
+- 优化任务类型识别规则，使用字段权重和英文关键词边界，避免 `rightcode` 这类字符串被错误识别成“写代码”。
+- 新增 UI 自测流程：
+  - `npm run ui:shot`：自动打开页面并截图。
+  - `npm run ui:audit`：自动检查明显布局问题并生成 JSON 报告。
+  - `npm run ui:report`：生成中文视觉验收报告。
+- 新增 `docs/ui-audit-report.json` 和 `docs/UI_REVIEW_REPORT.md`，用于记录每次视觉验收结果。
+- 优化移动端顶部密度，移动端筛选栏默认折叠，避免首屏被控件占满。
+- 静态构建和视觉验收截图已包含工作回放页面。
 
 ## 0.4.9 - 2026-06-03
 
-- Aligned the Overview top status row and metric row to the same four-column grid.
-- Changed authorized location display from raw latitude/longitude to a city label when reverse geocoding succeeds.
-- Allowed geolocation in static deployment headers for the current site instead of blocking it with `geolocation=()`.
-- Treated Codex `custom` providers as relay data so RightCode-style middle-station usage no longer falls into `unknown`.
-- Updated privacy documentation for the city/weather lookup behavior.
+- 对齐总览页顶部今日状态卡和核心指标卡，让上下网格更统一。
+- 定位授权成功后优先显示城市名称，不再只显示经纬度。
+- 调整静态部署响应头，允许当前页面使用浏览器定位能力。
+- 将 Codex 里的 `custom` provider 识别为中转站来源，避免 RightCode 用量落到 `unknown`。
+- 更新隐私说明，解释城市和天气查询只会在用户主动授权定位后发生。
 
 ## 0.4.8 - 2026-06-03
 
-- Improved the public static import experience for GitHub Pages and Netlify.
-- Changed the header import button into an explicit import menu with separate file import and `sessions` folder import actions.
-- Added direct `sessions` folder actions to empty states so users do not get trapped in the single-file picker.
-- Reused the existing browser-local session parsing and directory permission logic; token parsing and data aggregation were not changed.
+- 优化 GitHub Pages 和 Netlify 公开静态版的数据导入体验。
+- 顶部“导入数据”改成导入菜单，区分单文件导入和 `sessions` 文件夹导入。
+- 空状态里增加直接选择 `sessions` 文件夹的入口，避免用户只能选单个文件。
+- 复用已有浏览器本地解析和目录权限逻辑，没有修改 token 解析和统计口径。
 
 ## 0.4.7 - 2026-06-03
 
-- Reverted the GitHub Pages workflow to stable official action versions.
-- Added `enablement: true` to `actions/configure-pages` so first-time Pages setup can be enabled by the workflow when permissions allow it.
-- Kept the static build path unchanged; dashboard runtime and data logic were not changed.
+- GitHub Pages 工作流回退到稳定的官方 Action 版本。
+- 给 `actions/configure-pages` 增加 `enablement: true`，在权限允许时让工作流自动启用 Pages。
+- 静态构建路径保持不变，没有修改看板运行逻辑和数据逻辑。
 
 ## 0.4.6 - 2026-06-03
 
-- Adjusted the GitHub Pages workflow to match the recommended build/deploy structure.
-- Moved `configure-pages` into the build job before artifact upload.
-- Updated GitHub Actions runtime versions to reduce Node 20 deprecation warnings.
-- Documented that first-time GitHub Pages deployment still requires the repository Pages source to be set to GitHub Actions.
+- 调整 GitHub Pages 工作流结构，使构建和部署流程更符合官方推荐方式。
+- 将 `configure-pages` 放到构建任务中，并在上传 Pages artifact 前执行。
+- 更新 GitHub Actions 运行环境，减少 Node 版本弃用提醒。
+- 记录首次启用 GitHub Pages 时仍需要在仓库设置里选择 GitHub Actions 作为 Pages 来源。
 
 ## 0.4.5 - 2026-06-03
 
-- Added GitHub Pages deployment workflow as a Netlify-free static hosting option.
-- The workflow builds the existing static dashboard with `npm run build` and publishes `dist/`.
-- No token parsing, import/export, snapshot, or dashboard data logic changed.
+- 新增 GitHub Pages 部署工作流，作为 Netlify 之外的静态托管方式。
+- 工作流会执行 `npm run build`，并发布 `dist/` 目录。
+- 没有修改 token 解析、导入导出、脱敏快照或看板数据逻辑。
 
 ## 0.4.4 - 2026-06-03
 
-- Added `AGENTS.md` with project rules, UI acceptance requirements, and a mistake log for repeated UI and interaction issues.
-- Fixed the Today Status location/weather flow with explicit geolocation permission handling, HTTPS/local checks, Open-Meteo weather lookup, local caching, and user-visible error states.
-- Simplified the header by moving current mode into Status Details, placing the last update next to the title, and hiding the global estimated-data badge from the top-level layout.
-- Reworked Task Review alignment so distribution and sample panels use balanced columns, muted empty-task summaries, and a compact no-horizontal-scroll sample table.
-- Replaced the oversized cache hit rate trend with a compact multi-series usage trend for input, output, cache creation, cache hit, and active tokens.
-- Updated Settings/About privacy text to reflect that weather requests only happen after explicit location authorization.
+- 新增 `AGENTS.md`，记录项目规则、UI 验收要求和已犯错误清单。
+- 修复今日状态卡里的定位和天气流程：
+  - 明确处理浏览器定位权限。
+  - 判断 HTTPS / localhost 环境。
+  - 调用 Open-Meteo 获取天气。
+  - 本地缓存城市和天气结果。
+  - 出错时给用户可见提示。
+- 精简顶部 Header，将当前模式移动到“状态详情”，把最后更新时间放到标题旁边，并隐藏顶部全局估算提示。
+- 重排任务复盘页，让任务类型分布和高消耗样本左右更均衡。
+- 移除高消耗任务样本表格对横向滚动的依赖。
+- 用更紧凑的多指标趋势替代过大的缓存命中率趋势图。
+- 更新设置页隐私说明，明确天气请求只会在用户授权定位后发生。
 
 ## 0.4.3 - 2026-06-02
 
-- Tightened the dashboard density by reducing header height, card padding, oversized status blocks, and the desktop wrapping breakpoint.
-- Rebuilt the Overview first screen around one Today Status card plus compact core metrics, removing duplicate daily cards, the overview Top Sessions panel, and the Next Steps panel.
-- Changed Overview model statistics into a compact ranked list so the lower overview area no longer leaves large blank panels.
-- Fixed the Today Status location button by adding the missing click handler for the overview status area.
-- Fixed AI Calendar scope so its 90-day heatmap uses the date-range-independent calendar record set while preserving source/model/search/estimate filters.
-- Renamed the calendar "monthly active days" stat to range active days to avoid implying older May usage was missing when the current month is June.
-- Centered the AI Calendar heatmap matrix and kept empty dates visible as low-emphasis cells.
-- Reworked Task Review type cards into a stable grid with empty categories shown as muted cards instead of a collapsible block.
-- Fixed a 1366px horizontal overflow in the input/output/cache ratio legend with a dedicated compact legend layout.
+- 降低页面整体密度，减少 Header 高度、卡片 padding、状态块尺寸和桌面换行问题。
+- 重排总览首屏，只保留今日状态卡和核心指标，删除重复的本日会话、本日来源、本日质量、总览 Top 会话和下一步建议。
+- 将总览页“按模型统计”改成紧凑排行，减少大面积空白。
+- 修复今日状态卡定位按钮缺少点击事件的问题。
+- 修复 AI 日历统计范围，让 90 天热力图使用完整日期数据，不再被顶部 7 天筛选错误限制。
+- 将 AI 日历“本月活跃天数”改名为“区间活跃天数”，避免误以为 5 月数据丢失。
+- 居中 AI 日历热力图矩阵，并保留无数据日期的浅色格。
+- 任务复盘类型卡改成稳定网格，0 数据类型弱化显示，不再折叠成一小行。
+- 修复 1366 宽度下输入 / 输出 / 缓存占比图例横向溢出。
 
 ## 0.4.2 - 2026-06-02
 
-- Simplified the dashboard header so it focuses on the product name, mode, update time, status details, and core data actions.
-- Moved author and deeper status context into Settings/About instead of repeating it in the header.
-- Reworked page-specific filters so Overview, AI Calendar, Task Review, Detail Table, and Settings use different filter density.
-- Changed long-lived success notices into toast messages and reduced the estimated-data warning into a compact badge.
-- Improved the AI Calendar with a complete 90-day heatmap matrix, clearer tooltip data, larger legend, and explicit click-to-drilldown empty states.
-- Improved Task Review hierarchy, keyword classification, task summaries, non-empty type priority, folded empty types, and sample sorting.
-- Refined Detail Table and Settings/About visual hierarchy, table readability, selected-row states, and formal settings cards.
-- Reduced visual noise by softening the page grid and normalizing source colors, badges, card spacing, and responsive breakpoints.
+- 精简看板 Header，只保留产品名、模式、更新时间、状态详情和核心数据操作。
+- 将作者和详细状态移动到设置 / 关于页。
+- 按页面拆分筛选栏：
+  - 总览页只保留轻量时间筛选。
+  - AI 日历显示日期范围和指标选择。
+  - 任务复盘显示任务类型、来源、模型和日期范围。
+  - 明细页保留完整筛选栏。
+  - 设置页隐藏筛选栏。
+- 成功提示改成 toast，不再长期占用页面顶部空间。
+- 估算数据提醒改成小 badge，不再压缩主体内容。
+- 优化 AI 日历：完整 90 天矩阵、清晰 tooltip、更大的图例、点击日期进入明细。
+- 优化任务复盘：层级、关键词识别、任务摘要、排序和样本表格。
+- 优化明细表和设置页：表格可读性、选中行状态和正式卡片样式。
+- 降低背景网格干扰，统一来源颜色、badge、卡片间距和响应式断点。
 
 ## 0.4.1 - 2026-06-02
 
-- Added `docs/UI_ACCEPTANCE.md` with page-level visual standards, failure rules, and the required visual report template.
-- Added Playwright-based `visual:shot` and `visual:test` scripts for screenshot capture and automated UI smoke checks.
-- Added screenshot output under `docs/screenshots/current/` and ignored it by default to avoid committing local usage data.
-- Fixed responsive overflow found during visual testing in the mobile toolbar and 1366px overview chart layout.
-- Added an inline SVG favicon to remove the browser 404 noise during visual checks.
-- Documented the visual acceptance workflow in README.
+- 新增 `docs/UI_ACCEPTANCE.md`，记录页面级视觉标准、失败标准和视觉报告模板。
+- 新增 Playwright 截图与 UI 冒烟检查脚本：
+  - `npm run visual:shot`
+  - `npm run visual:test`
+- 新增截图输出目录 `docs/screenshots/current/`，并默认忽略，避免提交本地隐私截图。
+- 修复视觉测试发现的移动端工具栏溢出和 1366 宽度总览图表布局问题。
+- 新增内联 SVG favicon，减少视觉检查时的浏览器 404 噪声。
+- README 增加视觉验收流程说明。
 
 ## 0.4.0 - 2026-06-02
 
-- Added page-level navigation for Overview, AI Usage Calendar, Task Review, Detail Table, and Settings/About.
-- Added a Today Status module with local time, current-day token usage, active tokens, cache hit rate, optional browser geolocation, and no external weather API calls.
-- Added dashboard story cards that summarize recent 7-day movement, peak usage day, source mix, and data quality.
-- Added an AI usage calendar heatmap with metric switching, hover tooltips, and click-to-filter day drilldown into the detail table.
-- Added rule-based task review for coding, debugging, frontend UI, docs, deployment, data analysis, refactoring, planning, and unknown tasks.
-- Added browser-local manual task classification overrides stored in `localStorage`.
-- Updated demo data generation with simulated task scenarios so the public Netlify demo exercises the new calendar and task review modules.
-- Updated README documentation for the new page structure, task review logic, and privacy behavior.
+- 新增页面级导航：
+  - 总览
+  - AI 日历
+  - 任务复盘
+  - 明细
+  - 设置
+- 新增今日状态模块，显示本地时间、今日 token、active tokens、缓存命中率、浏览器定位和天气。
+- 新增数据故事卡片，用于总结最近 7 天变化、峰值日期、来源结构和数据质量。
+- 新增 AI 使用日历热力图，支持指标切换、悬浮提示和点击日期筛选明细。
+- 新增基于规则的任务复盘，支持写代码、调试、前端 UI、文档、部署、数据分析、重构、规划和 unknown。
+- 新增浏览器本地手动任务类型修正，修正结果保存在 `localStorage`。
+- 更新演示数据生成逻辑，让公开演示版可以展示 AI 日历和任务复盘模块。
+- README 增加新页面结构、任务复盘规则和隐私行为说明。
 
 ## 0.3.4 - 2026-06-01
 
-- Fixed flattened text in the cache hit rate trend by moving axis labels and date labels out of the non-uniformly scaled SVG.
-- Kept SVG rendering for the line, area, and grid only, with non-scaling strokes for cleaner chart geometry.
-- Reworked cache trend axis spacing, chart padding, title typography, and marker rendering for a clearer dashboard-style chart.
+- 修复缓存命中率趋势图文字发扁的问题。
+- 将坐标轴文字和日期文字移出非等比缩放的 SVG。
+- SVG 只负责绘制折线、面积和网格，文字由正常 HTML 渲染，避免字体被压缩。
+- 优化缓存趋势图的坐标轴间距、图表 padding、标题样式和 marker 渲染。
 
 ## 0.3.3 - 2026-06-01
 
-- Standardized compact token formatting to use `K`, `M`, and `B`; values below 1B remain in `M` instead of switching to Chinese `亿`.
-- Improved the cache hit rate chart for one-day filters by showing a dedicated single-day summary instead of a flattened line chart.
-- Increased cache hit rate chart height and spacing for multi-day trends to improve readability.
+- 统一 token 简写格式，使用 `K`、`M`、`B`。
+- 小于 1B 的数字继续用 `M`，不再切换成中文“亿”。
+- 单日筛选时，缓存命中率图改成单日摘要，避免只有一个点的折线图看起来被压扁。
+- 多日趋势时，增加缓存命中率图高度和间距，提高可读性。
 
 ## 0.3.2 - 2026-06-01
 
-- Fixed browser-imported `sessions` folder refresh so it can rescan the selected directory instead of only re-rendering cached data.
-- Preserved Today / 7 days / 30 days date presets after browser imports and folder refreshes instead of forcing the range back to custom.
-- Added IndexedDB persistence for Chrome/Edge directory handles so the public static site can remember a previously selected `sessions` folder when browser permissions allow it.
-- Updated browser cache clearing to also remove the remembered `sessions` folder handle.
-- Added README guidance for the public URL's remembered-folder behavior and browser permission limits.
+- 修复浏览器导入 `sessions` 文件夹后刷新无效的问题，现在可以重新扫描已选择目录。
+- 修复导入后日期筛选被强制回弹到自定义的问题，保留“今天 / 7 天 / 30 天”等预设。
+- 新增 IndexedDB 目录句柄缓存，在 Chrome / Edge 支持时记住上次选择的 `sessions` 文件夹。
+- 清除浏览器缓存时，也会清除记住的 `sessions` 文件夹权限。
+- README 增加公开网址记住文件夹行为和浏览器权限限制说明。
 
 ## 0.3.1 - 2026-05-30
 
-- Refined the README for open-source presentation with badges, preview images, project structure, FAQ, and topic suggestions.
-- Added GitHub-ready project cover and dashboard preview SVG assets under `screenshots/`.
-- Added release notes for the 0.3.0 public static demo and local-first import release.
-- Documented GitHub Topics recommendations and social preview usage.
+- 优化 README 开源展示，增加徽章、预览图、项目结构、FAQ 和 GitHub Topics 建议。
+- 新增 GitHub 项目封面和 dashboard 预览 SVG，放在 `screenshots/` 目录。
+- 增加 0.3.0 公开静态演示版和本地优先导入版本的发布说明。
+- 记录 GitHub Topics 和社交预览图设置建议。
 
 ## 0.3.0 - 2026-05-29
 
-- Replaced the theme toggle with explicit system/light/dark controls and fixed dark-mode contrast for the total token hero card.
-- Added static browser mode for Netlify-style hosting when `/api/usage` is unavailable.
-- Added a 30-day public demo dataset that auto-loads on static deployments.
-- Added browser-local imports for usage index snapshots, relay CSV/JSON, and `.codex/sessions` folders via the File API.
-- Added anonymized JSON and HTML snapshot exports for safe sharing.
-- Added Netlify build metadata and a static build check.
+- 将主题切换改成明确的“系统 / 浅色 / 深色”三段控件。
+- 修复暗色模式下总 Token 重点卡片对比度不足的问题。
+- 当 `/api/usage` 不可用时，自动进入公开静态浏览器模式，适配 Netlify 等静态托管。
+- 新增 30 天公开演示数据，静态部署时自动加载。
+- 新增浏览器本地导入：
+  - `usage-index.json`
+  - 脱敏快照
+  - 中转站 CSV / JSON
+  - `.codex/sessions` 文件夹
+- 新增脱敏 JSON 快照和脱敏 HTML 快照导出，方便安全分享。
+- 新增 Netlify 构建配置和静态构建检查。
 
 ## 0.2.0 - 2026-05-29
 
-- Enhanced the dashboard UI with richer metric cards, badges, dark mode, loading states, and denser chart/table layouts.
-- Added sortable, paginated, multi-select detail table with selected-record summaries and selected CSV/JSON export.
-- Added trend mode switching, cache hit rate trend, richer ratio legend, and Top 10/Top 20 session view.
-- Added runtime configuration, local/private default mode, public access guard, authentication requirement, and anonymized public output.
-- Added npm scripts, improved Windows launcher, open-source metadata, sample data, and stricter ignore rules.
+- 重做看板 UI，增加更清楚的核心数字卡片、badge、暗色模式、加载状态和紧凑图表 / 表格布局。
+- 明细表支持排序、分页、多选、选中汇总、导出选中 CSV / JSON。
+- 每日趋势支持模式切换。
+- 新增缓存命中率趋势、输入 / 输出 / 缓存占比图例和 Top 10 / Top 20 会话视图。
+- 新增运行配置、本地私有默认模式、公开访问保护、认证要求和公开模式脱敏输出。
+- 新增 npm scripts、Windows 启动脚本、开源元数据、示例数据和更严格的 `.gitignore`。
 
 ## 0.1.0 - 2026-05-29
 
-- Added local Codex session scanner, incremental usage index, relay CSV/JSON imports, and first dashboard UI.
+- 新增本地 Codex sessions 扫描器。
+- 新增增量 usage index。
+- 新增中转站 CSV / JSON 导入。
+- 新增第一版 Codex Token 用量看板 UI。
