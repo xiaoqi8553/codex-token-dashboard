@@ -855,6 +855,8 @@
         taskType: normalizeTaskType(raw.providedTaskType || raw.provided_task_type || raw.taskType || raw.task_type),
         sessionTitle: displayTitle(isLowValueTitle(rawTitle) ? fallbackTitle : (rawTitle || fallbackTitle)),
         relativePath: toText(raw.relativePath || raw.relative_path),
+        projectName: toText(raw.projectName || raw.project_name || raw.project, "未识别项目"),
+        projectPath: toText(raw.projectPath || raw.project_path || raw.cwd || raw.workspace),
         detailText: toText(raw.detailText),
         inputTokens,
         cachedInputTokens,
@@ -875,7 +877,7 @@
     function classifyTask(record) {
       if (record.taskType && record.taskType !== "other" && taskMap[record.taskType]) return taskMap[record.taskType];
       const title = String(record.sessionTitle || "").toLowerCase();
-      const path = [record.relativePath, record.importBatch].filter(Boolean).join(" ").toLowerCase();
+      const path = [record.projectName, record.projectPath, record.relativePath, record.importBatch].filter(Boolean).join(" ").toLowerCase();
       const detail = String(record.detailText || "").toLowerCase().slice(0, 3000);
       let best = taskMap.other;
       let bestScore = 0;
@@ -922,6 +924,8 @@
             date: record.date,
             source: record.source || "unknown",
             model: record.model || "unknown",
+            projectName: record.projectName || "未识别项目",
+            projectPath: record.projectPath || "",
             records: 0,
             totalTokens: 0,
             inputTokens: 0,
@@ -1084,6 +1088,7 @@
           <div class="row"><span>cached input</span><strong>${formatToken(event.cachedInputTokens)}</strong></div>
           <div class="row"><span>output</span><strong>${formatToken(event.outputTokens)}</strong></div>
           <div class="row"><span>records</span><strong>${formatInt(event.records)}</strong></div>
+          <div class="row"><span>project</span><strong title="${escapeHtml(event.projectPath || event.projectName)}">${escapeHtml(event.projectName || "未识别项目")}</strong></div>
           <div class="row"><span>session id</span><strong>${escapeHtml(event.sessionId.slice(0, 10))}...</strong></div>
         </div>
       `;

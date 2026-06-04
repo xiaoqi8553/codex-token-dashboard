@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-04T03:20:19.657Z",
+  "generatedAt": "2026-06-04T07:22:44.274Z",
   "baseUrl": "http://127.0.0.1:8787",
   "screenshotsDir": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current",
   "pages": [
@@ -95,7 +95,7 @@
           "code": "many-cards",
           "message": "首屏卡片数量超过 12 个",
           "detail": {
-            "count": 13
+            "count": 15
           }
         }
       ],
@@ -115,7 +115,7 @@
             "hasEmpty": true
           }
         ],
-        "cards": 13,
+        "cards": 15,
         "h1Count": 1,
         "activeNav": "◇任务复盘",
         "replay": null
@@ -186,7 +186,7 @@
         "charts": [
           {
             "selector": ".timeline-board",
-            "height": 749.71875,
+            "height": 776.5625,
             "hasGraphic": true,
             "hasEmpty": false
           }
@@ -295,7 +295,7 @@
           "code": "many-cards",
           "message": "首屏卡片数量超过 12 个",
           "detail": {
-            "count": 13
+            "count": 15
           }
         }
       ],
@@ -315,7 +315,7 @@
             "hasEmpty": true
           }
         ],
-        "cards": 13,
+        "cards": 15,
         "h1Count": 1,
         "activeNav": "◇任务复盘",
         "replay": null
@@ -386,7 +386,7 @@
         "charts": [
           {
             "selector": ".timeline-board",
-            "height": 729.421875,
+            "height": 756.265625,
             "hasGraphic": true,
             "hasEmpty": false
           }
@@ -510,7 +510,7 @@
           "code": "many-cards",
           "message": "首屏卡片数量超过 12 个",
           "detail": {
-            "count": 13
+            "count": 15
           }
         },
         {
@@ -537,7 +537,7 @@
             "hasEmpty": true
           }
         ],
-        "cards": 13,
+        "cards": 15,
         "h1Count": 1,
         "activeNav": "◇任务复盘",
         "replay": null

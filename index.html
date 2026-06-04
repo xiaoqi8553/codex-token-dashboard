@@ -1455,7 +1455,7 @@
 
     .calendar-stats, .task-stats {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
       gap: 10px;
     }
 
@@ -1591,6 +1591,44 @@
     .task-empty-note strong {
       color: var(--muted);
       font-weight: 650;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .project-list {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .project-row {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--panel);
+      padding: 11px 12px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(120px, .8fr) auto;
+      gap: 8px 10px;
+      align-items: center;
+    }
+
+    .project-row strong {
+      display: block;
+      font-size: 14px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .project-row span,
+    .project-row small {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .project-row small {
+      grid-column: 1 / -1;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -1854,7 +1892,7 @@
       .charts, .content-grid, .task-layout, .day-detail-grid, .settings-grid { grid-template-columns: 1fr; }
       .metrics, .today-status { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .calendar-stats, .task-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .task-type-grid { grid-template-columns: 1fr; }
+      .task-type-grid, .project-list { grid-template-columns: 1fr; }
     }
 
     @media (max-width: 820px) {
@@ -1921,6 +1959,8 @@
       .metrics { grid-template-columns: 1fr; }
       .today-status, .story-grid { grid-template-columns: 1fr; }
       .today-metrics, .calendar-stats, .task-stats { grid-template-columns: 1fr; }
+      .project-row { grid-template-columns: minmax(0, 1fr) auto; }
+      .project-row .track { grid-column: 1 / -1; }
       .static-panel.show { grid-template-columns: 1fr; }
       .filter-head { align-items: flex-start; flex-direction: column; gap: 4px; }
       .filter-hint { display: none; }
@@ -2316,6 +2356,31 @@
       return taskTypeMap[value] ? value : "";
     }
 
+    function normalizePathText(value) {
+      return String(value || "").replace(/\\/g, "/").replace(/\/+$/, "").trim();
+    }
+
+    function basenameFromPath(value) {
+      const text = normalizePathText(value);
+      if (!text) return "";
+      return text.split("/").filter(Boolean).pop() || "";
+    }
+
+    function inferProject(raw = {}, fallback = {}) {
+      const projectPath = normalizePathText(raw.projectPath || raw.project_path || raw.cwd || raw.workspace || raw.workspacePath || raw.workspace_path || fallback.projectPath);
+      const explicitName = String(raw.projectName || raw.project_name || raw.project || fallback.projectName || "").trim();
+      if (explicitName || projectPath) {
+        return {
+          projectName: explicitName || basenameFromPath(projectPath) || "未命名项目",
+          projectPath,
+          projectSource: projectPath ? "cwd" : "provided"
+        };
+      }
+      const imported = String(raw.importBatch || fallback.importBatch || "").trim();
+      if (imported) return { projectName: basenameFromPath(imported) || imported, projectPath: "", projectSource: "imported" };
+      return { projectName: "未识别项目", projectPath: "", projectSource: "unknown" };
+    }
+
     const handleDb = {
       name: "codexTokenDashboardHandles",
       store: "handles",
@@ -2470,7 +2535,7 @@
         return { taskType: record.providedTaskType, taskLabel: taskTypeMap[record.providedTaskType].label, taskConfidence: "provided", taskKeywords: ["数据字段"] };
       }
       const titleText = taskFieldText(record, ["sessionTitle"]);
-      const pathText = taskFieldText(record, ["relativePath", "filePath", "importBatch"]);
+      const pathText = taskFieldText(record, ["projectName", "projectPath", "relativePath", "filePath", "importBatch"]);
       const detailText = taskFieldText(record, ["detailText"]).slice(0, 3000);
       let best = taskTypes[taskTypes.length - 1];
       let bestScore = 0;
@@ -2696,6 +2761,7 @@
       const timestamp = toIso(raw.timestamp || raw.time || raw.date || raw.created_at || raw.createdAt || fallback.timestamp || new Date().toISOString());
       const source = normalizeSource(raw.provider, raw.source || fallback.source);
       const sessionId = String(raw.sessionId || raw.session_id || raw.conversation_id || raw.request_id || raw.id || fallback.sessionId || "browser-import");
+      const project = inferProject(raw, fallback);
       return {
         id: String(raw.id || simpleHash([timestamp, source, sessionId, raw.requestId || raw.request_id || "", inputTokens, cachedInputTokens, outputTokens, totalTokens, fallback.relativePath, fallback.lineNumber].join("|"))),
         timestamp,
@@ -2715,6 +2781,9 @@
         requestId: raw.requestId || raw.request_id || "",
         filePath: "",
         relativePath: raw.relativePath || raw.relative_path || fallback.relativePath || "",
+        projectName: project.projectName,
+        projectPath: project.projectPath,
+        projectSource: project.projectSource,
         lineNumber: toNumber(raw.lineNumber || fallback.lineNumber),
         sessionTitle: isLowValueTitle(raw.sessionTitle || raw.title) ? (fallback.relativePath || sessionId) : (raw.sessionTitle || raw.title || sessionId),
         providedTaskType: normalizeProvidedTaskType(raw),
@@ -2738,9 +2807,21 @@
         requestId: record.requestId ? anonymizeValue(record.requestId) : "",
         filePath: "",
         relativePath: record.relativePath ? "[hidden]" : "",
+        projectPath: record.projectPath ? "[hidden]" : "",
         sessionTitle: record.sessionTitle ? "[hidden]" : "",
         detailText: "",
         importBatch: record.importBatch ? "[hidden]" : ""
+      };
+    }
+
+    function cacheRecord(record) {
+      return {
+        ...record,
+        filePath: "",
+        detailText: "",
+        projectPath: record.projectPath || "",
+        sessionTitle: record.sessionTitle || "",
+        relativePath: record.relativePath || ""
       };
     }
 
@@ -2764,13 +2845,52 @@
       return { inputTokens: input, cachedInputTokens: cached, outputTokens: output, totalTokens, reasoningOutputTokens: reasoning };
     }
 
+    function textFromMessagePayload(payload) {
+      const content = payload?.content;
+      if (typeof content === "string") return content;
+      if (!Array.isArray(content)) return "";
+      return content
+        .map(entry => {
+          if (typeof entry === "string") return entry;
+          return entry?.text || entry?.input_text || "";
+        })
+        .filter(Boolean)
+        .join(" ");
+    }
+
+    function cleanSessionTitle(value) {
+      const text = String(value || "").replace(/\s+/g, " ").trim();
+      if (!text) return "";
+      const requestMarker = text.match(/(?:my request for codex:|我的请求[:：]|请你|现在我|我现在|还有几个问题|版本即将|please implement)/i);
+      const trimmed = requestMarker ? text.slice(requestMarker.index).trim() : text;
+      return trimmed
+        .replace(/^my request for codex:\s*/i, "")
+        .replace(/^我的请求[:：]\s*/i, "")
+        .slice(0, 180);
+    }
+
+    function considerSessionTitle(meta, candidate) {
+      const title = cleanSessionTitle(candidate);
+      if (!title || isLowValueTitle(title)) return;
+      if (isLowValueTitle(meta.title) || title.length > String(meta.title || "").length) meta.title = title;
+    }
+
     function visitUsageObjects(item, lineNumber, meta, relativePath, records) {
       if (!item || typeof item !== "object") return;
       const payload = item.payload && typeof item.payload === "object" ? item.payload : item;
-      meta.sessionId = payload.id || payload.session_id || meta.sessionId;
-      meta.provider = payload.model_provider || payload.provider || meta.provider;
-      meta.model = payload.model || payload.model_name || meta.model;
-      meta.timestamp = payload.timestamp || item.timestamp || meta.timestamp;
+      if (item.type === "session_meta" || item.type === "turn_context" || payload.model_provider || payload.thread_source || payload.model || payload.cwd) {
+        meta.sessionId = payload.id || payload.session_id || meta.sessionId;
+        meta.provider = payload.model_provider || payload.provider || meta.provider;
+        meta.model = payload.model || payload.model_name || meta.model;
+        meta.timestamp = payload.timestamp || item.timestamp || meta.timestamp;
+        meta.cwd = payload.cwd || meta.cwd;
+      }
+      if (item.type === "response_item" && payload.type === "message" && payload.role === "user") {
+        considerSessionTitle(meta, textFromMessagePayload(payload));
+      }
+      if (payload.role === "user" || item.role === "user") {
+        considerSessionTitle(meta, textFromMessagePayload(payload) || textFromMessagePayload(item));
+      }
       const usage = usageFromObject(item);
       if (usage) {
         records.push(normalizeRecord({
@@ -2779,8 +2899,11 @@
           sessionId: payload.session_id || payload.sessionId || payload.id || meta.sessionId,
           model: payload.model || payload.model_name || meta.model,
           provider: payload.model_provider || payload.provider || meta.provider,
-          requestId: payload.request_id || payload.requestId || payload.id || ""
-        }, { relativePath, lineNumber }));
+          requestId: payload.request_id || payload.requestId || payload.id || "",
+          sessionTitle: meta.title,
+          detailText: meta.title,
+          projectPath: meta.cwd
+        }, { relativePath, lineNumber, projectPath: meta.cwd }));
         return;
       }
       for (const value of Object.values(item)) {
@@ -2900,7 +3023,7 @@
         const file = entry.file;
         const text = await file.text();
         const relativePath = entry.relativePath || file.webkitRelativePath || file.name;
-        const meta = { sessionId: file.name, provider: "", model: "unknown", timestamp: new Date(file.lastModified || Date.now()).toISOString() };
+        const meta = { sessionId: file.name, provider: "", model: "unknown", timestamp: new Date(file.lastModified || Date.now()).toISOString(), title: "", cwd: "" };
         const before = records.length;
         if (/\.json$/i.test(file.name)) {
           const parsed = parseJsonLine(text);
@@ -2923,8 +3046,25 @@
             inputTokens: estimated,
             totalTokens: estimated,
             estimated: true,
-            estimateReason: "browser_missing_usage_fields_text_length"
-          }, { relativePath }));
+            estimateReason: "browser_missing_usage_fields_text_length",
+            sessionTitle: meta.title,
+            detailText: text.slice(0, 2000),
+            projectPath: meta.cwd
+          }, { relativePath, projectPath: meta.cwd }));
+        }
+        if (records.length > before) {
+          for (const record of records.slice(before)) {
+            if (meta.cwd && !record.projectPath) {
+              const project = inferProject({ projectPath: meta.cwd });
+              record.projectPath = project.projectPath;
+              record.projectName = project.projectName;
+              record.projectSource = project.projectSource;
+            }
+            if (!isLowValueTitle(meta.title) && isLowValueTitle(record.sessionTitle)) {
+              record.sessionTitle = meta.title;
+              record.detailText = record.detailText || meta.title;
+            }
+          }
         }
         parsedFiles += 1;
       }
@@ -3091,7 +3231,7 @@
       if (els.modelFilter.value !== "all") records = records.filter(record => record.model === els.modelFilter.value);
       if (els.searchInput.value.trim()) {
         const search = els.searchInput.value.trim().toLowerCase();
-        records = records.filter(record => [record.sessionId, record.model, record.relativePath, record.sessionTitle].join(" ").toLowerCase().includes(search));
+        records = records.filter(record => [record.sessionId, record.model, record.relativePath, record.sessionTitle, record.projectName, record.projectPath].join(" ").toLowerCase().includes(search));
       }
       const payload = makeStaticPayload(records, {
         sourceLabel: source.sessionsDir,
@@ -3115,7 +3255,7 @@
       if (els.modelFilter.value !== "all") records = records.filter(record => record.model === els.modelFilter.value);
       if (els.searchInput.value.trim()) {
         const search = els.searchInput.value.trim().toLowerCase();
-        records = records.filter(record => [record.sessionId, record.model, record.relativePath, record.sessionTitle].join(" ").toLowerCase().includes(search));
+        records = records.filter(record => [record.sessionId, record.model, record.relativePath, record.sessionTitle, record.projectName, record.projectPath].join(" ").toLowerCase().includes(search));
       }
       return records;
     }
@@ -3124,7 +3264,7 @@
       try {
         localStorage.setItem("codexTokenStaticPayload", JSON.stringify({
           ...payload,
-          records: payload.records.map(anonymizeRecord)
+          records: payload.records.map(cacheRecord)
         }));
       } catch {
         toast("浏览器缓存空间不足，本次数据未持久保存");
@@ -3882,16 +4022,40 @@
         .sort((a, b) => taskMetricValue(b, state.taskMetric) - taskMetricValue(a, state.taskMetric));
     }
 
+    function summarizeProjects(records) {
+      const groups = {};
+      for (const record of records) {
+        const key = record.projectPath || record.projectName || "未识别项目";
+        addGroup(groups, key, record, {
+          projectName: record.projectName || "未识别项目",
+          projectPath: record.projectPath || "",
+          projectSource: record.projectSource || "unknown",
+          bySource: {}
+        });
+        addGroup(groups[key].bySource, record.source || "unknown", record);
+      }
+      return Object.values(groups)
+        .map(group => ({
+          ...finalizeGroup(group),
+          bySource: Object.values(group.bySource || {}).map(finalizeGroup)
+        }))
+        .sort((a, b) => b.totalTokens - a.totalTokens);
+    }
+
     function renderTasks(summary) {
       const taskGroups = summarizeTasks(state.records);
+      const projectGroups = summarizeProjects(state.records);
       const max = Math.max(...taskGroups.map(group => taskMetricValue(group, state.taskMetric)), 1);
+      const projectMax = Math.max(...projectGroups.map(group => group.totalTokens), 1);
       const activeGroups = taskGroups.filter(group => group.records > 0);
       const emptyGroups = taskGroups.filter(group => !group.records);
       const displayGroups = activeGroups.length ? activeGroups : taskGroups.slice(0, 4);
+      const displayProjects = projectGroups.slice(0, 8);
       const recognizedSessions = activeGroups.filter(group => group.taskType !== "other").reduce((sum, group) => sum + group.sessions, 0);
       const unknownSessions = groupByKey(activeGroups, "other").sessions || 0;
       const manualRecords = state.records.filter(record => record.taskConfidence === "manual").length;
       const topType = activeGroups[0];
+      const topProject = projectGroups[0];
       const sorter = {
         totalTokens: (a, b) => b.totalTokens - a.totalTokens,
         activeTokens: (a, b) => b.activeTokens - a.activeTokens,
@@ -3919,7 +4083,37 @@
               <div class="calendar-stat"><span>未识别会话</span><strong>${formatInt(unknownSessions)}</strong></div>
               <div class="calendar-stat"><span>手动修正</span><strong>${formatInt(manualRecords)} 条</strong></div>
               <div class="calendar-stat"><span>最高消耗类型</span><strong>${topType ? escapeHtml(taskTypeMap[topType.taskType]?.label || topType.label) : "暂无"}</strong></div>
+              <div class="calendar-stat"><span>最高消耗项目</span><strong>${topProject ? escapeHtml(topProject.projectName) : "暂无"}</strong></div>
             </div>
+          </article>
+          <article class="panel">
+            <div class="panel-head">
+              <div><h2>项目 Token 分布</h2><p class="muted">按 Codex sessions 里的 cwd / workspace 聚合，用来判断每个具体项目花了多少 Token。</p></div>
+              <span class="muted">${formatInt(projectGroups.length)} 个项目</span>
+            </div>
+            ${displayProjects.length ? `<div class="project-list">
+              ${displayProjects.map(project => {
+                const official = groupByKey(project.bySource || [], "official_plus");
+                const relay = groupByKey(project.bySource || [], "relay");
+                const unknown = groupByKey(project.bySource || [], "unknown");
+                const sourceBits = [
+                  official.totalTokens ? `官方 ${formatToken(official.totalTokens)}` : "",
+                  relay.totalTokens ? `中转 ${formatToken(relay.totalTokens)}` : "",
+                  unknown.totalTokens ? `未知 ${formatToken(unknown.totalTokens)}` : ""
+                ].filter(Boolean).join(" / ") || "来源未知";
+                return `
+                  <div class="project-row" title="${escapeHtml(project.projectPath || project.projectName)}">
+                    <div>
+                      <strong>${escapeHtml(project.projectName || "未识别项目")}</strong>
+                      <span>${formatInt(project.sessions)} 个会话 / ${formatInt(project.records)} 条记录 / ${escapeHtml(project.projectSource === "cwd" ? "来自 cwd" : project.projectSource === "imported" ? "来自导入文件" : "推断不足")}</span>
+                    </div>
+                    <div class="track"><div class="fill active" style="width:${percent(project.totalTokens, projectMax, 1)}%"></div></div>
+                    <span class="num" title="${formatInt(project.totalTokens)}">${formatToken(project.totalTokens)}</span>
+                    <small>${escapeHtml(sourceBits)}</small>
+                  </div>
+                `;
+              }).join("")}
+            </div>` : emptyState("暂无项目统计。", "请重新选择 sessions 文件夹，让浏览器读取 cwd / workspace 信息。")}
           </article>
           <section class="task-layout">
             <article class="panel task-distribution-panel">
@@ -4014,7 +4208,7 @@
                 <h2>设置 / 关于</h2>
                 <p class="muted">这个页面说明当前运行方式、隐私边界和开源展示口径。</p>
               </div>
-              <span class="badge">版本 0.5.1</span>
+              <span class="badge">版本 0.5.2</span>
             </div>
             <div class="settings-grid">
               <div class="settings-card">
@@ -4276,6 +4470,7 @@
                 <div><span class="muted">完整 cached input</span><br>${formatInt(record.cachedInputTokens)}</div>
                 <div><span class="muted">完整 output</span><br>${formatInt(record.outputTokens)}</div>
                 <div><span class="muted">完整 total</span><br>${formatInt(record.totalTokens)}</div>
+                <div><span class="muted">项目</span><br>${escapeHtml(record.projectName || "未识别项目")}</div>
                 <div><span class="muted">路径</span><br>${escapeHtml(record.relativePath || record.filePath || "未知")}</div>
               </div>
             </td>
@@ -4387,8 +4582,8 @@
     }
 
     function recordsToCsv(records) {
-      const headers = ["date", "timestamp", "source", "model", "session_id", "input_tokens", "cached_input_tokens", "output_tokens", "total_tokens", "active_tokens", "cache_hit_rate", "estimated", "relative_path"];
-      const rows = records.map(record => [record.date, record.timestamp, record.source, record.model, record.sessionId, record.inputTokens, record.cachedInputTokens, record.outputTokens, record.totalTokens, record.activeTokens, percent(record.cachedInputTokens, record.inputTokens, 1), record.estimated, record.relativePath || record.filePath || ""]);
+      const headers = ["date", "timestamp", "source", "model", "project", "session_id", "input_tokens", "cached_input_tokens", "output_tokens", "total_tokens", "active_tokens", "cache_hit_rate", "estimated", "relative_path"];
+      const rows = records.map(record => [record.date, record.timestamp, record.source, record.model, record.projectName || "", record.sessionId, record.inputTokens, record.cachedInputTokens, record.outputTokens, record.totalTokens, record.activeTokens, percent(record.cachedInputTokens, record.inputTokens, 1), record.estimated, record.relativePath || record.filePath || ""]);
       return [headers, ...rows].map(row => row.map(value => `"${String(value ?? "").replaceAll('"', '""')}"`).join(",")).join("\n");
     }
 
@@ -4405,7 +4600,7 @@
       const summary = summarize(safeRecords.map(record => ({ ...record, activeTokens: activeTokens(record), uncachedInputTokens: uncachedInputTokens(record), hitRate: cacheHitRateOf(record) })));
       return {
         snapshotVersion: 1,
-        appVersion: "0.5.1",
+        appVersion: "0.5.2",
         generatedAt: new Date().toISOString(),
         privacy: {
           anonymized: true,

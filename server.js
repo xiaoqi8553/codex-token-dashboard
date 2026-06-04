@@ -9,7 +9,7 @@ const ROOT = __dirname;
 const DATA_DIR = path.join(ROOT, "data");
 const IMPORT_DIR = path.join(DATA_DIR, "imports");
 const INDEX_PATH = path.join(DATA_DIR, "usage-index.json");
-const INDEX_VERSION = 4;
+const INDEX_VERSION = 5;
 const SUPPORTED_SESSION_EXTENSIONS = new Set([".jsonl", ".json", ".log", ".txt"]);
 
 loadDotEnv();
@@ -237,6 +237,33 @@ function normalizeModel(value) {
   return String(value || "unknown").trim() || "unknown";
 }
 
+function normalizePathText(value) {
+  return String(value || "").replace(/\\/g, "/").replace(/\/+$/, "").trim();
+}
+
+function basenameFromPath(value) {
+  const text = normalizePathText(value);
+  if (!text) return "";
+  return text.split("/").filter(Boolean).pop() || "";
+}
+
+function inferProject(raw = {}) {
+  const projectPath = normalizePathText(raw.projectPath || raw.project_path || raw.cwd || raw.workspace || raw.workspacePath || raw.workspace_path);
+  const explicitName = String(raw.projectName || raw.project_name || raw.project || "").trim();
+  if (explicitName || projectPath) {
+    return {
+      projectName: explicitName || basenameFromPath(projectPath) || "未命名项目",
+      projectPath,
+      projectSource: projectPath ? "cwd" : "provided"
+    };
+  }
+  const imported = String(raw.importBatch || "").trim();
+  if (imported) {
+    return { projectName: basenameFromPath(imported) || imported, projectPath: "", projectSource: "imported" };
+  }
+  return { projectName: "未识别项目", projectPath: "", projectSource: "unknown" };
+}
+
 function getPayloadObject(item) {
   if (!item || typeof item !== "object") return {};
   return item.payload && typeof item.payload === "object" ? item.payload : item;
@@ -344,6 +371,7 @@ function createRecord(raw) {
   const effectiveTokens = Math.max(inputTokens - cachedInputTokens, 0) + outputTokens;
   const timestamp = toIso(raw.timestamp) || new Date(0).toISOString();
   const source = normalizeSource(raw.provider, raw.source);
+  const project = inferProject(raw);
 
   return {
     id: raw.id,
@@ -364,6 +392,9 @@ function createRecord(raw) {
     requestId: raw.requestId || "",
     filePath: raw.filePath || "",
     relativePath: raw.relativePath || "",
+    projectName: project.projectName,
+    projectPath: project.projectPath,
+    projectSource: project.projectSource,
     lineNumber: raw.lineNumber || 0,
     sessionTitle: raw.sessionTitle || raw.sessionId || "unknown",
     detailText: raw.detailText || "",
@@ -441,6 +472,7 @@ function parseSessionFile(filePath) {
       requestId,
       filePath,
       relativePath,
+      projectPath: meta.cwd,
       lineNumber,
       sessionTitle: meta.title || fallbackText.slice(0, 120) || sessionId,
       detailText: fallbackText
@@ -517,6 +549,7 @@ function parseSessionFile(filePath) {
       estimateReason: "missing_usage_fields_text_length",
       filePath,
       relativePath,
+      projectPath: meta.cwd,
       sessionTitle: meta.title || path.basename(filePath),
       detailText: text.slice(0, 2000)
     }));
@@ -637,6 +670,8 @@ function parseRelayImportFile(filePath) {
       estimateReason: !inputTokens && !outputTokens && !totalTokens ? "import_missing_usage_fields" : "",
       filePath,
       relativePath: path.relative(ROOT, filePath),
+      projectPath: row.project_path || row.projectPath || row.cwd || row.workspace || "",
+      projectName: row.project_name || row.projectName || row.project || "",
       sessionTitle: row.title || row.name || sessionId,
       detailText: JSON.stringify(row),
       imported: true,
@@ -852,6 +887,7 @@ function sanitizeRecord(record) {
     requestId: record.requestId ? maskMiddle(record.requestId, 8, 4) : "",
     filePath: "",
     relativePath: record.relativePath ? "[hidden]" : "",
+    projectPath: record.projectPath ? "[hidden]" : "",
     sessionTitle: record.sessionTitle ? "[hidden]" : "",
     detailText: "",
     importBatch: record.importBatch ? "[hidden]" : ""

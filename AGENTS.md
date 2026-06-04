@@ -35,6 +35,7 @@
 - 2026-06-04: `npm run ui:shot` and `npm run ui:audit` were run in parallel, causing a local server port race and a false `ERR_CONNECTION_REFUSED`. UI review commands must run sequentially: shot, audit, report.
 - 2026-06-04: CHANGELOG was left in English, which made release history hard for the user to verify. User-facing changelog and release notes should be written in Chinese by default.
 - 2026-06-04: Task Review trusted cached/imported `taskType: other` as if it were a real provided category, which locked records into "其他 / 未识别" and skipped improved rules. Treat `other` as unknown unless it is a manual override.
+- 2026-06-04: Task Review focused on task labels but missed the user's real accounting question: token usage by concrete project. Project aggregation should use Codex `cwd / workspace` first, then fall back cautiously.
 
 ## Before Finishing
 

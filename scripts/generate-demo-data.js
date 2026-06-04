@@ -6,15 +6,15 @@ const output = path.join(root, "sample-data", "demo-usage-index.json");
 const models = ["gpt-5-codex", "gpt-5-mini", "gpt-4.1", "claude-3.7-sonnet"];
 const sources = ["official_plus", "relay", "unknown"];
 const taskScenarios = [
-  { type: "coding", title: "实现 token dashboard feature", path: "sample-sessions/coding/dashboard-feature.jsonl" },
-  { type: "debug", title: "debug Netlify build error and API fallback", path: "sample-sessions/debug/netlify-error.log" },
-  { type: "frontend", title: "优化前端 UI 布局和暗色模式", path: "sample-sessions/frontend/ui-layout.jsonl" },
-  { type: "docs", title: "更新 README docs and changelog", path: "sample-sessions/docs/readme-update.txt" },
-  { type: "deploy", title: "部署 GitHub Netlify production build", path: "sample-sessions/deploy/netlify-production.jsonl" },
-  { type: "data", title: "分析 CSV JSON token chart 数据", path: "sample-sessions/data/token-analysis.jsonl" },
-  { type: "refactor", title: "refactor usage index parser structure", path: "sample-sessions/refactor/parser-cleanup.jsonl" },
-  { type: "planning", title: "制定 roadmap plan and architecture", path: "sample-sessions/planning/roadmap-plan.md" },
-  { type: "other", title: "临时会话和未识别上下文", path: "sample-sessions/misc/unknown-session.jsonl" }
+  { type: "coding", project: "codex-token-dashboard-demo", title: "实现 token dashboard feature", path: "sample-sessions/coding/dashboard-feature.jsonl" },
+  { type: "debug", project: "codex-token-dashboard-demo", title: "debug Netlify build error and API fallback", path: "sample-sessions/debug/netlify-error.log" },
+  { type: "frontend", project: "codex-token-dashboard-demo", title: "优化前端 UI 布局和暗色模式", path: "sample-sessions/frontend/ui-layout.jsonl" },
+  { type: "docs", project: "ai-writing-notes", title: "更新 README docs and changelog", path: "sample-sessions/docs/readme-update.txt" },
+  { type: "deploy", project: "codex-token-dashboard-demo", title: "部署 GitHub Netlify production build", path: "sample-sessions/deploy/netlify-production.jsonl" },
+  { type: "data", project: "vehicle-can-toolkit", title: "分析 CSV JSON token chart 数据", path: "sample-sessions/data/token-analysis.jsonl" },
+  { type: "refactor", project: "usage-ledger-core", title: "refactor usage index parser structure", path: "sample-sessions/refactor/parser-cleanup.jsonl" },
+  { type: "planning", project: "ai-product-roadmap", title: "制定 roadmap plan and architecture", path: "sample-sessions/planning/roadmap-plan.md" },
+  { type: "other", project: "misc-lab", title: "临时会话和未识别上下文", path: "sample-sessions/misc/unknown-session.jsonl" }
 ];
 const records = [];
 const base = new Date("2026-05-01T09:00:00.000Z");
@@ -63,6 +63,9 @@ for (let day = 0; day < 30; day += 1) {
       requestId: "",
       filePath: "",
       relativePath: source === "relay" ? `sample-data/imports/demo-relay-${scenario.type}.csv` : `${scenario.path.replace("sample-sessions/", `sample-sessions/${isoDate}/`)}`,
+      projectName: scenario.project,
+      projectPath: `[demo]/projects/${scenario.project}`,
+      projectSource: "cwd",
       lineNumber: index + 1,
       sessionTitle: `${scenario.title} (${source} / ${model})`,
       taskType: scenario.type,
