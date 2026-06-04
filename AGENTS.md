@@ -34,6 +34,7 @@
 - 2026-06-03: UI audit rules initially over-reported false P0s by treating custom HTML charts as empty and counting compact range buttons as failed filters. Audit heuristics must match the actual component patterns before judging UI quality.
 - 2026-06-04: `npm run ui:shot` and `npm run ui:audit` were run in parallel, causing a local server port race and a false `ERR_CONNECTION_REFUSED`. UI review commands must run sequentially: shot, audit, report.
 - 2026-06-04: CHANGELOG was left in English, which made release history hard for the user to verify. User-facing changelog and release notes should be written in Chinese by default.
+- 2026-06-04: Task Review trusted cached/imported `taskType: other` as if it were a real provided category, which locked records into "其他 / 未识别" and skipped improved rules. Treat `other` as unknown unless it is a manual override.
 
 ## Before Finishing
 

@@ -831,6 +831,10 @@
       if (["official_plus", "openai", "plus"].some(key => text.includes(key))) return "official_plus";
       return "unknown";
     }
+    function normalizeTaskType(value) {
+      const text = toText(value).trim();
+      return text && text !== "other" && taskMap[text] ? text : "";
+    }
     function normalizeRecord(raw = {}) {
       const inputTokens = Number(raw.inputTokens ?? raw.input_tokens ?? raw.prompt_tokens ?? raw.input ?? 0);
       const cachedInputTokens = Number(raw.cachedInputTokens ?? raw.cached_input_tokens ?? raw.cached_tokens ?? raw.cached ?? 0);
@@ -848,7 +852,7 @@
         model: toText(raw.model || raw.model_name, "unknown"),
         source: normalizeSource(raw.source, provider),
         provider,
-        taskType: toText(raw.taskType || raw.task_type),
+        taskType: normalizeTaskType(raw.providedTaskType || raw.provided_task_type || raw.taskType || raw.task_type),
         sessionTitle: displayTitle(isLowValueTitle(rawTitle) ? fallbackTitle : (rawTitle || fallbackTitle)),
         relativePath: toText(raw.relativePath || raw.relative_path),
         detailText: toText(raw.detailText),
@@ -869,7 +873,7 @@
       return text.includes(key);
     }
     function classifyTask(record) {
-      if (record.taskType && taskMap[record.taskType]) return taskMap[record.taskType];
+      if (record.taskType && record.taskType !== "other" && taskMap[record.taskType]) return taskMap[record.taskType];
       const title = String(record.sessionTitle || "").toLowerCase();
       const path = [record.relativePath, record.importBatch].filter(Boolean).join(" ").toLowerCase();
       const detail = String(record.detailText || "").toLowerCase().slice(0, 3000);

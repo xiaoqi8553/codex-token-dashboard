@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-04T01:33:03.486Z",
+  "generatedAt": "2026-06-04T03:20:19.657Z",
   "baseUrl": "http://127.0.0.1:8787",
   "screenshotsDir": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current",
   "pages": [
@@ -90,7 +90,15 @@
       "width": 1920,
       "height": 1080,
       "screenshot": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current\\tasks-1920.png",
-      "warnings": [],
+      "warnings": [
+        {
+          "code": "many-cards",
+          "message": "首屏卡片数量超过 12 个",
+          "detail": {
+            "count": 13
+          }
+        }
+      ],
       "failures": [],
       "metrics": {
         "scrollWidth": 1920,
@@ -107,7 +115,7 @@
             "hasEmpty": true
           }
         ],
-        "cards": 12,
+        "cards": 13,
         "h1Count": 1,
         "activeNav": "◇任务复盘",
         "replay": null
@@ -282,7 +290,15 @@
       "width": 1366,
       "height": 768,
       "screenshot": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current\\tasks-1366.png",
-      "warnings": [],
+      "warnings": [
+        {
+          "code": "many-cards",
+          "message": "首屏卡片数量超过 12 个",
+          "detail": {
+            "count": 13
+          }
+        }
+      ],
       "failures": [],
       "metrics": {
         "scrollWidth": 1366,
@@ -299,7 +315,7 @@
             "hasEmpty": true
           }
         ],
-        "cards": 12,
+        "cards": 13,
         "h1Count": 1,
         "activeNav": "◇任务复盘",
         "replay": null
@@ -491,6 +507,13 @@
       "screenshot": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current\\tasks-mobile.png",
       "warnings": [
         {
+          "code": "many-cards",
+          "message": "首屏卡片数量超过 12 个",
+          "detail": {
+            "count": 13
+          }
+        },
+        {
           "code": "mobile-buttons-crowded",
           "message": "移动端多个按钮过窄或过矮",
           "detail": {
@@ -509,12 +532,12 @@
         "charts": [
           {
             "selector": ".task-layout",
-            "height": 1361.125,
+            "height": 1462.96875,
             "hasGraphic": true,
             "hasEmpty": true
           }
         ],
-        "cards": 12,
+        "cards": 13,
         "h1Count": 1,
         "activeNav": "◇任务复盘",
         "replay": null

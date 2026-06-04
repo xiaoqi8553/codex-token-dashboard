@@ -1622,13 +1622,34 @@
       font-size: 13px;
     }
 
-    .task-table th:nth-child(1), .task-table td:nth-child(1) { width: 92px; }
-    .task-table th:nth-child(2), .task-table td:nth-child(2) { width: 118px; }
-    .task-table th:nth-child(3), .task-table td:nth-child(3) { width: 92px; }
-    .task-table th:nth-child(4), .task-table td:nth-child(4) { width: 96px; }
-    .task-table th:nth-child(5), .task-table td:nth-child(5) { width: 86px; }
-    .task-table th:nth-child(6), .task-table td:nth-child(6) { width: auto; }
-    .task-table th:nth-child(7), .task-table td:nth-child(7) { width: 112px; }
+    .task-table th:nth-child(1), .task-table td:nth-child(1) { width: 90px; }
+    .task-table th:nth-child(2), .task-table td:nth-child(2) { width: auto; }
+    .task-table th:nth-child(3), .task-table td:nth-child(3) { width: 118px; }
+    .task-table th:nth-child(4), .task-table td:nth-child(4) { width: 86px; }
+    .task-table th:nth-child(5), .task-table td:nth-child(5) { width: 112px; }
+
+    .task-evidence {
+      display: block;
+      color: var(--text);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 100%;
+      margin-top: 4px;
+    }
+
+    .task-meta-line {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      align-items: center;
+    }
+
+    .task-evidence small,
+    .task-meta-line small {
+      color: var(--muted);
+      font-size: 12px;
+    }
 
     .task-table select {
       width: 100%;
@@ -2289,6 +2310,12 @@
     const taskOverrideKey = "codexTokenTaskOverrides";
     state.taskOverrides = loadTaskOverrides();
 
+    function normalizeProvidedTaskType(raw) {
+      const value = String(raw.providedTaskType || raw.provided_task_type || raw.taskType || raw.task_type || "").trim();
+      if (!value || value === "other") return "";
+      return taskTypeMap[value] ? value : "";
+    }
+
     const handleDb = {
       name: "codexTokenDashboardHandles",
       store: "handles",
@@ -2406,6 +2433,19 @@
         try { return JSON.stringify(value); } catch { return String(value); }
       };
       return fields.map(field => stringify(record[field])).join(" ").toLowerCase();
+    }
+
+    function taskEvidenceText(record) {
+      const hits = Array.isArray(record.taskKeywords) ? record.taskKeywords.filter(Boolean).slice(0, 3) : [];
+      const sourceText = [record.sessionTitle, record.relativePath, record.detailText]
+        .map(value => String(value || "").replace(/\s+/g, " ").trim())
+        .find(value => value && !isLowValueTitle(value) && value !== "[hidden]");
+      const evidence = record.taskConfidence === "manual"
+        ? "手动修正"
+        : hits.length
+          ? hits.join(" / ")
+          : "规则未命中";
+      return sourceText ? `${evidence} · ${sourceText.slice(0, 42)}` : evidence;
     }
 
     function escapeRegExp(value) {
@@ -2677,7 +2717,7 @@
         relativePath: raw.relativePath || raw.relative_path || fallback.relativePath || "",
         lineNumber: toNumber(raw.lineNumber || fallback.lineNumber),
         sessionTitle: isLowValueTitle(raw.sessionTitle || raw.title) ? (fallback.relativePath || sessionId) : (raw.sessionTitle || raw.title || sessionId),
-        providedTaskType: raw.providedTaskType || raw.provided_task_type || raw.taskType || raw.task_type || "",
+        providedTaskType: normalizeProvidedTaskType(raw),
         detailText: raw.detailText || "",
         imported: Boolean(raw.imported || fallback.imported),
         importBatch: raw.importBatch || fallback.importBatch || ""
@@ -3917,18 +3957,24 @@
               ${topRecords.length ? `
                 <div class="table-wrap task-sample-wrap">
                   <table class="task-table">
-                    <thead><tr><th>日期</th><th>任务类型</th><th>模型</th><th>来源</th><th class="num">total</th><th>关键词</th><th>修正</th></tr></thead>
+                    <thead><tr><th>日期</th><th>任务 / 依据</th><th>模型 / 来源</th><th class="num">total</th><th>修正</th></tr></thead>
                     <tbody>
                       ${topRecords.map(record => {
                         const type = taskTypeMap[record.taskType] || taskTypeMap.other;
                         return `
                           <tr>
                             <td>${escapeHtml(record.date || "未知")}</td>
-                            <td><span class="badge">${escapeHtml(type.icon)} ${escapeHtml(type.label)}</span></td>
-                            <td><span class="badge" title="${escapeHtml(record.model || "未知")}">${escapeHtml(record.model || "未知")}</span></td>
-                            <td>${sourceBadge(record.source)}</td>
+                            <td title="${escapeHtml(taskEvidenceText(record))}">
+                              <div class="task-meta-line"><span class="badge">${escapeHtml(type.icon)} ${escapeHtml(type.label)}</span><small>${escapeHtml(record.taskConfidence === "manual" ? "手动" : record.taskConfidence === "rule" ? "规则" : "未命中")}</small></div>
+                              <span class="task-evidence">${escapeHtml(taskEvidenceText(record))}</span>
+                            </td>
+                            <td>
+                              <div class="task-meta-line">
+                                <span class="badge" title="${escapeHtml(record.model || "未知")}">${escapeHtml(record.model || "未知")}</span>
+                                ${sourceBadge(record.source)}
+                              </div>
+                            </td>
                             <td class="num" title="${formatInt(record.totalTokens)}"><strong>${formatToken(record.totalTokens)}</strong></td>
-                            <td title="${escapeHtml((record.taskKeywords || []).join(", ") || record.sessionTitle || record.relativePath || "未识别")}">${escapeHtml(record.taskConfidence === "manual" ? "手动修正" : (record.taskKeywords || []).join(", ") || "未识别")}</td>
                             <td>
                               <select data-task-override="${escapeHtml(record.id)}" aria-label="修正任务类型">
                                 ${taskTypes.map(item => `<option value="${item.id}" ${record.taskType === item.id ? "selected" : ""}>${escapeHtml(item.label)}</option>`).join("")}
@@ -3968,7 +4014,7 @@
                 <h2>设置 / 关于</h2>
                 <p class="muted">这个页面说明当前运行方式、隐私边界和开源展示口径。</p>
               </div>
-              <span class="badge">版本 0.5.0</span>
+              <span class="badge">版本 0.5.1</span>
             </div>
             <div class="settings-grid">
               <div class="settings-card">
@@ -4359,7 +4405,7 @@
       const summary = summarize(safeRecords.map(record => ({ ...record, activeTokens: activeTokens(record), uncachedInputTokens: uncachedInputTokens(record), hitRate: cacheHitRateOf(record) })));
       return {
         snapshotVersion: 1,
-        appVersion: "0.5.0",
+        appVersion: "0.5.1",
         generatedAt: new Date().toISOString(),
         privacy: {
           anonymized: true,
