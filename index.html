@@ -2424,7 +2424,7 @@
       store: "handles",
       sessionsKey: "sessionsDirectory"
     };
-    const staticParserVersion = 7;
+    const staticParserVersion = 8;
 
     function todayString(offsetDays = 0) {
       const date = new Date();
@@ -3044,7 +3044,21 @@
       return {
         byTurnId: {},
         bySessionId: {},
-        stats: { browserLogFiles: 0, turnRules: 0, relayTurns: 0, officialTurns: 0, sessionRules: 0, relaySessions: 0, officialSessions: 0 }
+        events: [],
+        eventsByProject: {},
+        stats: {
+          browserLogFiles: 0,
+          turnRules: 0,
+          relayTurns: 0,
+          officialTurns: 0,
+          sessionRules: 0,
+          relaySessions: 0,
+          officialSessions: 0,
+          timeRules: 0,
+          globalTimeRules: 0,
+          relayEvents: 0,
+          officialEvents: 0
+        }
       };
     }
 
@@ -3064,10 +3078,49 @@
       evidence.bySessionId[sessionId] = current;
     }
 
+    function uuidV7TimeSeconds(id) {
+      const clean = String(id || "").replace(/-/g, "");
+      if (!/^[0-9a-f]{32}$/i.test(clean)) return 0;
+      try {
+        const seconds = Math.floor(Number.parseInt(clean.slice(0, 12), 16) / 1000);
+        if (seconds < 1577836800 || seconds > 2051222400) return 0;
+        return seconds;
+      } catch {
+        return 0;
+      }
+    }
+
+    function addEndpointEvent(evidence, source, cwd, turnIds = []) {
+      if (!evidence || !source || !cwd || !["relay", "official_plus"].includes(source)) return;
+      const projectKey = normalizePathText(cwd);
+      if (!projectKey) return;
+      for (const turnId of turnIds) {
+        const ts = uuidV7TimeSeconds(turnId);
+        if (!ts) continue;
+        const event = {
+          ts,
+          source,
+          rule: source === "relay" ? "browser:rightcode-global-time-endpoint" : "browser:official-global-time-endpoint"
+        };
+        evidence.events.push(event);
+        if (!evidence.eventsByProject[projectKey]) evidence.eventsByProject[projectKey] = [];
+        evidence.eventsByProject[projectKey].push({
+          ts,
+          source,
+          rule: source === "relay" ? "browser:rightcode-time-endpoint" : "browser:official-time-endpoint"
+        });
+        if (source === "relay") evidence.stats.relayEvents += 1;
+        if (source === "official_plus") evidence.stats.officialEvents += 1;
+      }
+    }
+
     function scanEndpointEvidenceText(text, evidence) {
       const chunk = String(text || "");
       if (!chunk) return;
       const lower = chunk.toLowerCase();
+      let cwd = "";
+      const cwdMatch = chunk.match(/cwd=(.*?)}:try_run_sampling_request/) || chunk.match(/\bcwd=([^}]+)/);
+      if (cwdMatch) cwd = String(cwdMatch[1] || "").trim();
       const sessionIds = new Set();
       const sessionPattern = /conversation\.id=([0-9a-f-]{36})/gi;
       let sessionMatch;
@@ -3100,6 +3153,7 @@
           : (host === "chatgpt.com" || host.endsWith(".chatgpt.com") || host === "openai.com" || host.endsWith(".openai.com") ? "official_plus" : "");
         if (!source) continue;
         for (const turnId of turnIds) addEndpointEvidence(evidence, turnId, source);
+        addEndpointEvent(evidence, source, cwd, Array.from(turnIds));
       }
     }
 
@@ -3146,6 +3200,10 @@
         }
       }
       evidence.stats.sessionRules = Object.keys(evidence.bySessionId).length;
+      evidence.events.sort((a, b) => a.ts - b.ts);
+      for (const eventsForProject of Object.values(evidence.eventsByProject)) {
+        eventsForProject.sort((a, b) => a.ts - b.ts);
+      }
       return evidence;
     }
 
@@ -3153,12 +3211,60 @@
       if (record.source === "relay") return { ...record, sourceRule: record.sourceRule || "explicit:relay" };
       const hit = record.turnId && evidence?.byTurnId ? evidence.byTurnId[record.turnId] : null;
       if (hit) return { ...record, source: hit.source, sourceRule: hit.rule };
+      const timeHit = findBrowserNearestEndpointEvidence(record, evidence);
+      if (timeHit) {
+        if (timeHit.scope === "global") evidence.stats.globalTimeRules += 1;
+        else evidence.stats.timeRules += 1;
+        return {
+          ...record,
+          source: timeHit.source,
+          sourceRule: timeHit.rule,
+          sourceEvidenceDeltaSeconds: timeHit.deltaSeconds
+        };
+      }
       const sessionHit = record.sessionId && evidence?.bySessionId ? evidence.bySessionId[record.sessionId] : null;
       if (sessionHit) return { ...record, source: sessionHit.source, sourceRule: sessionHit.rule };
       if (record.provider === "custom" && record.source === "official_plus") {
         return { ...record, sourceRule: record.sourceRule || "fallback:custom-without-relay-evidence" };
       }
       return record;
+    }
+
+    function findBrowserNearestEvent(events, timestamp, maxDeltaSeconds = 300) {
+      if (!events?.length || !timestamp) return null;
+      const recordTs = Math.floor(Date.parse(timestamp) / 1000);
+      if (!Number.isFinite(recordTs)) return null;
+      let best = null;
+      for (const event of events) {
+        const delta = Math.abs(event.ts - recordTs);
+        if (delta > maxDeltaSeconds && event.ts > recordTs) break;
+        if (delta <= maxDeltaSeconds && (!best || delta < best.delta)) {
+          best = { ...event, delta };
+        }
+      }
+      return best;
+    }
+
+    function findBrowserNearestEndpointEvidence(record, evidence) {
+      if (!record?.timestamp || !evidence) return null;
+      const projectKey = normalizePathText(record.projectPath || "");
+      const projectMatch = projectKey ? findBrowserNearestEvent(evidence.eventsByProject?.[projectKey], record.timestamp) : null;
+      if (projectMatch) {
+        return {
+          source: projectMatch.source,
+          rule: projectMatch.rule,
+          deltaSeconds: projectMatch.delta,
+          scope: "project"
+        };
+      }
+      const globalMatch = findBrowserNearestEvent(evidence.events, record.timestamp);
+      if (!globalMatch) return null;
+      return {
+        source: globalMatch.source,
+        rule: globalMatch.rule,
+        deltaSeconds: globalMatch.delta,
+        scope: "global"
+      };
     }
 
     async function collectDirectoryFiles(directoryHandle, prefix = "") {
@@ -4493,7 +4599,7 @@
                 <h2>设置 / 关于</h2>
                 <p class="muted">这个页面说明当前运行方式、隐私边界和开源展示口径。</p>
               </div>
-              <span class="badge">版本 0.5.9</span>
+              <span class="badge">版本 0.5.10</span>
             </div>
             <div class="settings-grid">
               <div class="settings-card">
@@ -4885,7 +4991,7 @@
       const summary = summarize(safeRecords.map(record => ({ ...record, activeTokens: activeTokens(record), uncachedInputTokens: uncachedInputTokens(record), hitRate: cacheHitRateOf(record) })));
       return {
         snapshotVersion: 1,
-        appVersion: "0.5.9",
+        appVersion: "0.5.10",
         generatedAt: new Date().toISOString(),
         privacy: {
           anonymized: true,

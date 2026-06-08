@@ -9,7 +9,7 @@ const ROOT = __dirname;
 const DATA_DIR = path.join(ROOT, "data");
 const IMPORT_DIR = path.join(DATA_DIR, "imports");
 const INDEX_PATH = path.join(DATA_DIR, "usage-index.json");
-const INDEX_VERSION = 12;
+const INDEX_VERSION = 13;
 const SUPPORTED_SESSION_EXTENSIONS = new Set([".jsonl", ".json", ".log", ".txt"]);
 
 loadDotEnv();
@@ -284,7 +284,21 @@ function loadEndpointEvidence() {
   endpointEvidenceCache = {
     byTurnId: {},
     bySessionId: {},
-    stats: { rightCodeConfig: hasRightCodeConfig(), turnRules: 0, relayTurns: 0, officialTurns: 0, sessionRules: 0, relaySessions: 0, officialSessions: 0 }
+    events: [],
+    eventsByProject: {},
+    stats: {
+      rightCodeConfig: hasRightCodeConfig(),
+      turnRules: 0,
+      relayTurns: 0,
+      officialTurns: 0,
+      sessionRules: 0,
+      relaySessions: 0,
+      officialSessions: 0,
+      timeRules: 0,
+      globalTimeRules: 0,
+      relayEvents: 0,
+      officialEvents: 0
+    }
   };
 
   const dbPath = path.join(os.homedir(), ".codex", "logs_2.sqlite");
@@ -296,22 +310,32 @@ db = r'''${dbPath.replace(/\\/g, "\\\\")}'''
 con = sqlite3.connect('file:' + db + '?mode=ro', uri=True)
 cur = con.cursor()
 rows = cur.execute("""
-select feedback_log_body
+select ts, feedback_log_body
 from logs
 where feedback_log_body like '%turn.id=%'
    or feedback_log_body like '%turn_id=%'
    or feedback_log_body like '%submission.id=%'
    or (feedback_log_body like '%conversation.id=%' and feedback_log_body like '%provider_name=%')
+   or feedback_log_body like '%POST to %'
 """).fetchall()
 rules = {}
 session_rules = {}
-for (body,) in rows:
+events = []
+for (ts, body) in rows:
     text = body or ""
     lower = text.lower()
     turn_ids = set(re.findall(r'turn\\.id=([0-9a-f-]{36})', text))
     turn_ids.update(re.findall(r'turn_id=([0-9a-f-]{36})', text))
     turn_ids.update(re.findall(r'submission\\.id="([0-9a-f-]{36})"', text))
     session_ids = set(re.findall(r'conversation\\.id=([0-9a-f-]{36})', text))
+    cwd = ""
+    cwd_match = re.search(r'cwd=(.*?)}:try_run_sampling_request', text)
+    if cwd_match:
+        cwd = cwd_match.group(1).strip()
+    elif " cwd=" in text:
+        cwd_match = re.search(r'\\bcwd=([^}]+)', text)
+        if cwd_match:
+            cwd = cwd_match.group(1).strip()
     if session_ids:
         provider_relay = "provider_name=rightcode" in lower
         provider_official = "provider_name=openai" in lower or "provider_name=chatgpt" in lower
@@ -334,13 +358,19 @@ for (body,) in rows:
     is_official = any(host == "chatgpt.com" or host.endswith(".chatgpt.com") or host == "openai.com" or host.endswith(".openai.com") for host in hosts)
     if not is_relay and not is_official:
         continue
+    if cwd:
+        events.append({
+            "ts": int(ts or 0),
+            "source": "relay" if is_relay else "official_plus",
+            "cwd": cwd
+        })
     for turn_id in turn_ids:
         entry = rules.setdefault(turn_id, {"relayHits": 0, "officialHits": 0})
         if is_relay:
             entry["relayHits"] += 1
         if is_official:
             entry["officialHits"] += 1
-print(json.dumps({"turnRules": rules, "sessionRules": session_rules}))
+print(json.dumps({"turnRules": rules, "sessionRules": session_rules, "events": events}))
 con.close()
 `;
 
@@ -350,6 +380,7 @@ con.close()
     const parsed = JSON.parse(result.stdout);
     const rules = parsed.turnRules || parsed;
     const sessionRules = parsed.sessionRules || {};
+    const events = Array.isArray(parsed.events) ? parsed.events : [];
     for (const [turnId, counts] of Object.entries(rules)) {
       const relayHits = Number(counts.relayHits || 0);
       const officialHits = Number(counts.officialHits || 0);
@@ -374,6 +405,28 @@ con.close()
       }
     }
     endpointEvidenceCache.stats.sessionRules = Object.keys(endpointEvidenceCache.bySessionId).length;
+    for (const event of events) {
+      const projectKey = normalizePathText(event.cwd || "");
+      const ts = Number(event.ts || 0);
+      if (!projectKey || !ts || !["relay", "official_plus"].includes(event.source)) continue;
+      endpointEvidenceCache.events.push({
+        ts,
+        source: event.source,
+        rule: event.source === "relay" ? "auto:rightcode-global-time-endpoint" : "auto:official-global-time-endpoint"
+      });
+      if (!endpointEvidenceCache.eventsByProject[projectKey]) endpointEvidenceCache.eventsByProject[projectKey] = [];
+      endpointEvidenceCache.eventsByProject[projectKey].push({
+        ts,
+        source: event.source,
+        rule: event.source === "relay" ? "auto:rightcode-time-endpoint" : "auto:official-time-endpoint"
+      });
+      if (event.source === "relay") endpointEvidenceCache.stats.relayEvents += 1;
+      if (event.source === "official_plus") endpointEvidenceCache.stats.officialEvents += 1;
+    }
+    for (const eventsForProject of Object.values(endpointEvidenceCache.eventsByProject)) {
+      eventsForProject.sort((a, b) => a.ts - b.ts);
+    }
+    endpointEvidenceCache.events.sort((a, b) => a.ts - b.ts);
   } catch {
     return endpointEvidenceCache;
   }
@@ -381,11 +434,65 @@ con.close()
   return endpointEvidenceCache;
 }
 
+function findNearestEvent(events, timestamp, maxDeltaSeconds = 300) {
+  if (!events?.length) return null;
+  const recordTs = Math.floor(Date.parse(timestamp) / 1000);
+  if (!Number.isFinite(recordTs)) return null;
+
+  let best = null;
+  for (const event of events) {
+    const delta = Math.abs(event.ts - recordTs);
+    if (delta > maxDeltaSeconds && event.ts > recordTs) break;
+    if (delta <= maxDeltaSeconds && (!best || delta < best.delta)) {
+      best = { ...event, delta };
+    }
+  }
+  return best;
+}
+
+function findNearestEndpointEvidence(record) {
+  if (!record.timestamp) return null;
+  const evidence = loadEndpointEvidence();
+  const projectKey = normalizePathText(record.projectPath || "");
+  const projectMatch = projectKey ? findNearestEvent(evidence.eventsByProject[projectKey], record.timestamp) : null;
+  if (projectMatch) {
+    return {
+      source: projectMatch.source,
+      rule: projectMatch.rule,
+      deltaSeconds: projectMatch.delta,
+      scope: "project"
+    };
+  }
+
+  const globalMatch = findNearestEvent(evidence.events, record.timestamp);
+  if (!globalMatch) return null;
+  return {
+    source: globalMatch.source,
+    rule: globalMatch.rule,
+    deltaSeconds: globalMatch.delta,
+    scope: "global"
+  };
+}
+
 function applyAutomaticSourceEvidence(record) {
   if (record.source === "relay") return { ...record, sourceRule: record.sourceRule || "explicit:relay" };
   const evidence = record.turnId ? loadEndpointEvidence().byTurnId[record.turnId] : null;
   if (evidence) {
     return { ...record, source: evidence.source, sourceRule: evidence.rule };
+  }
+  const timeEvidence = findNearestEndpointEvidence(record);
+  if (timeEvidence) {
+    if (timeEvidence.scope === "global") {
+      loadEndpointEvidence().stats.globalTimeRules += 1;
+    } else {
+      loadEndpointEvidence().stats.timeRules += 1;
+    }
+    return {
+      ...record,
+      source: timeEvidence.source,
+      sourceRule: timeEvidence.rule,
+      sourceEvidenceDeltaSeconds: timeEvidence.deltaSeconds
+    };
   }
   const sessionEvidence = record.sessionId ? loadEndpointEvidence().bySessionId[record.sessionId] : null;
   if (sessionEvidence) {

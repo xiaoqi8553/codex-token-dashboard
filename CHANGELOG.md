@@ -1,5 +1,15 @@
 # 更新日志
 
+## 0.5.10 - 2026-06-08
+
+- 修复本地 Node 模式中“同一天混用官方 Plus 和 RightCode 中转站”时的来源归因偏差。
+- 根因是 `.codex/sessions` 里的 usage 记录 `turnId` 不一定等于 `logs_2.sqlite` 里真实 HTTP 请求的底层 `turn.id`，只按 turnId 匹配会漏掉 20:33-21:59 这类中转站请求。
+- 新增 endpoint 时间证据：读取 `logs_2.sqlite` 中真实 `POST to www.right.codes` 和 `POST to chatgpt.com/openai.com` 请求，先按同项目 `cwd` + 时间邻近匹配 usage 记录。
+- 对没有同项目请求证据但同一时间附近有明确 endpoint 的记录，新增全局时间邻近回填规则，并用 `auto:rightcode-global-time-endpoint` / `auto:official-global-time-endpoint` 标记，方便在明细中追溯。
+- 来源判断优先级调整为：显式中转站、精确 turn endpoint、同项目时间 endpoint、全局时间 endpoint、session provider、默认官方 Plus。
+- GitHub Pages / 浏览器导入模式同步支持 endpoint 时间证据；由于浏览器不能直接查询 SQLite 行时间，会从日志里的 UUIDv7 `turn.id` 反推出请求时间。
+- 本地索引版本提升到 13，浏览器静态解析版本提升到 8，重新扫描或重新导入 `.codex` 根目录后会重建来源归因缓存。
+
 ## 0.5.9 - 2026-06-08
 
 - 修复 GitHub Pages / 浏览器导入模式和本地 Node 模式的来源识别不一致问题。

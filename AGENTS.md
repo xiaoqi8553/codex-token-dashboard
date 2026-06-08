@@ -48,6 +48,8 @@
 - 2026-06-08: Some nested Codex payload ids and model objects were stringified as `[object Object]`, breaking source/session aggregation. Always normalize scalar fields through a safe scalar extractor before writing records.
 - 2026-06-08: A manual `sourceRules` idea was misaligned with the user's requirement. Source separation must be automatic where evidence exists: use RightCode config/API-key account shape plus runtime `right.codes` request timestamps; only fall back to official when no relay evidence exists.
 - 2026-06-08: Splitting relay by day was invalid because the user mixes official Plus and RightCode on the same day. Source evidence must be turn/request level where possible; date can only be diagnostic context, not an attribution rule.
+- 2026-06-08: Exact turnId matching was still insufficient because `.codex/sessions` usage records can carry an aggregate/parent turnId while `logs_2.sqlite` stores the real HTTP request under another turn id. Source attribution must also use endpoint timestamp evidence, preferably scoped by `cwd`, before falling back to provider defaults.
+- 2026-06-08: Browser/static import cannot run SQLite queries against `logs_2.sqlite`; when mirroring Node source attribution in GitHub Pages mode, derive request event time from UUIDv7 `turn.id` and keep the same sourceRule labels visible for audit.
 
 ## Before Finishing
 
