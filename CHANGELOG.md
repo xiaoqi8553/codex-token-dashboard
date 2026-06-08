@@ -1,5 +1,14 @@
 # 更新日志
 
+## 0.5.11 - 2026-06-08
+
+- 修复 RightCode / 官方 Plus 来源归因再次漂移的问题。
+- 不再把所有 `right.codes` 域名请求都视为中转站：`right.codes/codex/v1` 按官方路径处理，只有 `www.right.codes/codex-pro/v1` / `www.right.codes/v1` 这类计费 API 路径才作为 RightCode 中转站证据。
+- 移除跨项目的全局最近 endpoint 归因，避免把 `E:\小车\小车上位机设计` 的 RightCode 请求错误套到 `html-codex-token-codex-plus-token` 会话上。
+- 新增 Codex++ 切换成功日志辅助证据：只在 `codex-plus.log` 中出现成功切到 `Right Code` 且配置有效时，才把对应时间区间归为中转站；失败的切换尝试不会参与统计。
+- 6.1-6.4 校验集重新扫描后全部保持官方 Plus；6.8 晚上 20-21 点能按 turn / 同项目 endpoint / Codex++ 切换区间识别出中转站用量。
+- 本地索引版本提升到 16，浏览器静态解析版本提升到 9，重新扫描或重新导入后会重建来源归因缓存。
+
 ## 0.5.10 - 2026-06-08
 
 - 修复本地 Node 模式中“同一天混用官方 Plus 和 RightCode 中转站”时的来源归因偏差。

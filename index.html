@@ -2424,7 +2424,7 @@
       store: "handles",
       sessionsKey: "sessionsDirectory"
     };
-    const staticParserVersion = 8;
+    const staticParserVersion = 9;
 
     function todayString(offsetDays = 0) {
       const date = new Date();
@@ -2782,10 +2782,11 @@
       const values = [explicitSource, provider]
         .map(value => scalarText(value).trim().toLowerCase())
         .filter(value => value && value !== "unknown");
+      if (values.some(value => isRightCodeBillableEndpoint(value))) return "relay";
+      if (values.some(value => isOfficialEndpoint(value))) return "official_plus";
       if (values.some(value => (
         ["relay", "relay_import", "rightcode", "right_code", "right-code", "proxy", "中转站"].includes(value) ||
         value.includes("rightcode") ||
-        value.includes("right.codes") ||
         value.includes("right-code") ||
         value.includes("relay")
       ))) return "relay";
@@ -2794,6 +2795,42 @@
       if (values.some(value => value === "custom")) return "official_plus";
       if (values.some(value => ["official_plus", "official", "plus", "openai", "chatgpt"].includes(value))) return "official_plus";
       return "unknown";
+    }
+
+    function parseEndpointUrl(value) {
+      const text = String(value || "").trim();
+      if (!text) return null;
+      try {
+        return new URL(text);
+      } catch {
+        const match = text.match(/https?:\/\/[^\s:{"']+/i);
+        if (!match) return null;
+        try {
+          return new URL(match[0]);
+        } catch {
+          return null;
+        }
+      }
+    }
+
+    function isRightCodeBillableEndpoint(value) {
+      const url = parseEndpointUrl(value);
+      if (!url) return false;
+      const host = url.hostname.toLowerCase();
+      const pathname = url.pathname.toLowerCase();
+      return host === "www.right.codes" && (pathname.startsWith("/codex-pro/v1") || pathname.startsWith("/v1"));
+    }
+
+    function isOfficialEndpoint(value) {
+      const url = parseEndpointUrl(value);
+      if (!url) return false;
+      const host = url.hostname.toLowerCase();
+      const pathname = url.pathname.toLowerCase();
+      return host === "chatgpt.com" ||
+        host.endsWith(".chatgpt.com") ||
+        host === "openai.com" ||
+        host.endsWith(".openai.com") ||
+        (host === "right.codes" && pathname.startsWith("/codex/v1"));
     }
 
     function scalarText(value) {
@@ -3092,7 +3129,7 @@
 
     function addEndpointEvent(evidence, source, cwd, turnIds = []) {
       if (!evidence || !source || !cwd || !["relay", "official_plus"].includes(source)) return;
-      const projectKey = normalizePathText(cwd);
+      const projectKey = normalizePathText(cwd).toLowerCase();
       if (!projectKey) return;
       for (const turnId of turnIds) {
         const ts = uuidV7TimeSeconds(turnId);
@@ -3100,7 +3137,7 @@
         const event = {
           ts,
           source,
-          rule: source === "relay" ? "browser:rightcode-global-time-endpoint" : "browser:official-global-time-endpoint"
+          rule: source === "relay" ? "browser:rightcode-time-endpoint" : "browser:official-time-endpoint"
         };
         evidence.events.push(event);
         if (!evidence.eventsByProject[projectKey]) evidence.eventsByProject[projectKey] = [];
@@ -3142,15 +3179,15 @@
       const endpointPattern = /POST to\s+(https?:\/\/[^\s:{"']+)/gi;
       let endpointMatch;
       while ((endpointMatch = endpointPattern.exec(chunk))) {
-        let host = "";
+        let endpointUrl = null;
         try {
-          host = new URL(endpointMatch[1]).hostname.toLowerCase();
+          endpointUrl = new URL(endpointMatch[1]);
         } catch {
-          host = endpointMatch[1].replace(/^https?:\/\//i, "").split("/")[0].toLowerCase();
+          endpointUrl = parseEndpointUrl(endpointMatch[1]);
         }
-        const source = host === "right.codes" || host.endsWith(".right.codes")
+        const source = isRightCodeBillableEndpoint(endpointUrl?.href)
           ? "relay"
-          : (host === "chatgpt.com" || host.endsWith(".chatgpt.com") || host === "openai.com" || host.endsWith(".openai.com") ? "official_plus" : "");
+          : (isOfficialEndpoint(endpointUrl?.href) ? "official_plus" : "");
         if (!source) continue;
         for (const turnId of turnIds) addEndpointEvidence(evidence, turnId, source);
         addEndpointEvent(evidence, source, cwd, Array.from(turnIds));
@@ -3247,7 +3284,7 @@
 
     function findBrowserNearestEndpointEvidence(record, evidence) {
       if (!record?.timestamp || !evidence) return null;
-      const projectKey = normalizePathText(record.projectPath || "");
+      const projectKey = normalizePathText(record.projectPath || "").toLowerCase();
       const projectMatch = projectKey ? findBrowserNearestEvent(evidence.eventsByProject?.[projectKey], record.timestamp) : null;
       if (projectMatch) {
         return {
@@ -3257,14 +3294,7 @@
           scope: "project"
         };
       }
-      const globalMatch = findBrowserNearestEvent(evidence.events, record.timestamp);
-      if (!globalMatch) return null;
-      return {
-        source: globalMatch.source,
-        rule: globalMatch.rule,
-        deltaSeconds: globalMatch.delta,
-        scope: "global"
-      };
+      return null;
     }
 
     async function collectDirectoryFiles(directoryHandle, prefix = "") {
@@ -4599,7 +4629,7 @@
                 <h2>设置 / 关于</h2>
                 <p class="muted">这个页面说明当前运行方式、隐私边界和开源展示口径。</p>
               </div>
-              <span class="badge">版本 0.5.10</span>
+              <span class="badge">版本 0.5.11</span>
             </div>
             <div class="settings-grid">
               <div class="settings-card">
@@ -4991,7 +5021,7 @@
       const summary = summarize(safeRecords.map(record => ({ ...record, activeTokens: activeTokens(record), uncachedInputTokens: uncachedInputTokens(record), hitRate: cacheHitRateOf(record) })));
       return {
         snapshotVersion: 1,
-        appVersion: "0.5.10",
+        appVersion: "0.5.11",
         generatedAt: new Date().toISOString(),
         privacy: {
           anonymized: true,

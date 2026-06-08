@@ -9,7 +9,7 @@ const ROOT = __dirname;
 const DATA_DIR = path.join(ROOT, "data");
 const IMPORT_DIR = path.join(DATA_DIR, "imports");
 const INDEX_PATH = path.join(DATA_DIR, "usage-index.json");
-const INDEX_VERSION = 13;
+const INDEX_VERSION = 16;
 const SUPPORTED_SESSION_EXTENSIONS = new Set([".jsonl", ".json", ".log", ".txt"]);
 
 loadDotEnv();
@@ -223,10 +223,11 @@ function normalizeSource(provider, explicitSource = "") {
   const values = [explicitSource, provider]
     .map(value => scalarText(value).trim().toLowerCase())
     .filter(value => value && value !== "unknown");
+  if (values.some(value => isRightCodeBillableEndpoint(value))) return "relay";
+  if (values.some(value => isOfficialEndpoint(value))) return "official_plus";
   if (values.some(value => (
     ["relay", "relay_import", "rightcode", "right_code", "right-code", "proxy", "中转站"].includes(value) ||
     value.includes("rightcode") ||
-    value.includes("right.codes") ||
     value.includes("right-code") ||
     value.includes("relay")
   ))) return "relay";
@@ -235,6 +236,42 @@ function normalizeSource(provider, explicitSource = "") {
   if (values.some(value => value === "custom")) return "official_plus";
   if (values.some(value => ["official_plus", "official", "plus", "openai", "chatgpt"].includes(value))) return "official_plus";
   return "unknown";
+}
+
+function parseEndpointUrl(value) {
+  const text = String(value || "").trim();
+  if (!text) return null;
+  try {
+    return new URL(text);
+  } catch {
+    const match = text.match(/https?:\/\/[^\s:{"']+/i);
+    if (!match) return null;
+    try {
+      return new URL(match[0]);
+    } catch {
+      return null;
+    }
+  }
+}
+
+function isRightCodeBillableEndpoint(value) {
+  const url = parseEndpointUrl(value);
+  if (!url) return false;
+  const host = url.hostname.toLowerCase();
+  const pathname = url.pathname.toLowerCase();
+  return host === "www.right.codes" && (pathname.startsWith("/codex-pro/v1") || pathname.startsWith("/v1"));
+}
+
+function isOfficialEndpoint(value) {
+  const url = parseEndpointUrl(value);
+  if (!url) return false;
+  const host = url.hostname.toLowerCase();
+  const pathname = url.pathname.toLowerCase();
+  return host === "chatgpt.com" ||
+    host.endsWith(".chatgpt.com") ||
+    host === "openai.com" ||
+    host.endsWith(".openai.com") ||
+    (host === "right.codes" && pathname.startsWith("/codex/v1"));
 }
 
 function scalarText(value) {
@@ -286,6 +323,7 @@ function loadEndpointEvidence() {
     bySessionId: {},
     events: [],
     eventsByProject: {},
+    switchIntervals: [],
     stats: {
       rightCodeConfig: hasRightCodeConfig(),
       turnRules: 0,
@@ -297,7 +335,11 @@ function loadEndpointEvidence() {
       timeRules: 0,
       globalTimeRules: 0,
       relayEvents: 0,
-      officialEvents: 0
+      officialEvents: 0,
+      switchIntervals: 0,
+      relaySwitchIntervals: 0,
+      officialSwitchIntervals: 0,
+      switchRules: 0
     }
   };
 
@@ -306,6 +348,7 @@ function loadEndpointEvidence() {
 
   const script = `
 import sqlite3, json, re
+from urllib.parse import urlparse
 db = r'''${dbPath.replace(/\\/g, "\\\\")}'''
 con = sqlite3.connect('file:' + db + '?mode=ro', uri=True)
 cur = con.cursor()
@@ -348,14 +391,22 @@ for (ts, body) in rows:
                     entry["officialHits"] += 1
     if not turn_ids:
         continue
-    hosts = []
+    endpoints = []
     for match in re.findall(r'''POST to\\s+(https?://[^\\s:{"']+)''', text):
         try:
-            hosts.append(match.split("://", 1)[1].split("/", 1)[0].lower())
+            parsed = urlparse(match)
+            endpoints.append((parsed.netloc.lower(), parsed.path.lower()))
         except Exception:
             pass
-    is_relay = any(host == "right.codes" or host.endswith(".right.codes") for host in hosts)
-    is_official = any(host == "chatgpt.com" or host.endswith(".chatgpt.com") or host == "openai.com" or host.endswith(".openai.com") for host in hosts)
+    is_relay = any(host == "www.right.codes" and (path.startswith("/codex-pro/v1") or path.startswith("/v1")) for host, path in endpoints)
+    is_official = any(
+        host == "chatgpt.com" or
+        host.endswith(".chatgpt.com") or
+        host == "openai.com" or
+        host.endswith(".openai.com") or
+        (host == "right.codes" and path.startswith("/codex/v1"))
+        for host, path in endpoints
+    )
     if not is_relay and not is_official:
         continue
     if cwd:
@@ -406,13 +457,13 @@ con.close()
     }
     endpointEvidenceCache.stats.sessionRules = Object.keys(endpointEvidenceCache.bySessionId).length;
     for (const event of events) {
-      const projectKey = normalizePathText(event.cwd || "");
+      const projectKey = normalizePathText(event.cwd || "").toLowerCase();
       const ts = Number(event.ts || 0);
       if (!projectKey || !ts || !["relay", "official_plus"].includes(event.source)) continue;
       endpointEvidenceCache.events.push({
         ts,
         source: event.source,
-        rule: event.source === "relay" ? "auto:rightcode-global-time-endpoint" : "auto:official-global-time-endpoint"
+        rule: event.source === "relay" ? "auto:rightcode-time-endpoint" : "auto:official-time-endpoint"
       });
       if (!endpointEvidenceCache.eventsByProject[projectKey]) endpointEvidenceCache.eventsByProject[projectKey] = [];
       endpointEvidenceCache.eventsByProject[projectKey].push({
@@ -427,11 +478,73 @@ con.close()
       eventsForProject.sort((a, b) => a.ts - b.ts);
     }
     endpointEvidenceCache.events.sort((a, b) => a.ts - b.ts);
+    addCodexPlusSwitchEvidence(endpointEvidenceCache);
   } catch {
     return endpointEvidenceCache;
   }
 
   return endpointEvidenceCache;
+}
+
+function addCodexPlusSwitchEvidence(evidence) {
+  const logPath = path.join(os.homedir(), ".codex-session-delete", "codex-plus.log");
+  if (!fs.existsSync(logPath)) return;
+  const lines = readTextFile(logPath).split(/\r?\n/).filter(Boolean);
+  const changes = [];
+  for (const line of lines) {
+    let row;
+    try {
+      row = JSON.parse(line);
+    } catch {
+      continue;
+    }
+    const event = String(row.event || "");
+    const detail = row.detail || {};
+    const ts = Math.floor(Number(row.timestamp_ms || 0) / 1000);
+    if (!ts || !event.endsWith(".ok")) continue;
+    const relayName = String(detail.relayName || detail.targetRelayName || "").toLowerCase();
+    const relayId = String(detail.relayId || detail.activeRelayId || detail.targetRelayId || "").toLowerCase();
+    const relayMode = String(detail.relayMode || detail.targetRelayMode || "").toLowerCase();
+    const configured = detail.configured === undefined ? true : Boolean(detail.configured);
+    if (!configured) continue;
+
+    const isRightCode = relayName.includes("right code") || relayId.includes("rightcode");
+    const isOfficial = relayMode === "official" ||
+      relayName.includes("openai official") ||
+      relayName.includes("默认中转") ||
+      relayId === "default" ||
+      relayId.includes("codex-official");
+
+    if (isRightCode) {
+      changes.push({ ts, source: "relay" });
+    } else if (isOfficial) {
+      changes.push({ ts, source: "official_plus" });
+    }
+  }
+  changes.sort((a, b) => a.ts - b.ts);
+  let current = null;
+  for (const change of changes) {
+    if (current && current.source !== change.source && current.ts < change.ts) {
+      evidence.switchIntervals.push({
+        start: current.ts,
+        end: change.ts,
+        source: current.source,
+        rule: current.source === "relay" ? "auto:rightcode-codex-plus-switch" : "auto:official-codex-plus-switch"
+      });
+    }
+    current = change;
+  }
+  if (current) {
+    evidence.switchIntervals.push({
+      start: current.ts,
+      end: Infinity,
+      source: current.source,
+      rule: current.source === "relay" ? "auto:rightcode-codex-plus-switch" : "auto:official-codex-plus-switch"
+    });
+  }
+  evidence.stats.switchIntervals = evidence.switchIntervals.length;
+  evidence.stats.relaySwitchIntervals = evidence.switchIntervals.filter(item => item.source === "relay").length;
+  evidence.stats.officialSwitchIntervals = evidence.switchIntervals.filter(item => item.source === "official_plus").length;
 }
 
 function findNearestEvent(events, timestamp, maxDeltaSeconds = 300) {
@@ -453,7 +566,7 @@ function findNearestEvent(events, timestamp, maxDeltaSeconds = 300) {
 function findNearestEndpointEvidence(record) {
   if (!record.timestamp) return null;
   const evidence = loadEndpointEvidence();
-  const projectKey = normalizePathText(record.projectPath || "");
+  const projectKey = normalizePathText(record.projectPath || "").toLowerCase();
   const projectMatch = projectKey ? findNearestEvent(evidence.eventsByProject[projectKey], record.timestamp) : null;
   if (projectMatch) {
     return {
@@ -463,15 +576,15 @@ function findNearestEndpointEvidence(record) {
       scope: "project"
     };
   }
+  return null;
+}
 
-  const globalMatch = findNearestEvent(evidence.events, record.timestamp);
-  if (!globalMatch) return null;
-  return {
-    source: globalMatch.source,
-    rule: globalMatch.rule,
-    deltaSeconds: globalMatch.delta,
-    scope: "global"
-  };
+function findSwitchEvidence(record) {
+  if (!record.timestamp) return null;
+  const recordTs = Math.floor(Date.parse(record.timestamp) / 1000);
+  if (!Number.isFinite(recordTs)) return null;
+  const intervals = loadEndpointEvidence().switchIntervals || [];
+  return intervals.find(interval => recordTs >= interval.start && recordTs < interval.end) || null;
 }
 
 function applyAutomaticSourceEvidence(record) {
@@ -493,6 +606,11 @@ function applyAutomaticSourceEvidence(record) {
       sourceRule: timeEvidence.rule,
       sourceEvidenceDeltaSeconds: timeEvidence.deltaSeconds
     };
+  }
+  const switchEvidence = findSwitchEvidence(record);
+  if (switchEvidence) {
+    loadEndpointEvidence().stats.switchRules += 1;
+    return { ...record, source: switchEvidence.source, sourceRule: switchEvidence.rule };
   }
   const sessionEvidence = record.sessionId ? loadEndpointEvidence().bySessionId[record.sessionId] : null;
   if (sessionEvidence) {

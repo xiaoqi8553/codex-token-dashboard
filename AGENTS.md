@@ -50,6 +50,8 @@
 - 2026-06-08: Splitting relay by day was invalid because the user mixes official Plus and RightCode on the same day. Source evidence must be turn/request level where possible; date can only be diagnostic context, not an attribution rule.
 - 2026-06-08: Exact turnId matching was still insufficient because `.codex/sessions` usage records can carry an aggregate/parent turnId while `logs_2.sqlite` stores the real HTTP request under another turn id. Source attribution must also use endpoint timestamp evidence, preferably scoped by `cwd`, before falling back to provider defaults.
 - 2026-06-08: Browser/static import cannot run SQLite queries against `logs_2.sqlite`; when mirroring Node source attribution in GitHub Pages mode, derive request event time from UUIDv7 `turn.id` and keep the same sourceRule labels visible for audit.
+- 2026-06-08: Treating any `right.codes` host as relay was too broad. `right.codes/codex/v1` can appear in the user's official validation days, so relay evidence must be path-sensitive and limited to billable RightCode API paths such as `www.right.codes/codex-pro/v1` / `www.right.codes/v1`.
+- 2026-06-08: Global nearest endpoint attribution caused cross-project contamination, for example applying `E:\小车\小车上位机设计` RightCode requests to `html-codex-token-codex-plus-token` usage records. Source time evidence must be scoped to the same `cwd` or supported by explicit Codex++ switch intervals.
 
 ## Before Finishing
 
