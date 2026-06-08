@@ -1,5 +1,22 @@
 # 更新日志
 
+## 0.5.8 - 2026-06-08
+
+- 修复 0.5.7 / 0.5.6 来源识别在“全官方、全中转站、全 unknown”之间来回摆动的问题。
+- 新增 turn 级自动来源识别：解析 `.codex/sessions` 中的 `turn_id`，再读取本机 `~/.codex/logs_2.sqlite` 里的真实请求端点证据。
+- 只有当前 turn 明确命中 `right.codes / RightCode` 请求时，才归为中转站；明确命中 OpenAI / ChatGPT 请求时归为官方 Plus。
+- 裸 `model_provider: custom` 不再直接归中转站；如果没有 RightCode/API endpoint 等明确中转站证据，默认归为官方 Plus，符合“无中转站特征就当官方”的口径。
+- 索引统计中新增 `sourceEvidence`，用于记录是否检测到 RightCode 配置、命中了多少 turn 级来源规则。
+- 本地索引版本提升到 10，重新扫描会按新的 turn 级来源策略重建缓存。
+
+## 0.5.7 - 2026-06-08
+
+- 修复 0.5.6 过度保守导致 `.codex/sessions` 导入后大量 `custom + vscode` 会话全部显示为 `unknown` 的问题。
+- 新口径：明确出现 `relay / relay_import / rightcode / right.codes / 中转站` 的结构化来源才归为中转站。
+- 裸 `model_provider: custom` 默认归为官方 Plus，因为 Codex++ 会把官方 Plus 会话也包成 `custom`，不能因此丢到未知。
+- 中转站 CSV / JSON 导入仍保持 `source = relay`，不会被官方 Plus 兜底覆盖。
+- 本地索引版本提升到 7，浏览器静态解析版本提升到 4，避免继续读取 0.5.6 的 unknown 缓存。
+
 ## 0.5.6 - 2026-06-08
 
 - 修复浏览器导入新 `.codex/sessions` 后来源被全部归为“中转站”的问题。

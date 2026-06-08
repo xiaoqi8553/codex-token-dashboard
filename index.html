@@ -2424,7 +2424,7 @@
       store: "handles",
       sessionsKey: "sessionsDirectory"
     };
-    const staticParserVersion = 3;
+    const staticParserVersion = 4;
 
     function todayString(offsetDays = 0) {
       const date = new Date();
@@ -2789,6 +2789,9 @@
         value.includes("right-code") ||
         value.includes("relay")
       ))) return "relay";
+      // Codex++ can wrap official Plus sessions as model_provider=custom and source=vscode.
+      // Bare "custom" is therefore treated as official Plus unless there is an explicit relay hint.
+      if (values.some(value => value === "custom")) return "official_plus";
       if (values.some(value => ["official_plus", "official", "plus", "openai", "chatgpt"].includes(value))) return "official_plus";
       return "unknown";
     }
@@ -4276,7 +4279,7 @@
                 <h2>设置 / 关于</h2>
                 <p class="muted">这个页面说明当前运行方式、隐私边界和开源展示口径。</p>
               </div>
-              <span class="badge">版本 0.5.6</span>
+              <span class="badge">版本 0.5.8</span>
             </div>
             <div class="settings-grid">
               <div class="settings-card">
@@ -4668,7 +4671,7 @@
       const summary = summarize(safeRecords.map(record => ({ ...record, activeTokens: activeTokens(record), uncachedInputTokens: uncachedInputTokens(record), hitRate: cacheHitRateOf(record) })));
       return {
         snapshotVersion: 1,
-        appVersion: "0.5.6",
+        appVersion: "0.5.8",
         generatedAt: new Date().toISOString(),
         privacy: {
           anonymized: true,

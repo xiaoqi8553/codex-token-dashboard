@@ -9,7 +9,7 @@ const ROOT = __dirname;
 const DATA_DIR = path.join(ROOT, "data");
 const IMPORT_DIR = path.join(DATA_DIR, "imports");
 const INDEX_PATH = path.join(DATA_DIR, "usage-index.json");
-const INDEX_VERSION = 6;
+const INDEX_VERSION = 10;
 const SUPPORTED_SESSION_EXTENSIONS = new Set([".jsonl", ".json", ".log", ".txt"]);
 
 loadDotEnv();
@@ -230,8 +230,117 @@ function normalizeSource(provider, explicitSource = "") {
     value.includes("right-code") ||
     value.includes("relay")
   ))) return "relay";
+  // Codex++ can wrap official Plus sessions as model_provider=custom and source=vscode.
+  // Bare "custom" is therefore treated as official Plus unless there is an explicit relay hint.
+  if (values.some(value => value === "custom")) return "official_plus";
   if (values.some(value => ["official_plus", "official", "plus", "openai", "chatgpt"].includes(value))) return "official_plus";
   return "unknown";
+}
+
+let endpointEvidenceCache;
+
+function hasRightCodeConfig() {
+  const accountRoot = path.join(os.homedir(), ".codex", "XQ_acc");
+  let entries = [];
+  try {
+    entries = fs.readdirSync(accountRoot, { withFileTypes: true });
+  } catch {
+    return false;
+  }
+  return entries.some(entry => {
+    if (!entry.isDirectory()) return false;
+    const configPath = path.join(accountRoot, entry.name, "config.toml");
+    const authPath = path.join(accountRoot, entry.name, "auth.json");
+    const configText = readTextFile(configPath).toLowerCase();
+    if (!configText.includes("right.codes") && !configText.includes("right code")) return false;
+    const authText = readTextFile(authPath).toLowerCase();
+    return authText.includes("openai_api_key") || authText.includes("\"key\"");
+  });
+}
+
+function loadEndpointEvidence() {
+  if (endpointEvidenceCache) return endpointEvidenceCache;
+  endpointEvidenceCache = { byTurnId: {}, stats: { rightCodeConfig: hasRightCodeConfig(), turnRules: 0, relayTurns: 0, officialTurns: 0 } };
+
+  const dbPath = path.join(os.homedir(), ".codex", "logs_2.sqlite");
+  if (!fs.existsSync(dbPath)) return endpointEvidenceCache;
+
+  const script = `
+import sqlite3, json, re
+db = r'''${dbPath.replace(/\\/g, "\\\\")}'''
+con = sqlite3.connect('file:' + db + '?mode=ro', uri=True)
+cur = con.cursor()
+rows = cur.execute("""
+select feedback_log_body
+from logs
+where feedback_log_body like '%turn.id=%'
+   or feedback_log_body like '%turn_id=%'
+   or feedback_log_body like '%submission.id=%'
+""").fetchall()
+rules = {}
+for (body,) in rows:
+    text = body or ""
+    lower = text.lower()
+    turn_ids = set(re.findall(r'turn\\.id=([0-9a-f-]{36})', text))
+    turn_ids.update(re.findall(r'turn_id=([0-9a-f-]{36})', text))
+    turn_ids.update(re.findall(r'submission\\.id="([0-9a-f-]{36})"', text))
+    if not turn_ids:
+        continue
+    is_relay = "right.codes" in lower or "right code" in lower or "rightcode" in lower
+    is_official = (
+        "api.openai.com" in lower or
+        "chatgpt.com" in lower or
+        "ab.chatgpt.com" in lower or
+        "openai.com" in lower
+    )
+    if not is_relay and not is_official:
+        continue
+    for turn_id in turn_ids:
+        entry = rules.setdefault(turn_id, {"relayHits": 0, "officialHits": 0})
+        if is_relay:
+            entry["relayHits"] += 1
+        if is_official:
+            entry["officialHits"] += 1
+print(json.dumps(rules))
+con.close()
+`;
+
+  try {
+    const result = childProcess.spawnSync("python", ["-c", script], { encoding: "utf8", timeout: 10000, maxBuffer: 8 * 1024 * 1024 });
+    if (result.status !== 0 || !result.stdout) return endpointEvidenceCache;
+    const rules = JSON.parse(result.stdout);
+    for (const [turnId, counts] of Object.entries(rules)) {
+      const relayHits = Number(counts.relayHits || 0);
+      const officialHits = Number(counts.officialHits || 0);
+      if (relayHits > 0) {
+        endpointEvidenceCache.byTurnId[turnId] = { source: "relay", rule: "auto:rightcode-turn-endpoint", relayHits, officialHits };
+        endpointEvidenceCache.stats.relayTurns += 1;
+      } else if (officialHits > 0) {
+        endpointEvidenceCache.byTurnId[turnId] = { source: "official_plus", rule: "auto:official-turn-endpoint", relayHits, officialHits };
+        endpointEvidenceCache.stats.officialTurns += 1;
+      }
+    }
+    endpointEvidenceCache.stats.turnRules = Object.keys(endpointEvidenceCache.byTurnId).length;
+  } catch {
+    return endpointEvidenceCache;
+  }
+
+  return endpointEvidenceCache;
+}
+
+function applyAutomaticSourceEvidence(record) {
+  if (record.source === "relay") return { ...record, sourceRule: record.sourceRule || "explicit:relay" };
+  const evidence = record.turnId ? loadEndpointEvidence().byTurnId[record.turnId] : null;
+  if (evidence) {
+    return { ...record, source: evidence.source, sourceRule: evidence.rule };
+  }
+  if (record.provider === "custom" && record.source === "unknown") {
+    return { ...record, source: "official_plus", sourceRule: "fallback:custom-without-relay-evidence" };
+  }
+  if (record.provider === "custom" && record.source === "official_plus") {
+    return { ...record, sourceRule: record.sourceRule || "fallback:custom-without-relay-evidence" };
+  }
+  return record;
 }
 
 function normalizeModel(value) {
@@ -377,7 +486,7 @@ function createRecord(raw) {
   const source = normalizeSource(raw.provider, raw.source);
   const project = inferProject(raw);
 
-  return {
+  const record = {
     id: raw.id,
     timestamp,
     date: toDate(timestamp),
@@ -394,6 +503,7 @@ function createRecord(raw) {
     estimated: Boolean(raw.estimated),
     estimateReason: raw.estimateReason || "",
     requestId: raw.requestId || "",
+    turnId: raw.turnId || "",
     filePath: raw.filePath || "",
     relativePath: raw.relativePath || "",
     projectName: project.projectName,
@@ -405,6 +515,7 @@ function createRecord(raw) {
     imported: Boolean(raw.imported),
     importBatch: raw.importBatch || ""
   };
+  return applyAutomaticSourceEvidence(record);
 }
 
 function parseSessionFile(filePath) {
@@ -418,7 +529,8 @@ function parseSessionFile(filePath) {
     model: "",
     timestamp: "",
     title: "",
-    cwd: ""
+    cwd: "",
+    turnId: ""
   };
   const records = [];
   const seen = new Set();
@@ -433,6 +545,7 @@ function parseSessionFile(filePath) {
     const provider = payload.model_provider || payload.provider || meta.provider || "";
     const source = payload.source || payload.thread_source || meta.source || "";
     const requestId = payload.request_id || payload.requestId || payload.id || "";
+    const turnId = payload.turn_id || payload.turnId || meta.turnId || "";
     let tokenSet = usage;
 
     // Codex token_count records contain cumulative totals plus last_token_usage.
@@ -459,7 +572,8 @@ function parseSessionFile(filePath) {
       tokenSet.inputTokens,
       tokenSet.cachedInputTokens,
       tokenSet.outputTokens,
-      tokenSet.totalTokens
+      tokenSet.totalTokens,
+      turnId
     ]);
     if (seen.has(id)) return;
     seen.add(id);
@@ -477,6 +591,7 @@ function parseSessionFile(filePath) {
       totalTokens: tokenSet.totalTokens || tokenSet.inputTokens + tokenSet.outputTokens,
       reasoningOutputTokens: tokenSet.reasoningOutputTokens,
       requestId,
+      turnId,
       filePath,
       relativePath,
       projectPath: meta.cwd,
@@ -497,6 +612,7 @@ function parseSessionFile(filePath) {
       meta.model = payload.model || payload.model_name || meta.model;
       meta.timestamp = payload.timestamp || item.timestamp || meta.timestamp;
       meta.cwd = payload.cwd || meta.cwd;
+      meta.turnId = payload.turn_id || payload.turnId || meta.turnId;
     }
 
     if (item.type === "response_item" && payload.type === "message" && payload.role === "user") {
@@ -690,6 +806,7 @@ function parseRelayImportFile(filePath) {
 
 function buildIndex() {
   ensureDirs();
+  endpointEvidenceCache = null;
   const previous = loadIndex();
   const nextFiles = {};
   const sessionFiles = listFiles(SESSIONS_DIR, SUPPORTED_SESSION_EXTENSIONS);
@@ -738,7 +855,8 @@ function buildIndex() {
       importFiles: importFiles.length,
       reusedFiles,
       parsedFiles,
-      records: deduped.length
+      records: deduped.length,
+      sourceEvidence: loadEndpointEvidence().stats
     },
     files: nextFiles,
     imports: nextImports,
@@ -893,6 +1011,7 @@ function sanitizeRecord(record) {
     ...record,
     sessionId: maskMiddle(record.sessionId, 8, 4),
     requestId: record.requestId ? maskMiddle(record.requestId, 8, 4) : "",
+    turnId: record.turnId ? maskMiddle(record.turnId, 8, 4) : "",
     filePath: "",
     relativePath: record.relativePath ? "[hidden]" : "",
     projectPath: record.projectPath ? "[hidden]" : "",

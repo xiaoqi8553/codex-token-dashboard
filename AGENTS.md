@@ -41,7 +41,10 @@
 - 2026-06-08: Playwright audit passed but manual screenshot review missed obvious blank space in Task Review. Visual QA must inspect whitespace and balance, not only automated P0/P1 rules.
 - 2026-06-08: Work Replay did not inherit the main dashboard theme setting and stayed dark on dark-system browsers. Subpages must read shared UI preferences such as `codexTokenTheme`.
 - 2026-06-08: Source classification allowed `openai` to win before checking `custom/rightcode`, which can move relay usage into official Plus. Relay hints must have priority over generic provider hints.
-- 2026-06-08: Treating bare `model_provider: custom` as relay was wrong after Codex++ wrapped all current sessions as `custom`. Only explicit structured `rightcode/right.codes/relay` hints should become relay; bare `custom + vscode` must stay `unknown` unless the user configures a manual mapping.
+- 2026-06-08: Treating bare `model_provider: custom` as relay was wrong after Codex++ wrapped all current sessions as `custom`. Only explicit structured `rightcode/right.codes/relay` hints should become relay; the default fallback still has to match the product accounting rule instead of creating a useless all-unknown dashboard.
+- 2026-06-08: The 0.5.6 fallback overcorrected by sending bare `custom + vscode` to `unknown`, which made the dashboard useless for the user's expected accounting. For this product, ambiguous Codex++ sessions should default to official Plus while explicit relay/import hints remain relay.
+- 2026-06-08: A manual `sourceRules` idea was misaligned with the user's requirement. Source separation must be automatic where evidence exists: use RightCode config/API-key account shape plus runtime `right.codes` request timestamps; only fall back to official when no relay evidence exists.
+- 2026-06-08: Splitting relay by day was invalid because the user mixes official Plus and RightCode on the same day. Source evidence must be turn/request level where possible; date can only be diagnostic context, not an attribution rule.
 
 ## Before Finishing
 
