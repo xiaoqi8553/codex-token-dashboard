@@ -9,7 +9,7 @@ const ROOT = __dirname;
 const DATA_DIR = path.join(ROOT, "data");
 const IMPORT_DIR = path.join(DATA_DIR, "imports");
 const INDEX_PATH = path.join(DATA_DIR, "usage-index.json");
-const INDEX_VERSION = 5;
+const INDEX_VERSION = 6;
 const SUPPORTED_SESSION_EXTENSIONS = new Set([".jsonl", ".json", ".log", ".txt"]);
 
 loadDotEnv();
@@ -224,10 +224,11 @@ function normalizeSource(provider, explicitSource = "") {
     .map(value => String(value || "").trim().toLowerCase())
     .filter(value => value && value !== "unknown");
   if (values.some(value => (
-    ["relay", "rightcode", "right_code", "right-code", "proxy", "custom", "中转站"].includes(value) ||
+    ["relay", "relay_import", "rightcode", "right_code", "right-code", "proxy", "中转站"].includes(value) ||
     value.includes("rightcode") ||
     value.includes("right.codes") ||
-    value.includes("right-code")
+    value.includes("right-code") ||
+    value.includes("relay")
   ))) return "relay";
   if (values.some(value => ["official_plus", "official", "plus", "openai", "chatgpt"].includes(value))) return "official_plus";
   return "unknown";

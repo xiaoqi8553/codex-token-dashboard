@@ -41,6 +41,7 @@
 - 2026-06-08: Playwright audit passed but manual screenshot review missed obvious blank space in Task Review. Visual QA must inspect whitespace and balance, not only automated P0/P1 rules.
 - 2026-06-08: Work Replay did not inherit the main dashboard theme setting and stayed dark on dark-system browsers. Subpages must read shared UI preferences such as `codexTokenTheme`.
 - 2026-06-08: Source classification allowed `openai` to win before checking `custom/rightcode`, which can move relay usage into official Plus. Relay hints must have priority over generic provider hints.
+- 2026-06-08: Treating bare `model_provider: custom` as relay was wrong after Codex++ wrapped all current sessions as `custom`. Only explicit structured `rightcode/right.codes/relay` hints should become relay; bare `custom + vscode` must stay `unknown` unless the user configures a manual mapping.
 
 ## Before Finishing
 

@@ -2424,6 +2424,7 @@
       store: "handles",
       sessionsKey: "sessionsDirectory"
     };
+    const staticParserVersion = 3;
 
     function todayString(offsetDays = 0) {
       const date = new Date();
@@ -2782,10 +2783,11 @@
         .map(value => String(value || "").trim().toLowerCase())
         .filter(value => value && value !== "unknown");
       if (values.some(value => (
-        ["relay", "rightcode", "right_code", "right-code", "proxy", "custom", "中转站"].includes(value) ||
+        ["relay", "relay_import", "rightcode", "right_code", "right-code", "proxy", "中转站"].includes(value) ||
         value.includes("rightcode") ||
         value.includes("right.codes") ||
-        value.includes("right-code")
+        value.includes("right-code") ||
+        value.includes("relay")
       ))) return "relay";
       if (values.some(value => ["official_plus", "official", "plus", "openai", "chatgpt"].includes(value))) return "official_plus";
       return "unknown";
@@ -3305,6 +3307,7 @@
       try {
         localStorage.setItem("codexTokenStaticPayload", JSON.stringify({
           ...payload,
+          parserVersion: staticParserVersion,
           records: payload.records.map(cacheRecord)
         }));
       } catch {
@@ -3315,7 +3318,11 @@
     function loadCachedStaticPayload() {
       try {
         const cached = localStorage.getItem("codexTokenStaticPayload");
-        return cached ? JSON.parse(cached) : null;
+        if (!cached) return null;
+        const parsed = JSON.parse(cached);
+        parsed.parserVersion = Number(parsed.parserVersion || 0);
+        parsed.parserStale = parsed.parserVersion < staticParserVersion;
+        return parsed;
       } catch {
         return null;
       }
@@ -3353,7 +3360,23 @@
     async function enterStaticMode(reason = "") {
       state.dataMode = "static";
       els.staticPanel.classList.add("show");
-      const cached = loadCachedStaticPayload();
+      let cached = loadCachedStaticPayload();
+      if (cached?.records?.length && cached.parserStale) {
+        const staleSourceType = cached.sourceType || "import";
+        if (staleSourceType === "sessions-folder") {
+          await restoreSavedSessionsDirectory({ silent: true });
+          if (state.sessionsDirectoryHandle) {
+            const refreshed = await refreshSessionsDirectoryHandle("", { silent: true });
+            if (refreshed) {
+              setStatus("浏览器缓存来自旧解析器，已自动重新扫描 sessions 文件夹并修正来源归类。");
+              return;
+            }
+          }
+        }
+        localStorage.removeItem("codexTokenStaticPayload");
+        cached = null;
+        setStatus("浏览器缓存来自旧解析器，已清除旧数据。请重新导入 sessions 文件夹以修正中转站归类。", "error");
+      }
       if (cached?.records?.length) {
         state.staticPayload = makeStaticPayload(cached.records, { sourceLabel: cached.sessionsDir || "浏览器缓存", sourceType: cached.sourceType || "import", readOnly: true, updatedAt: cached.updatedAt });
         state.staticSourceType = state.staticPayload.sourceType;
@@ -4253,7 +4276,7 @@
                 <h2>设置 / 关于</h2>
                 <p class="muted">这个页面说明当前运行方式、隐私边界和开源展示口径。</p>
               </div>
-              <span class="badge">版本 0.5.5</span>
+              <span class="badge">版本 0.5.6</span>
             </div>
             <div class="settings-grid">
               <div class="settings-card">
@@ -4645,7 +4668,7 @@
       const summary = summarize(safeRecords.map(record => ({ ...record, activeTokens: activeTokens(record), uncachedInputTokens: uncachedInputTokens(record), hitRate: cacheHitRateOf(record) })));
       return {
         snapshotVersion: 1,
-        appVersion: "0.5.5",
+        appVersion: "0.5.6",
         generatedAt: new Date().toISOString(),
         privacy: {
           anonymized: true,

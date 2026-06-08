@@ -1,5 +1,14 @@
 # 更新日志
 
+## 0.5.6 - 2026-06-08
+
+- 修复浏览器导入新 `.codex/sessions` 后来源被全部归为“中转站”的问题。
+- 根因是 Codex++ 会把会话上下文统一写成 `model_provider: custom`，但 `custom` 本身不能证明它一定来自 RightCode 或其他中转站。
+- 现在只有结构化字段里明确出现 `rightcode / right.codes / relay / 中转站` 时才归为中转站；只有明确出现 `openai / official_plus / plus / chatgpt` 时才归为官方 Plus。
+- 裸 `custom` 或 `custom + vscode` 会归为 `unknown`，避免把无法证明的来源伪装成官方或中转站。
+- 本地 Node 索引版本提升到 6，重新扫描时会丢弃旧的 per-file 缓存，避免旧错误来源继续残留。
+- 浏览器静态导入解析版本提升到 3，旧 localStorage 缓存会被清理或重新扫描，避免 GitHub Pages 继续展示旧归类。
+
 ## 0.5.5 - 2026-06-08
 
 - 修复中转站用量被重新归到“官方 Plus”的问题。
