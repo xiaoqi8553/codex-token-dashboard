@@ -40,6 +40,7 @@
 - 2026-06-08: Work Replay still looked like a separate visual experiment. Replay must share the main dashboard's product language and put project, task, time, and token cost directly in the primary timeline.
 - 2026-06-08: Playwright audit passed but manual screenshot review missed obvious blank space in Task Review. Visual QA must inspect whitespace and balance, not only automated P0/P1 rules.
 - 2026-06-08: Work Replay did not inherit the main dashboard theme setting and stayed dark on dark-system browsers. Subpages must read shared UI preferences such as `codexTokenTheme`.
+- 2026-06-08: Source classification allowed `openai` to win before checking `custom/rightcode`, which can move relay usage into official Plus. Relay hints must have priority over generic provider hints.
 
 ## Before Finishing
 

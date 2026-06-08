@@ -1,5 +1,13 @@
 # 更新日志
 
+## 0.5.5 - 2026-06-08
+
+- 修复中转站用量被重新归到“官方 Plus”的问题。
+- `custom / rightcode / right.codes / relay` 现在是更高优先级的中转站信号，即使同一条日志里同时出现 `model_provider: openai`，也不会覆盖中转站判断。
+- 浏览器导入 `.codex/sessions` 时会读取 `source / thread_source`，用于辅助判断来源。
+- 本地 Node 扫描同样会读取 `source / thread_source`，前端导入模式和本地模式保持一致。
+- 保留 `vscode / user` 这类普通启动来源为中性信息，不会误判为中转站。
+
 ## 0.5.4 - 2026-06-08
 
 - 收紧任务复盘左右主面板高度，从 520px 调整为 420px，减少“任务类型分布”左侧面板的大块无效留白。

@@ -2781,13 +2781,13 @@
       const values = [explicitSource, provider]
         .map(value => String(value || "").trim().toLowerCase())
         .filter(value => value && value !== "unknown");
-      if (values.some(value => ["official_plus", "official", "plus", "openai", "chatgpt"].includes(value))) return "official_plus";
       if (values.some(value => (
         ["relay", "rightcode", "right_code", "right-code", "proxy", "custom", "中转站"].includes(value) ||
         value.includes("rightcode") ||
         value.includes("right.codes") ||
         value.includes("right-code")
       ))) return "relay";
+      if (values.some(value => ["official_plus", "official", "plus", "openai", "chatgpt"].includes(value))) return "official_plus";
       return "unknown";
     }
 
@@ -2919,6 +2919,7 @@
       if (item.type === "session_meta" || item.type === "turn_context" || payload.model_provider || payload.thread_source || payload.model || payload.cwd) {
         meta.sessionId = payload.id || payload.session_id || meta.sessionId;
         meta.provider = payload.model_provider || payload.provider || meta.provider;
+        meta.source = payload.source || payload.thread_source || meta.source;
         meta.model = payload.model || payload.model_name || meta.model;
         meta.timestamp = payload.timestamp || item.timestamp || meta.timestamp;
         meta.cwd = payload.cwd || meta.cwd;
@@ -2937,6 +2938,7 @@
           sessionId: payload.session_id || payload.sessionId || payload.id || meta.sessionId,
           model: payload.model || payload.model_name || meta.model,
           provider: payload.model_provider || payload.provider || meta.provider,
+          source: payload.source || payload.thread_source || meta.source,
           requestId: payload.request_id || payload.requestId || payload.id || "",
           sessionTitle: meta.title,
           detailText: meta.title,
@@ -3061,7 +3063,7 @@
         const file = entry.file;
         const text = await file.text();
         const relativePath = entry.relativePath || file.webkitRelativePath || file.name;
-        const meta = { sessionId: file.name, provider: "", model: "unknown", timestamp: new Date(file.lastModified || Date.now()).toISOString(), title: "", cwd: "" };
+        const meta = { sessionId: file.name, provider: "", source: "", model: "unknown", timestamp: new Date(file.lastModified || Date.now()).toISOString(), title: "", cwd: "" };
         const before = records.length;
         if (/\.json$/i.test(file.name)) {
           const parsed = parseJsonLine(text);
@@ -3081,6 +3083,7 @@
             sessionId: meta.sessionId,
             model: meta.model,
             provider: meta.provider,
+            source: meta.source,
             inputTokens: estimated,
             totalTokens: estimated,
             estimated: true,
@@ -4250,7 +4253,7 @@
                 <h2>设置 / 关于</h2>
                 <p class="muted">这个页面说明当前运行方式、隐私边界和开源展示口径。</p>
               </div>
-              <span class="badge">版本 0.5.4</span>
+              <span class="badge">版本 0.5.5</span>
             </div>
             <div class="settings-grid">
               <div class="settings-card">
@@ -4642,7 +4645,7 @@
       const summary = summarize(safeRecords.map(record => ({ ...record, activeTokens: activeTokens(record), uncachedInputTokens: uncachedInputTokens(record), hitRate: cacheHitRateOf(record) })));
       return {
         snapshotVersion: 1,
-        appVersion: "0.5.4",
+        appVersion: "0.5.5",
         generatedAt: new Date().toISOString(),
         privacy: {
           anonymized: true,

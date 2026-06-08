@@ -223,13 +223,13 @@ function normalizeSource(provider, explicitSource = "") {
   const values = [explicitSource, provider]
     .map(value => String(value || "").trim().toLowerCase())
     .filter(value => value && value !== "unknown");
-  if (values.some(value => ["official_plus", "official", "plus", "openai", "chatgpt"].includes(value))) return "official_plus";
   if (values.some(value => (
     ["relay", "rightcode", "right_code", "right-code", "proxy", "custom", "中转站"].includes(value) ||
     value.includes("rightcode") ||
     value.includes("right.codes") ||
     value.includes("right-code")
   ))) return "relay";
+  if (values.some(value => ["official_plus", "official", "plus", "openai", "chatgpt"].includes(value))) return "official_plus";
   return "unknown";
 }
 
@@ -341,11 +341,14 @@ function considerSessionTitle(meta, candidate) {
 function applySessionMetaLine(line, meta) {
   if (!line.includes("session_meta")) return;
   const provider = extractRawField(line, "model_provider");
+  const source = extractRawField(line, "source");
+  const threadSource = extractRawField(line, "thread_source");
   const id = extractRawField(line, "id");
   const model = extractRawField(line, "model");
   const timestamps = [...line.matchAll(/"timestamp"\s*:\s*"([^"]*)"/g)].map(match => match[1]);
 
   if (provider) meta.provider = provider;
+  if (source || threadSource) meta.source = source || threadSource;
   if (id) meta.sessionId = id;
   if (model) meta.model = model;
   if (timestamps[1] || timestamps[0]) meta.timestamp = timestamps[1] || timestamps[0];
@@ -410,6 +413,7 @@ function parseSessionFile(filePath) {
   const meta = {
     sessionId: "",
     provider: "",
+    source: "",
     model: "",
     timestamp: "",
     title: "",
@@ -426,6 +430,7 @@ function parseSessionFile(filePath) {
     const sessionId = payload.session_id || payload.sessionId || payload.id || meta.sessionId || path.basename(filePath);
     const model = payload.model || payload.model_name || meta.model || "";
     const provider = payload.model_provider || payload.provider || meta.provider || "";
+    const source = payload.source || payload.thread_source || meta.source || "";
     const requestId = payload.request_id || payload.requestId || payload.id || "";
     let tokenSet = usage;
 
@@ -464,6 +469,7 @@ function parseSessionFile(filePath) {
       sessionId,
       model,
       provider,
+      source,
       inputTokens: tokenSet.inputTokens,
       cachedInputTokens: tokenSet.cachedInputTokens,
       outputTokens: tokenSet.outputTokens,
@@ -486,6 +492,7 @@ function parseSessionFile(filePath) {
     if (item.type === "session_meta" || item.type === "turn_context" || payload.model_provider || payload.thread_source || payload.model) {
       meta.sessionId = payload.id || payload.session_id || meta.sessionId;
       meta.provider = payload.model_provider || payload.provider || meta.provider;
+      meta.source = payload.source || payload.thread_source || meta.source;
       meta.model = payload.model || payload.model_name || meta.model;
       meta.timestamp = payload.timestamp || item.timestamp || meta.timestamp;
       meta.cwd = payload.cwd || meta.cwd;
