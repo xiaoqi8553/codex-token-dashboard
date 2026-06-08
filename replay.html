@@ -4,6 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Codex Work Replay</title>
+  <script>
+    try {
+      const theme = localStorage.getItem("codexTokenTheme") || "light";
+      if (theme !== "system") document.documentElement.setAttribute("data-theme", theme);
+    } catch {
+      document.documentElement.setAttribute("data-theme", "light");
+    }
+  </script>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23111827'/%3E%3Cpath d='M18 22l10 10-10 10' fill='none' stroke='%23f8fafc' stroke-width='6' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M32 42h14' fill='none' stroke='%2322c55e' stroke-width='6' stroke-linecap='round'/%3E%3C/svg%3E">
   <style>
     :root {
@@ -30,7 +38,7 @@
     }
 
     @media (prefers-color-scheme: dark) {
-      :root {
+      html:not([data-theme="light"]) {
         color-scheme: dark;
         --bg: #111827;
         --surface: #151d2a;
@@ -49,6 +57,26 @@
         --output: #fb7185;
         --active: #22d3ee;
       }
+    }
+
+    html[data-theme="dark"] {
+      color-scheme: dark;
+      --bg: #111827;
+      --surface: #151d2a;
+      --surface-soft: #101722;
+      --surface-muted: #1b2534;
+      --text: #edf3fb;
+      --muted: #a9b6c7;
+      --faint: #7e8da3;
+      --line: #2b384a;
+      --line-strong: #3b4b60;
+      --shadow: 0 20px 56px rgba(0, 0, 0, .22);
+      --official: #60a5fa;
+      --relay: #34d399;
+      --unknown: #94a3b8;
+      --cache: #f59e0b;
+      --output: #fb7185;
+      --active: #22d3ee;
     }
 
     * { box-sizing: border-box; }
@@ -681,6 +709,11 @@
           <option value="story">叙事模式</option>
           <option value="compact">紧凑模式</option>
         </select>
+        <select id="themeSelect" aria-label="主题模式">
+          <option value="light">浅色</option>
+          <option value="dark">深色</option>
+          <option value="system">系统</option>
+        </select>
         <button id="playBtn" class="primary" type="button">播放</button>
         <button id="speedBtn" type="button">1x</button>
         <div class="progress-wrap">
@@ -747,6 +780,7 @@
       toDate: document.querySelector("#toDate"),
       sortSelect: document.querySelector("#sortSelect"),
       styleSelect: document.querySelector("#styleSelect"),
+      themeSelect: document.querySelector("#themeSelect"),
       playBtn: document.querySelector("#playBtn"),
       speedBtn: document.querySelector("#speedBtn"),
       progressInput: document.querySelector("#progressInput"),
@@ -763,6 +797,18 @@
       summaryRows: document.querySelector("#summaryRows")
     };
     document.documentElement.dataset.replayStyle = els.styleSelect.value;
+
+    function applyTheme(theme) {
+      const chosen = ["system", "light", "dark"].includes(theme) ? theme : "light";
+      if (chosen === "system") {
+        document.documentElement.removeAttribute("data-theme");
+      } else {
+        document.documentElement.setAttribute("data-theme", chosen);
+      }
+      localStorage.setItem("codexTokenTheme", chosen);
+      if (els.themeSelect) els.themeSelect.value = chosen;
+    }
+    applyTheme(localStorage.getItem("codexTokenTheme") || "light");
 
     const sourceLabels = { official_plus: "官方 Plus", relay: "中转站", unknown: "未知" };
     const sourceColors = { official_plus: "var(--official)", relay: "var(--relay)", unknown: "var(--unknown)" };
@@ -1202,6 +1248,7 @@
       document.documentElement.dataset.replayStyle = els.styleSelect.value;
       render();
     });
+    els.themeSelect.addEventListener("change", () => applyTheme(els.themeSelect.value));
     els.exportBtn.addEventListener("click", exportMarkdown);
     document.addEventListener("click", event => {
       const button = event.target.closest("[data-index]");

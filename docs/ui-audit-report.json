@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-08T09:13:18.114Z",
+  "generatedAt": "2026-06-08T09:44:23.266Z",
   "baseUrl": "http://127.0.0.1:8787",
   "screenshotsDir": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current",
   "pages": [
@@ -110,7 +110,7 @@
         "charts": [
           {
             "selector": ".task-layout",
-            "height": 520,
+            "height": 420,
             "hasGraphic": true,
             "hasEmpty": true
           }
@@ -310,7 +310,7 @@
         "charts": [
           {
             "selector": ".task-layout",
-            "height": 520,
+            "height": 420,
             "hasGraphic": true,
             "hasEmpty": true
           }
@@ -532,7 +532,7 @@
         "charts": [
           {
             "selector": ".task-layout",
-            "height": 1462.96875,
+            "height": 1358.03125,
             "hasGraphic": true,
             "hasEmpty": true
           }

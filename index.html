@@ -1537,8 +1537,8 @@
     }
 
     .task-layout > .panel {
-      height: 520px;
-      min-height: 520px;
+      height: 420px;
+      min-height: 420px;
       display: flex;
       flex-direction: column;
       overflow: hidden;
@@ -1555,13 +1555,32 @@
     .task-type-grid.is-compact { grid-template-columns: 1fr; }
 
     .task-distribution-panel {
-      align-content: start;
-      grid-template-rows: auto auto;
+      gap: 10px;
     }
 
     .task-distribution-panel .task-type-grid {
+      grid-template-columns: 1fr;
+      align-self: stretch;
+      flex: 1;
       overflow: auto;
       padding-right: 2px;
+    }
+
+    .task-distribution-panel .task-type-card {
+      grid-template-columns: minmax(150px, .8fr) minmax(180px, 1.35fr) 86px;
+      min-height: 58px;
+      padding: 10px 12px;
+      align-items: center;
+    }
+
+    .task-distribution-panel .task-type-card .track {
+      grid-column: auto;
+      min-width: 0;
+    }
+
+    .task-distribution-panel .task-type-card .num {
+      text-align: right;
+      white-space: nowrap;
     }
 
     .task-type-grid.compact {
@@ -4231,7 +4250,7 @@
                 <h2>设置 / 关于</h2>
                 <p class="muted">这个页面说明当前运行方式、隐私边界和开源展示口径。</p>
               </div>
-              <span class="badge">版本 0.5.3</span>
+              <span class="badge">版本 0.5.4</span>
             </div>
             <div class="settings-grid">
               <div class="settings-card">
@@ -4623,7 +4642,7 @@
       const summary = summarize(safeRecords.map(record => ({ ...record, activeTokens: activeTokens(record), uncachedInputTokens: uncachedInputTokens(record), hitRate: cacheHitRateOf(record) })));
       return {
         snapshotVersion: 1,
-        appVersion: "0.5.3",
+        appVersion: "0.5.4",
         generatedAt: new Date().toISOString(),
         privacy: {
           anonymized: true,

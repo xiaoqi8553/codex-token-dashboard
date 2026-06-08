@@ -38,6 +38,8 @@
 - 2026-06-04: Task Review focused on task labels but missed the user's real accounting question: token usage by concrete project. Project aggregation should use Codex `cwd / workspace` first, then fall back cautiously.
 - 2026-06-08: Weather/location was implemented as a manual button path only. Once the user has granted location permission, normal dashboard refresh should also refresh stale weather data using the saved location.
 - 2026-06-08: Work Replay still looked like a separate visual experiment. Replay must share the main dashboard's product language and put project, task, time, and token cost directly in the primary timeline.
+- 2026-06-08: Playwright audit passed but manual screenshot review missed obvious blank space in Task Review. Visual QA must inspect whitespace and balance, not only automated P0/P1 rules.
+- 2026-06-08: Work Replay did not inherit the main dashboard theme setting and stayed dark on dark-system browsers. Subpages must read shared UI preferences such as `codexTokenTheme`.
 
 ## Before Finishing
 
