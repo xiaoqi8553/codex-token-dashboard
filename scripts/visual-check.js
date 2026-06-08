@@ -149,7 +149,7 @@ async function collectChecks(page, pageInfo, viewport) {
     });
     return {
       titlePresent: view === "replay"
-        ? Boolean(document.querySelector("h1")?.textContent.includes("Codex Work Replay"))
+        ? /Codex (Work Replay|工作回放)/.test(document.querySelector("h1")?.textContent || "")
         : Boolean(document.querySelector("h1")?.textContent.includes("Codex Token")),
       activeNavPresent: view === "replay" ? true : Boolean(activeNav && activeNav.dataset.view === view),
       horizontalScroll: document.documentElement.scrollWidth > document.documentElement.clientWidth + 2,

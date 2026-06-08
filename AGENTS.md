@@ -36,6 +36,8 @@
 - 2026-06-04: CHANGELOG was left in English, which made release history hard for the user to verify. User-facing changelog and release notes should be written in Chinese by default.
 - 2026-06-04: Task Review trusted cached/imported `taskType: other` as if it were a real provided category, which locked records into "其他 / 未识别" and skipped improved rules. Treat `other` as unknown unless it is a manual override.
 - 2026-06-04: Task Review focused on task labels but missed the user's real accounting question: token usage by concrete project. Project aggregation should use Codex `cwd / workspace` first, then fall back cautiously.
+- 2026-06-08: Weather/location was implemented as a manual button path only. Once the user has granted location permission, normal dashboard refresh should also refresh stale weather data using the saved location.
+- 2026-06-08: Work Replay still looked like a separate visual experiment. Replay must share the main dashboard's product language and put project, task, time, and token cost directly in the primary timeline.
 
 ## Before Finishing
 

@@ -218,12 +218,12 @@
     .workspace {
       margin-top: 12px;
       display: grid;
-      grid-template-columns: minmax(0, 1fr) 430px;
+      grid-template-columns: minmax(0, 1fr) 380px;
       gap: 12px;
       align-items: stretch;
     }
     .stage {
-      min-height: 520px;
+      min-height: 560px;
       padding: 18px;
       display: grid;
       grid-template-rows: auto minmax(0, 1fr) auto;
@@ -274,102 +274,109 @@
 
     .timeline-board {
       position: relative;
-      overflow: hidden;
+      overflow: auto;
       border: 1px solid var(--line);
       border-radius: 14px;
-      background:
-        linear-gradient(90deg, rgba(100, 116, 139, .12) 1px, transparent 1px),
-        var(--surface-soft);
-      background-size: 10% 100%;
-      min-height: 360px;
-      padding: 12px 12px 34px;
+      background: var(--surface-soft);
+      min-height: 420px;
+      padding: 14px;
     }
-    .lanes {
+
+    .timeline-stream {
+      display: grid;
+      gap: 10px;
       position: relative;
-      height: 100%;
-      display: grid;
-      grid-template-rows: repeat(var(--lane-count), minmax(42px, 1fr));
-      gap: 6px;
-      z-index: 2;
     }
-    .lane {
+
+    .replay-event {
       display: grid;
-      grid-template-columns: 116px minmax(0, 1fr);
-      gap: 12px;
+      grid-template-columns: 84px 22px minmax(0, 1fr) auto;
+      gap: 10px;
       align-items: center;
-      min-height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: var(--surface);
+      padding: 12px;
+      text-align: left;
+      transition: border-color 140ms ease, background 140ms ease, transform 140ms ease;
     }
-    .lane-label {
+
+    .replay-event:hover {
+      border-color: var(--line-strong);
+      background: var(--surface-soft);
+      transform: translateY(-1px);
+    }
+
+    .replay-event.active {
+      border-color: color-mix(in srgb, var(--active) 55%, var(--line));
+      box-shadow: 0 10px 28px rgba(8, 145, 178, .12);
+    }
+
+    .replay-event .time {
       color: var(--muted);
+      font-size: 12px;
       font-weight: 700;
+    }
+
+    .replay-event .node {
+      position: relative;
+      left: auto;
+      top: auto;
+      width: var(--size);
+      height: var(--size);
+      transform: none;
+      border-radius: 999px;
+      border: 2px solid var(--source);
+      background: var(--task);
+      box-shadow: 0 1px 0 rgba(255,255,255,.28) inset;
+      opacity: .86;
+      padding: 0;
+      min-height: 0;
+    }
+
+    .event-main {
+      min-width: 0;
+      display: grid;
+      gap: 5px;
+    }
+
+    .event-title {
+      font-weight: 800;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .event-sub {
+      color: var(--muted);
       font-size: 12px;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
-    .lane-track {
-      position: relative;
-      height: 100%;
-      min-height: 42px;
-      border-radius: 10px;
-      background: color-mix(in srgb, var(--surface) 72%, transparent);
-      border: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
+
+    .event-value {
+      text-align: right;
+      font-size: 18px;
+      font-weight: 850;
+      white-space: nowrap;
     }
-    .node {
-      position: absolute;
-      left: var(--x);
-      top: 50%;
-      width: var(--size);
-      height: var(--size);
-      transform: translate(-50%, -50%);
-      border-radius: 999px;
-      border: 2px solid var(--source);
-      background: var(--task);
-      box-shadow: 0 1px 0 rgba(255,255,255,.28) inset, 0 4px 10px rgba(15,23,42,.16);
-      opacity: .42;
-      transition: transform 160ms ease, opacity 160ms ease, box-shadow 160ms ease;
-      padding: 0;
-      min-height: 0;
+
+    [data-replay-style="compact"] .replay-event {
+      grid-template-columns: 72px 16px minmax(0, 1fr) auto;
+      padding: 9px 10px;
     }
-    .node.past { opacity: .72; }
-    .node.active {
-      opacity: 1;
-      transform: translate(-50%, -50%) scale(1.2);
-      box-shadow: 0 0 0 5px color-mix(in srgb, var(--task) 18%, transparent), 0 12px 26px rgba(15,23,42,.22);
-      z-index: 5;
+
+    [data-replay-style="compact"] .event-sub { display: none; }
+
+    [data-replay-style="story"] .replay-event {
+      grid-template-columns: 96px 24px minmax(0, 1fr);
     }
-    .playhead {
-      position: absolute;
-      top: 12px;
-      bottom: 34px;
-      left: calc(128px + (100% - 152px) * var(--progress));
-      width: 2px;
-      background: var(--text);
-      opacity: .44;
-      z-index: 3;
-      pointer-events: none;
-    }
-    .playhead::after {
-      content: "";
-      position: absolute;
-      bottom: -7px;
-      left: 50%;
-      width: 10px;
-      height: 10px;
-      transform: translateX(-50%);
-      border-radius: 50%;
-      background: var(--text);
-    }
-    .axis {
-      position: absolute;
-      left: 140px;
-      right: 12px;
-      bottom: 8px;
-      display: flex;
-      justify-content: space-between;
-      color: var(--faint);
-      font-size: 11px;
-      z-index: 2;
+
+    [data-replay-style="story"] .event-value {
+      grid-column: 3;
+      text-align: left;
+      color: var(--active);
     }
     .empty {
       color: var(--muted);
@@ -633,9 +640,8 @@
       .stage { padding: 13px; min-height: 620px; }
       .section-head { display: grid; }
       .timeline-board { overflow: auto; }
-      .lane { grid-template-columns: 88px minmax(360px, 1fr); }
-      .axis { left: 112px; min-width: 360px; }
-      .playhead { left: calc(100px + (100% - 124px) * var(--progress)); }
+      .replay-event { grid-template-columns: 72px 18px minmax(0, 1fr); }
+      .event-value { grid-column: 3; text-align: left; }
       .event-card { grid-template-columns: 62px minmax(0, 1fr); }
       .event-card .value { grid-column: 2; }
       .bar { grid-template-columns: 94px minmax(0, 1fr) 72px; }
@@ -648,9 +654,9 @@
       <div class="brand">
         <div class="mark">CR</div>
         <div>
-          <h1>Codex Work Replay</h1>
+          <h1>Codex 工作回放</h1>
           <div class="sub">
-            <span>回放 AI 协作过程 / 工作流回顾</span>
+            <span>按项目和任务复盘 AI 协作过程</span>
             <span class="source-pill" id="sourceText">正在读取数据...</span>
           </div>
         </div>
@@ -670,6 +676,11 @@
           <option value="token">按 Token</option>
           <option value="task">按任务类型</option>
         </select>
+        <select id="styleSelect" aria-label="时间轴风格">
+          <option value="project">项目时间轴</option>
+          <option value="story">叙事模式</option>
+          <option value="compact">紧凑模式</option>
+        </select>
         <button id="playBtn" class="primary" type="button">播放</button>
         <button id="speedBtn" type="button">1x</button>
         <div class="progress-wrap">
@@ -688,14 +699,12 @@
         <div class="section-head">
           <div>
             <h2>时间轴回放</h2>
-            <p>横轴代表时间，纵向泳道代表任务类型。节点越大，Token 体量越高；颜色代表任务类型，边框代表来源。</p>
+            <p>每一行就是一个工作节点：哪个项目、什么任务、花了多少 Token。播放时按时间推进。</p>
           </div>
           <div class="timeline-meta" id="timelineMeta"></div>
         </div>
         <div class="timeline-board" id="timelineBoard">
-          <div class="playhead" id="playhead"></div>
-          <div class="lanes" id="lanes"></div>
-          <div class="axis" id="axis"></div>
+          <div class="timeline-stream" id="timelineStream"></div>
         </div>
         <div class="legend">
           <div class="legend-group" id="legend"></div>
@@ -715,8 +724,8 @@
 
     <section class="lower">
       <article class="panel">
-        <h2>任务类型分布</h2>
-        <p class="panel-sub">按当前回放范围统计各类任务的 Token 体量和 session 数量。</p>
+        <h2>项目消耗分布</h2>
+        <p class="panel-sub">按项目聚合，判断这段时间 Token 主要花在哪些项目上。</p>
         <div class="bars" id="taskBars"></div>
       </article>
       <article class="panel">
@@ -737,6 +746,7 @@
       fromDate: document.querySelector("#fromDate"),
       toDate: document.querySelector("#toDate"),
       sortSelect: document.querySelector("#sortSelect"),
+      styleSelect: document.querySelector("#styleSelect"),
       playBtn: document.querySelector("#playBtn"),
       speedBtn: document.querySelector("#speedBtn"),
       progressInput: document.querySelector("#progressInput"),
@@ -744,8 +754,7 @@
       exportBtn: document.querySelector("#exportBtn"),
       timelineMeta: document.querySelector("#timelineMeta"),
       timelineBoard: document.querySelector("#timelineBoard"),
-      lanes: document.querySelector("#lanes"),
-      axis: document.querySelector("#axis"),
+      timelineStream: document.querySelector("#timelineStream"),
       legend: document.querySelector("#legend"),
       currentCard: document.querySelector("#currentCard"),
       timeline: document.querySelector("#timeline"),
@@ -753,6 +762,7 @@
       summaryInsight: document.querySelector("#summaryInsight"),
       summaryRows: document.querySelector("#summaryRows")
     };
+    document.documentElement.dataset.replayStyle = els.styleSelect.value;
 
     const sourceLabels = { official_plus: "官方 Plus", relay: "中转站", unknown: "未知" };
     const sourceColors = { official_plus: "var(--official)", relay: "var(--relay)", unknown: "var(--unknown)" };
@@ -986,8 +996,12 @@
         summary.tasks[event.task.id] = summary.tasks[event.task.id] || { ...event.task, totalTokens: 0, sessions: 0 };
         summary.tasks[event.task.id].totalTokens += event.totalTokens;
         summary.tasks[event.task.id].sessions += 1;
+        const projectKey = event.projectName || "未识别项目";
+        summary.projects[projectKey] = summary.projects[projectKey] || { label: projectKey, totalTokens: 0, sessions: 0 };
+        summary.projects[projectKey].totalTokens += event.totalTokens;
+        summary.projects[projectKey].sessions += 1;
         return summary;
-      }, { totalTokens: 0, activeTokens: 0, cachedInputTokens: 0, inputTokens: 0, outputTokens: 0, sessions: 0, sources: {}, tasks: {} });
+      }, { totalTokens: 0, activeTokens: 0, cachedInputTokens: 0, inputTokens: 0, outputTokens: 0, sessions: 0, sources: {}, tasks: {}, projects: {} });
     }
     function sortedEventsForList() {
       const mode = els.sortSelect.value;
@@ -1015,40 +1029,23 @@
     }
     function renderTimeline(summary) {
       const active = events[activeIndex];
-      const minTime = Math.min(...events.map(event => new Date(event.timestamp).getTime()), Date.now());
-      const maxTime = Math.max(...events.map(event => new Date(event.timestamp).getTime()), minTime + 1);
-      const totalSpan = Math.max(maxTime - minTime, 1);
       const maxTokens = Math.max(...events.map(event => event.totalTokens), 1);
-      const usedTasks = taskTypes
-        .map(type => ({ ...type, count: events.filter(event => event.task.id === type.id).length }))
-        .filter(type => type.count || type.id === "other")
-        .sort((a, b) => (b.count > 0) - (a.count > 0) || b.count - a.count || a.priority - b.priority);
-      const lanes = usedTasks.filter(type => type.count).length ? usedTasks.filter(type => type.count) : [taskMap.other];
-      els.lanes.style.setProperty("--lane-count", lanes.length);
-      els.lanes.innerHTML = lanes.map(type => {
-        const laneEvents = events.filter(event => event.task.id === type.id);
+      els.timelineStream.innerHTML = events.length ? events.map((event, index) => {
+        const size = Math.max(12, Math.min(24, 12 + Math.sqrt(event.totalTokens / maxTokens) * 12));
+        const title = `${event.task.label} · ${event.projectName || "未识别项目"} 正在运行`;
+        const cls = index === activeIndex ? "active" : index < activeIndex ? "past" : "";
         return `
-          <div class="lane">
-            <div class="lane-label" title="${escapeHtml(type.label)}">${escapeHtml(type.label)}</div>
-            <div class="lane-track">
-              ${laneEvents.map(event => {
-                const index = events.indexOf(event);
-                const x = events.length <= 1 ? 50 : 3 + ((new Date(event.timestamp).getTime() - minTime) / totalSpan) * 94;
-                const size = Math.max(12, Math.min(34, 12 + Math.sqrt(event.totalTokens / maxTokens) * 22));
-                const cls = index === activeIndex ? "active" : index < activeIndex ? "past" : "";
-                return `<button class="node ${cls}" data-index="${index}" title="${escapeHtml(event.timestamp.slice(0, 16).replace("T", " "))} / ${escapeHtml(event.task.label)} / ${formatToken(event.totalTokens)}" style="--x:${x}%;--size:${size}px;--task:${event.task.color};--source:${sourceColors[event.source] || sourceColors.unknown}" type="button"></button>`;
-              }).join("")}
-            </div>
-          </div>
+          <button class="replay-event ${cls}" data-index="${index}" type="button">
+            <span class="time">${escapeHtml(event.timestamp.slice(5, 16).replace("T", " "))}</span>
+            <span class="node ${cls}" style="--size:${size}px;--task:${event.task.color};--source:${sourceColors[event.source] || sourceColors.unknown}" aria-hidden="true"></span>
+            <span class="event-main">
+              <span class="event-title">${escapeHtml(title)}</span>
+              <span class="event-sub">${escapeHtml(event.title)} / ${sourceLabels[event.source] || "未知"} / ${escapeHtml(event.model)}</span>
+            </span>
+            <span class="event-value">${formatToken(event.totalTokens)}</span>
+          </button>
         `;
-      }).join("") || `<div class="empty">当前范围没有可回放的 usage 记录。</div>`;
-      const progress = events.length ? activeIndex / Math.max(events.length - 1, 1) : 0;
-      els.timelineBoard.style.setProperty("--progress", String(progress));
-      els.axis.innerHTML = events.length ? [
-        new Date(minTime).toISOString().slice(5, 10),
-        active ? active.timestamp.slice(5, 16).replace("T", " ") : "",
-        new Date(maxTime).toISOString().slice(5, 10)
-      ].map(item => `<span>${escapeHtml(item)}</span>`).join("") : "";
+      }).join("") : `<div class="empty">当前范围没有可回放的 usage 记录。</div>`;
       const { from, to } = getRangeBounds(rawRecords);
       els.timelineMeta.innerHTML = `
         <span class="badge">${escapeHtml(from)} 至 ${escapeHtml(to)}</span>
@@ -1068,10 +1065,10 @@
       }
       els.currentCard.innerHTML = `
         <div class="current-kicker">
-          <span>当前 session</span>
+          <span>当前节点</span>
           <span>${activeIndex + 1} / ${events.length}</span>
         </div>
-        <h3>${escapeHtml(event.title)}</h3>
+        <h3>${escapeHtml(event.task.label)} · ${escapeHtml(event.projectName || "未识别项目")}</h3>
         <div class="badges">
           <span class="badge">${escapeHtml(event.timestamp.replace("T", " ").slice(0, 16))}</span>
           <span class="badge ${event.source}">${sourceLabels[event.source] || "未知"}</span>
@@ -1089,6 +1086,7 @@
           <div class="row"><span>output</span><strong>${formatToken(event.outputTokens)}</strong></div>
           <div class="row"><span>records</span><strong>${formatInt(event.records)}</strong></div>
           <div class="row"><span>project</span><strong title="${escapeHtml(event.projectPath || event.projectName)}">${escapeHtml(event.projectName || "未识别项目")}</strong></div>
+          <div class="row"><span>title</span><strong title="${escapeHtml(event.title)}">${escapeHtml(event.title.slice(0, 42))}</strong></div>
           <div class="row"><span>session id</span><strong>${escapeHtml(event.sessionId.slice(0, 10))}...</strong></div>
         </div>
       `;
@@ -1108,25 +1106,28 @@
       }).join("") || `<div class="empty">暂无事件。请回到主看板导入 sessions 文件夹。</div>`;
     }
     function renderLower(summary) {
+      const projects = Object.values(summary.projects).sort((a, b) => b.totalTokens - a.totalTokens);
       const tasks = Object.values(summary.tasks).sort((a, b) => b.totalTokens - a.totalTokens);
-      const max = Math.max(...tasks.map(task => task.totalTokens), 1);
-      els.taskBars.innerHTML = tasks.map(task => `
+      const max = Math.max(...projects.map(project => project.totalTokens), 1);
+      els.taskBars.innerHTML = projects.slice(0, 8).map(project => `
         <div class="bar">
-          <strong>${escapeHtml(task.label)}</strong>
-          <div class="track"><div class="fill" style="--w:${percent(task.totalTokens, max)}%;--color:${task.color}"></div></div>
-          <span>${formatToken(task.totalTokens)}</span>
+          <strong>${escapeHtml(project.label)}</strong>
+          <div class="track"><div class="fill" style="--w:${percent(project.totalTokens, max)}%;--color:var(--active)"></div></div>
+          <span>${formatToken(project.totalTokens)}</span>
         </div>
-      `).join("") || `<div class="empty">暂无任务类型。</div>`;
+      `).join("") || `<div class="empty">暂无项目统计。</div>`;
       const peak = events.reduce((best, event) => event.totalTokens > (best?.totalTokens || 0) ? event : best, null);
       const topTask = tasks[0];
+      const topProject = projects[0];
       const relayShare = percent(summary.sources.relay || 0, summary.totalTokens);
       els.summaryInsight.innerHTML = `
         <div class="insight">
-          <strong>${topTask ? `${topTask.label} 是主要工作类型` : "暂无可总结的回放数据"}</strong>
-          <p>${peak ? `峰值 session 出现在 ${peak.timestamp.slice(0, 16).replace("T", " ")}，消耗 ${formatToken(peak.totalTokens)}。当前范围中转站占比 ${relayShare}%，输出 Token 为 ${formatToken(summary.outputTokens)}。` : "导入 sessions 或 usage-index 后，这里会生成本段协作的结构化总结。"}</p>
+          <strong>${topProject ? `${topProject.label} 是主要消耗项目` : "暂无可总结的回放数据"}</strong>
+          <p>${peak ? `峰值节点是 ${peak.task.label} / ${peak.projectName || "未识别项目"}，消耗 ${formatToken(peak.totalTokens)}。当前范围中转站占比 ${relayShare}%，输出 Token 为 ${formatToken(summary.outputTokens)}。` : "导入 sessions 或 usage-index 后，这里会生成本段协作的结构化总结。"}</p>
         </div>
       `;
       els.summaryRows.innerHTML = `
+        <div class="row"><span>主要项目</span><strong>${topProject ? topProject.label : "暂无"}</strong></div>
         <div class="row"><span>主要任务类型</span><strong>${topTask ? topTask.label : "暂无"}</strong></div>
         <div class="row"><span>最高消耗 session</span><strong>${peak ? `${peak.date} / ${formatToken(peak.totalTokens)}` : "暂无"}</strong></div>
         <div class="row"><span>中转站占比</span><strong>${relayShare}%</strong></div>
@@ -1197,6 +1198,10 @@
     els.fromDate.addEventListener("change", () => { activeIndex = 0; render(); });
     els.toDate.addEventListener("change", () => { activeIndex = 0; render(); });
     els.sortSelect.addEventListener("change", renderEventList);
+    els.styleSelect.addEventListener("change", () => {
+      document.documentElement.dataset.replayStyle = els.styleSelect.value;
+      render();
+    });
     els.exportBtn.addEventListener("click", exportMarkdown);
     document.addEventListener("click", event => {
       const button = event.target.closest("[data-index]");
@@ -1213,7 +1218,7 @@
       render();
     }).catch(error => {
       els.sourceText.textContent = "数据加载失败";
-      els.lanes.innerHTML = `<div class="empty">${escapeHtml(error.message || "无法读取数据，请回到主看板导入。")}</div>`;
+      els.timelineStream.innerHTML = `<div class="empty">${escapeHtml(error.message || "无法读取数据，请回到主看板导入。")}</div>`;
     });
   </script>
 </body>

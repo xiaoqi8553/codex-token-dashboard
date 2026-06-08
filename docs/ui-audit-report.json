@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-04T07:22:44.274Z",
+  "generatedAt": "2026-06-08T09:13:18.114Z",
   "baseUrl": "http://127.0.0.1:8787",
   "screenshotsDir": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current",
   "pages": [
@@ -110,7 +110,7 @@
         "charts": [
           {
             "selector": ".task-layout",
-            "height": 723.875,
+            "height": 520,
             "hasGraphic": true,
             "hasEmpty": true
           }
@@ -186,7 +186,7 @@
         "charts": [
           {
             "selector": ".timeline-board",
-            "height": 776.5625,
+            "height": 704.78125,
             "hasGraphic": true,
             "hasEmpty": false
           }
@@ -196,8 +196,8 @@
         "activeNav": "",
         "replay": {
           "hasTimeline": true,
-          "nodeCount": 16,
-          "sideWidth": 430,
+          "nodeCount": 21,
+          "sideWidth": 380,
           "hasGlow": false,
           "hasControls": true
         }
@@ -310,7 +310,7 @@
         "charts": [
           {
             "selector": ".task-layout",
-            "height": 723.875,
+            "height": 520,
             "hasGraphic": true,
             "hasEmpty": true
           }
@@ -379,14 +379,14 @@
       "metrics": {
         "scrollWidth": 1366,
         "clientWidth": 1366,
-        "headerHeight": 90.796875,
-        "occupiedHeight": 90.796875,
+        "headerHeight": 117.640625,
+        "occupiedHeight": 117.640625,
         "viewportHeight": 768,
         "filtersVisible": false,
         "charts": [
           {
             "selector": ".timeline-board",
-            "height": 756.265625,
+            "height": 704.78125,
             "hasGraphic": true,
             "hasEmpty": false
           }
@@ -396,8 +396,8 @@
         "activeNav": "",
         "replay": {
           "hasTimeline": true,
-          "nodeCount": 16,
-          "sideWidth": 430,
+          "nodeCount": 21,
+          "sideWidth": 380,
           "hasGlow": false,
           "hasControls": true
         }
@@ -612,15 +612,7 @@
       "width": 390,
       "height": 844,
       "screenshot": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current\\work-replay-mobile.png",
-      "warnings": [
-        {
-          "code": "mobile-buttons-crowded",
-          "message": "移动端多个按钮过窄或过矮",
-          "detail": {
-            "count": 10
-          }
-        }
-      ],
+      "warnings": [],
       "failures": [],
       "metrics": {
         "scrollWidth": 390,
@@ -632,7 +624,7 @@
         "charts": [
           {
             "selector": ".timeline-board",
-            "height": 382.84375,
+            "height": 823.46875,
             "hasGraphic": true,
             "hasEmpty": false
           }
@@ -642,7 +634,7 @@
         "activeNav": "",
         "replay": {
           "hasTimeline": true,
-          "nodeCount": 16,
+          "nodeCount": 21,
           "sideWidth": 374,
           "hasGlow": false,
           "hasControls": true

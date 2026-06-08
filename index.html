@@ -1533,7 +1533,15 @@
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 10px;
-      align-items: start;
+      align-items: stretch;
+    }
+
+    .task-layout > .panel {
+      height: 520px;
+      min-height: 520px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
     }
 
     .task-type-grid {
@@ -1549,6 +1557,11 @@
     .task-distribution-panel {
       align-content: start;
       grid-template-rows: auto auto;
+    }
+
+    .task-distribution-panel .task-type-grid {
+      overflow: auto;
+      padding-right: 2px;
     }
 
     .task-type-grid.compact {
@@ -1635,8 +1648,10 @@
     }
 
     .task-sample-wrap {
-      max-height: 520px;
+      max-height: none;
+      flex: 1;
       overflow-x: hidden;
+      overflow-y: auto;
     }
 
     .page-title {
@@ -1890,6 +1905,7 @@
       .header { grid-template-columns: 1fr; align-items: start; }
       .toolbar { justify-content: start; }
       .charts, .content-grid, .task-layout, .day-detail-grid, .settings-grid { grid-template-columns: 1fr; }
+      .task-layout > .panel { height: auto; min-height: 0; }
       .metrics, .today-status { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .calendar-stats, .task-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .task-type-grid, .project-list { grid-template-columns: 1fr; }
@@ -2247,6 +2263,9 @@
       taskOverrides: {},
       locationLabel: localStorage.getItem("codexTokenLocationLabel") || "",
       weatherLabel: localStorage.getItem("codexTokenWeatherLabel") || "",
+      locationLat: localStorage.getItem("codexTokenLocationLat") || "",
+      locationLng: localStorage.getItem("codexTokenLocationLng") || "",
+      weatherUpdatedAt: localStorage.getItem("codexTokenWeatherUpdatedAt") || "",
       topLimit: 10,
       data: null,
       records: [],
@@ -3349,6 +3368,7 @@
           try {
             setLoading(true);
             await loadDemoData("示例数据已重新加载。");
+            refreshWeatherFromSavedLocation({ silent: true, force: true });
           } catch (error) {
             setStatus("示例数据加载失败，你可以手动导入 usage-index.json 或脱敏快照。", "error");
           } finally {
@@ -3363,6 +3383,7 @@
           try {
             setLoading(true);
             await refreshSessionsDirectoryHandle("sessions 文件夹已刷新：");
+            refreshWeatherFromSavedLocation({ silent: true, force: true });
           } catch (error) {
             setStatus(error.message || "sessions 文件夹刷新失败，请重新选择文件夹。", "error");
           } finally {
@@ -3378,6 +3399,7 @@
         } else {
           setStatus("已重新应用当前导入数据。");
         }
+        refreshWeatherFromSavedLocation({ silent: true, force: true });
         return;
       }
       setLoading(true);
@@ -3397,6 +3419,7 @@
         renderModelOptions(payload.models || []);
         render(payload);
         setStatus(`扫描完成：${payload.scanMs ?? 0} ms，更新于 ${formatDateTime(payload.updatedAt)}。`);
+        refreshWeatherFromSavedLocation({ silent: true, force: true });
       } catch (error) {
         await enterStaticMode(error.message || "本地 API 不可用");
       } finally {
@@ -4208,7 +4231,7 @@
                 <h2>设置 / 关于</h2>
                 <p class="muted">这个页面说明当前运行方式、隐私边界和开源展示口径。</p>
               </div>
-              <span class="badge">版本 0.5.2</span>
+              <span class="badge">版本 0.5.3</span>
             </div>
             <div class="settings-grid">
               <div class="settings-card">
@@ -4600,7 +4623,7 @@
       const summary = summarize(safeRecords.map(record => ({ ...record, activeTokens: activeTokens(record), uncachedInputTokens: uncachedInputTokens(record), hitRate: cacheHitRateOf(record) })));
       return {
         snapshotVersion: 1,
-        appVersion: "0.5.2",
+        appVersion: "0.5.3",
         generatedAt: new Date().toISOString(),
         privacy: {
           anonymized: true,
@@ -5061,6 +5084,32 @@
       return formatLocationName(payload.address || {});
     }
 
+    async function refreshWeatherFromSavedLocation(options = {}) {
+      if (!state.locationLat || !state.locationLng) return false;
+      const force = Boolean(options.force);
+      const last = state.weatherUpdatedAt ? new Date(state.weatherUpdatedAt).getTime() : 0;
+      const stale = !last || Date.now() - last > 60 * 60 * 1000 || new Date(state.weatherUpdatedAt).toDateString() !== new Date().toDateString();
+      if (!force && !stale) return false;
+      try {
+        if (!options.silent) setStatus("正在刷新天气...");
+        state.weatherLabel = "天气：刷新中";
+        if (state.data) render(state.data);
+        state.weatherLabel = await fetchWeather(state.locationLat, state.locationLng);
+        state.weatherUpdatedAt = new Date().toISOString();
+        localStorage.setItem("codexTokenWeatherLabel", state.weatherLabel);
+        localStorage.setItem("codexTokenWeatherUpdatedAt", state.weatherUpdatedAt);
+        if (state.data) render(state.data);
+        if (!options.silent) setStatus("天气已随 Token 用量刷新。");
+        return true;
+      } catch (error) {
+        state.weatherLabel = state.weatherLabel === "天气：刷新中" ? "天气：获取失败" : state.weatherLabel;
+        localStorage.setItem("codexTokenWeatherLabel", state.weatherLabel);
+        if (!options.silent) setStatus(error.message || "天气刷新失败。", "error");
+        if (state.data) render(state.data);
+        return false;
+      }
+    }
+
     async function requestLocation() {
       if (!navigator.geolocation) {
         setStatus("当前浏览器不支持定位能力。", "error");
@@ -5074,6 +5123,10 @@
       navigator.geolocation.getCurrentPosition(async position => {
         const lat = position.coords.latitude.toFixed(2);
         const lng = position.coords.longitude.toFixed(2);
+        state.locationLat = lat;
+        state.locationLng = lng;
+        localStorage.setItem("codexTokenLocationLat", lat);
+        localStorage.setItem("codexTokenLocationLng", lng);
         state.locationLabel = "定位：城市读取中";
         localStorage.setItem("codexTokenLocationLabel", state.locationLabel);
         state.weatherLabel = "天气：读取中";
@@ -5090,8 +5143,10 @@
             state.locationLabel = "定位：已授权";
           }
           state.weatherLabel = weatherLabel.status === "fulfilled" ? weatherLabel.value : "天气：获取失败";
+          state.weatherUpdatedAt = new Date().toISOString();
           localStorage.setItem("codexTokenLocationLabel", state.locationLabel);
           localStorage.setItem("codexTokenWeatherLabel", state.weatherLabel);
+          localStorage.setItem("codexTokenWeatherUpdatedAt", state.weatherUpdatedAt);
           if (weatherLabel.status === "rejected") throw weatherLabel.reason;
           setStatus("定位和天气已更新。城市来自 OpenStreetMap，天气来自 Open-Meteo，仅在点击授权后请求。");
         } catch (error) {
