@@ -1,5 +1,15 @@
 # 更新日志
 
+## 0.5.9 - 2026-06-08
+
+- 修复 GitHub Pages / 浏览器导入模式和本地 Node 模式的来源识别不一致问题。
+- 浏览器导入 `.codex` 根目录时，现在会读取 `logs_2.sqlite` 中的真实请求端点证据，用 turnId 区分 `right.codes` 中转站和 `chatgpt.com/openai.com` 官方 Plus。
+- 新增会话级来源证据：当日志中出现 `conversation.id + provider_name=rightcode` 时，会把该会话归为中转站；真实 turn 级 endpoint 证据优先级更高。
+- 修复 `sessionId / model` 被解析成 `[object Object]` 的问题，避免影响会话、项目和来源聚合。
+- 浏览器端 sessions 导入现在和本地 Node 一样优先使用 `last_token_usage`，缺少时再按累计 usage 做差分，减少重复累计。
+- 本地索引版本提升到 12，浏览器静态解析版本提升到 7，旧缓存会重新生成。
+- 当前本地日志可证明的中转站用量会按证据重新计算；如果要和 RightCode 后台账单完全一致，仍建议导入中转站 CSV / JSON。
+
 ## 0.5.8 - 2026-06-08
 
 - 修复 0.5.7 / 0.5.6 来源识别在“全官方、全中转站、全 unknown”之间来回摆动的问题。

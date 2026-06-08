@@ -9,7 +9,7 @@ const ROOT = __dirname;
 const DATA_DIR = path.join(ROOT, "data");
 const IMPORT_DIR = path.join(DATA_DIR, "imports");
 const INDEX_PATH = path.join(DATA_DIR, "usage-index.json");
-const INDEX_VERSION = 10;
+const INDEX_VERSION = 12;
 const SUPPORTED_SESSION_EXTENSIONS = new Set([".jsonl", ".json", ".log", ".txt"]);
 
 loadDotEnv();
@@ -221,7 +221,7 @@ function estimateTokens(text) {
 
 function normalizeSource(provider, explicitSource = "") {
   const values = [explicitSource, provider]
-    .map(value => String(value || "").trim().toLowerCase())
+    .map(value => scalarText(value).trim().toLowerCase())
     .filter(value => value && value !== "unknown");
   if (values.some(value => (
     ["relay", "relay_import", "rightcode", "right_code", "right-code", "proxy", "中转站"].includes(value) ||
@@ -235,6 +235,27 @@ function normalizeSource(provider, explicitSource = "") {
   if (values.some(value => value === "custom")) return "official_plus";
   if (values.some(value => ["official_plus", "official", "plus", "openai", "chatgpt"].includes(value))) return "official_plus";
   return "unknown";
+}
+
+function scalarText(value) {
+  if (value == null) return "";
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return String(value);
+  if (Array.isArray(value)) return scalarText(value.find(item => scalarText(item)));
+  if (typeof value === "object") {
+    for (const key of ["id", "session_id", "turn_id", "model", "slug", "name", "value"]) {
+      const text = scalarText(value[key]);
+      if (text) return text;
+    }
+  }
+  return "";
+}
+
+function firstScalar(...values) {
+  for (const value of values) {
+    const text = scalarText(value).trim();
+    if (text) return text;
+  }
+  return "";
 }
 
 let endpointEvidenceCache;
@@ -260,7 +281,11 @@ function hasRightCodeConfig() {
 
 function loadEndpointEvidence() {
   if (endpointEvidenceCache) return endpointEvidenceCache;
-  endpointEvidenceCache = { byTurnId: {}, stats: { rightCodeConfig: hasRightCodeConfig(), turnRules: 0, relayTurns: 0, officialTurns: 0 } };
+  endpointEvidenceCache = {
+    byTurnId: {},
+    bySessionId: {},
+    stats: { rightCodeConfig: hasRightCodeConfig(), turnRules: 0, relayTurns: 0, officialTurns: 0, sessionRules: 0, relaySessions: 0, officialSessions: 0 }
+  };
 
   const dbPath = path.join(os.homedir(), ".codex", "logs_2.sqlite");
   if (!fs.existsSync(dbPath)) return endpointEvidenceCache;
@@ -276,23 +301,37 @@ from logs
 where feedback_log_body like '%turn.id=%'
    or feedback_log_body like '%turn_id=%'
    or feedback_log_body like '%submission.id=%'
+   or (feedback_log_body like '%conversation.id=%' and feedback_log_body like '%provider_name=%')
 """).fetchall()
 rules = {}
+session_rules = {}
 for (body,) in rows:
     text = body or ""
     lower = text.lower()
     turn_ids = set(re.findall(r'turn\\.id=([0-9a-f-]{36})', text))
     turn_ids.update(re.findall(r'turn_id=([0-9a-f-]{36})', text))
     turn_ids.update(re.findall(r'submission\\.id="([0-9a-f-]{36})"', text))
+    session_ids = set(re.findall(r'conversation\\.id=([0-9a-f-]{36})', text))
+    if session_ids:
+        provider_relay = "provider_name=rightcode" in lower
+        provider_official = "provider_name=openai" in lower or "provider_name=chatgpt" in lower
+        if provider_relay or provider_official:
+            for session_id in session_ids:
+                entry = session_rules.setdefault(session_id, {"relayHits": 0, "officialHits": 0})
+                if provider_relay:
+                    entry["relayHits"] += 1
+                if provider_official:
+                    entry["officialHits"] += 1
     if not turn_ids:
         continue
-    is_relay = "right.codes" in lower or "right code" in lower or "rightcode" in lower
-    is_official = (
-        "api.openai.com" in lower or
-        "chatgpt.com" in lower or
-        "ab.chatgpt.com" in lower or
-        "openai.com" in lower
-    )
+    hosts = []
+    for match in re.findall(r'''POST to\\s+(https?://[^\\s:{"']+)''', text):
+        try:
+            hosts.append(match.split("://", 1)[1].split("/", 1)[0].lower())
+        except Exception:
+            pass
+    is_relay = any(host == "right.codes" or host.endswith(".right.codes") for host in hosts)
+    is_official = any(host == "chatgpt.com" or host.endswith(".chatgpt.com") or host == "openai.com" or host.endswith(".openai.com") for host in hosts)
     if not is_relay and not is_official:
         continue
     for turn_id in turn_ids:
@@ -301,14 +340,16 @@ for (body,) in rows:
             entry["relayHits"] += 1
         if is_official:
             entry["officialHits"] += 1
-print(json.dumps(rules))
+print(json.dumps({"turnRules": rules, "sessionRules": session_rules}))
 con.close()
 `;
 
   try {
     const result = childProcess.spawnSync("python", ["-c", script], { encoding: "utf8", timeout: 10000, maxBuffer: 8 * 1024 * 1024 });
     if (result.status !== 0 || !result.stdout) return endpointEvidenceCache;
-    const rules = JSON.parse(result.stdout);
+    const parsed = JSON.parse(result.stdout);
+    const rules = parsed.turnRules || parsed;
+    const sessionRules = parsed.sessionRules || {};
     for (const [turnId, counts] of Object.entries(rules)) {
       const relayHits = Number(counts.relayHits || 0);
       const officialHits = Number(counts.officialHits || 0);
@@ -321,6 +362,18 @@ con.close()
       }
     }
     endpointEvidenceCache.stats.turnRules = Object.keys(endpointEvidenceCache.byTurnId).length;
+    for (const [sessionId, counts] of Object.entries(sessionRules)) {
+      const relayHits = Number(counts.relayHits || 0);
+      const officialHits = Number(counts.officialHits || 0);
+      if (relayHits > 0) {
+        endpointEvidenceCache.bySessionId[sessionId] = { source: "relay", rule: "auto:rightcode-session-provider", relayHits, officialHits };
+        endpointEvidenceCache.stats.relaySessions += 1;
+      } else if (officialHits > 0) {
+        endpointEvidenceCache.bySessionId[sessionId] = { source: "official_plus", rule: "auto:official-session-provider", relayHits, officialHits };
+        endpointEvidenceCache.stats.officialSessions += 1;
+      }
+    }
+    endpointEvidenceCache.stats.sessionRules = Object.keys(endpointEvidenceCache.bySessionId).length;
   } catch {
     return endpointEvidenceCache;
   }
@@ -333,6 +386,10 @@ function applyAutomaticSourceEvidence(record) {
   const evidence = record.turnId ? loadEndpointEvidence().byTurnId[record.turnId] : null;
   if (evidence) {
     return { ...record, source: evidence.source, sourceRule: evidence.rule };
+  }
+  const sessionEvidence = record.sessionId ? loadEndpointEvidence().bySessionId[record.sessionId] : null;
+  if (sessionEvidence) {
+    return { ...record, source: sessionEvidence.source, sourceRule: sessionEvidence.rule };
   }
   if (record.provider === "custom" && record.source === "unknown") {
     return { ...record, source: "official_plus", sourceRule: "fallback:custom-without-relay-evidence" };
@@ -490,10 +547,10 @@ function createRecord(raw) {
     id: raw.id,
     timestamp,
     date: toDate(timestamp),
-    sessionId: String(raw.sessionId || "unknown"),
-    model: normalizeModel(raw.model),
+    sessionId: firstScalar(raw.sessionId, "unknown"),
+    model: normalizeModel(firstScalar(raw.model)),
     source,
-    provider: String(raw.provider || source || "unknown"),
+    provider: firstScalar(raw.provider, source, "unknown"),
     inputTokens,
     cachedInputTokens,
     outputTokens,
@@ -502,18 +559,19 @@ function createRecord(raw) {
     reasoningOutputTokens: toNumber(raw.reasoningOutputTokens),
     estimated: Boolean(raw.estimated),
     estimateReason: raw.estimateReason || "",
-    requestId: raw.requestId || "",
-    turnId: raw.turnId || "",
+    requestId: firstScalar(raw.requestId),
+    turnId: firstScalar(raw.turnId),
     filePath: raw.filePath || "",
     relativePath: raw.relativePath || "",
     projectName: project.projectName,
     projectPath: project.projectPath,
     projectSource: project.projectSource,
     lineNumber: raw.lineNumber || 0,
-    sessionTitle: raw.sessionTitle || raw.sessionId || "unknown",
+    sessionTitle: firstScalar(raw.sessionTitle, raw.sessionId, "unknown"),
     detailText: raw.detailText || "",
     imported: Boolean(raw.imported),
-    importBatch: raw.importBatch || ""
+    importBatch: raw.importBatch || "",
+    sourceRule: firstScalar(raw.sourceRule)
   };
   return applyAutomaticSourceEvidence(record);
 }
@@ -540,12 +598,12 @@ function parseSessionFile(filePath) {
   function addUsage(usage, item, lineNumber, fallbackText = "") {
     const payload = getPayloadObject(item);
     const timestamp = item?.timestamp || payload.timestamp || meta.timestamp || "";
-    const sessionId = payload.session_id || payload.sessionId || payload.id || meta.sessionId || path.basename(filePath);
-    const model = payload.model || payload.model_name || meta.model || "";
-    const provider = payload.model_provider || payload.provider || meta.provider || "";
-    const source = payload.source || payload.thread_source || meta.source || "";
-    const requestId = payload.request_id || payload.requestId || payload.id || "";
-    const turnId = payload.turn_id || payload.turnId || meta.turnId || "";
+    const sessionId = firstScalar(payload.session_id, payload.sessionId, payload.id, meta.sessionId, path.basename(filePath));
+    const model = firstScalar(payload.model, payload.model_name, meta.model);
+    const provider = firstScalar(payload.model_provider, payload.provider, meta.provider);
+    const source = firstScalar(payload.source, payload.thread_source, meta.source);
+    const requestId = firstScalar(payload.request_id, payload.requestId, payload.id);
+    const turnId = firstScalar(payload.turn_id, payload.turnId, meta.turnId);
     let tokenSet = usage;
 
     // Codex token_count records contain cumulative totals plus last_token_usage.
@@ -606,13 +664,13 @@ function parseSessionFile(filePath) {
     const payload = getPayloadObject(item);
 
     if (item.type === "session_meta" || item.type === "turn_context" || payload.model_provider || payload.thread_source || payload.model) {
-      meta.sessionId = payload.id || payload.session_id || meta.sessionId;
-      meta.provider = payload.model_provider || payload.provider || meta.provider;
-      meta.source = payload.source || payload.thread_source || meta.source;
-      meta.model = payload.model || payload.model_name || meta.model;
-      meta.timestamp = payload.timestamp || item.timestamp || meta.timestamp;
-      meta.cwd = payload.cwd || meta.cwd;
-      meta.turnId = payload.turn_id || payload.turnId || meta.turnId;
+      meta.sessionId = firstScalar(payload.id, payload.session_id, meta.sessionId);
+      meta.provider = firstScalar(payload.model_provider, payload.provider, meta.provider);
+      meta.source = firstScalar(payload.source, payload.thread_source, meta.source);
+      meta.model = firstScalar(payload.model, payload.model_name, meta.model);
+      meta.timestamp = firstScalar(payload.timestamp, item.timestamp, meta.timestamp);
+      meta.cwd = firstScalar(payload.cwd, meta.cwd);
+      meta.turnId = firstScalar(payload.turn_id, payload.turnId, meta.turnId);
     }
 
     if (item.type === "response_item" && payload.type === "message" && payload.role === "user") {

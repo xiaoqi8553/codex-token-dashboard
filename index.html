@@ -2424,7 +2424,7 @@
       store: "handles",
       sessionsKey: "sessionsDirectory"
     };
-    const staticParserVersion = 4;
+    const staticParserVersion = 7;
 
     function todayString(offsetDays = 0) {
       const date = new Date();
@@ -2780,7 +2780,7 @@
 
     function normalizeSource(provider, explicitSource = "") {
       const values = [explicitSource, provider]
-        .map(value => String(value || "").trim().toLowerCase())
+        .map(value => scalarText(value).trim().toLowerCase())
         .filter(value => value && value !== "unknown");
       if (values.some(value => (
         ["relay", "relay_import", "rightcode", "right_code", "right-code", "proxy", "中转站"].includes(value) ||
@@ -2796,23 +2796,44 @@
       return "unknown";
     }
 
+    function scalarText(value) {
+      if (value == null) return "";
+      if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return String(value);
+      if (Array.isArray(value)) return scalarText(value.find(item => scalarText(item)));
+      if (typeof value === "object") {
+        for (const key of ["id", "session_id", "turn_id", "model", "slug", "name", "value"]) {
+          const text = scalarText(value[key]);
+          if (text) return text;
+        }
+      }
+      return "";
+    }
+
+    function firstScalar(...values) {
+      for (const value of values) {
+        const text = scalarText(value).trim();
+        if (text) return text;
+      }
+      return "";
+    }
+
     function normalizeRecord(raw, fallback = {}) {
       const inputTokens = toNumber(raw.inputTokens ?? raw.input_tokens ?? raw.prompt_tokens ?? raw.input);
       const cachedInputTokens = toNumber(raw.cachedInputTokens ?? raw.cached_input_tokens ?? raw.cached_tokens ?? raw.cached);
       const outputTokens = toNumber(raw.outputTokens ?? raw.output_tokens ?? raw.completion_tokens ?? raw.output);
       const totalTokens = toNumber(raw.totalTokens ?? raw.total_tokens ?? raw.tokens ?? raw.total ?? inputTokens + outputTokens);
-      const timestamp = toIso(raw.timestamp || raw.time || raw.date || raw.created_at || raw.createdAt || fallback.timestamp || new Date().toISOString());
+      const timestamp = toIso(firstScalar(raw.timestamp, raw.time, raw.date, raw.created_at, raw.createdAt, fallback.timestamp) || new Date().toISOString());
       const source = normalizeSource(raw.provider, raw.source || fallback.source);
-      const sessionId = String(raw.sessionId || raw.session_id || raw.conversation_id || raw.request_id || raw.id || fallback.sessionId || "browser-import");
+      const sessionId = firstScalar(raw.sessionId, raw.session_id, raw.conversation_id, raw.request_id, raw.id, fallback.sessionId, "browser-import");
       const project = inferProject(raw, fallback);
       return {
         id: String(raw.id || simpleHash([timestamp, source, sessionId, raw.requestId || raw.request_id || "", inputTokens, cachedInputTokens, outputTokens, totalTokens, fallback.relativePath, fallback.lineNumber].join("|"))),
         timestamp,
         date: toDate(timestamp),
         sessionId,
-        model: String(raw.model || raw.model_name || fallback.model || "unknown"),
+        model: firstScalar(raw.model, raw.model_name, fallback.model, "unknown"),
         source,
-        provider: String(raw.provider || fallback.provider || source),
+        provider: firstScalar(raw.provider, fallback.provider, source),
         inputTokens,
         cachedInputTokens,
         outputTokens,
@@ -2821,7 +2842,9 @@
         reasoningOutputTokens: toNumber(raw.reasoningOutputTokens ?? raw.reasoning_output_tokens ?? raw.reasoning_tokens),
         estimated: Boolean(raw.estimated),
         estimateReason: raw.estimateReason || raw.estimate_reason || "",
-        requestId: raw.requestId || raw.request_id || "",
+        requestId: firstScalar(raw.requestId, raw.request_id),
+        turnId: firstScalar(raw.turnId, raw.turn_id),
+        sourceRule: raw.sourceRule || raw.source_rule || "",
         filePath: "",
         relativePath: raw.relativePath || raw.relative_path || fallback.relativePath || "",
         projectName: project.projectName,
@@ -2885,7 +2908,49 @@
       const totalTokens = toNumber(chosen.total_tokens || chosen.tokens || input + output);
       const reasoning = toNumber(chosen.reasoning_output_tokens || chosen.reasoning_tokens);
       if (!input && !cached && !output && !totalTokens && !reasoning) return null;
-      return { inputTokens: input, cachedInputTokens: cached, outputTokens: output, totalTokens, reasoningOutputTokens: reasoning };
+      return {
+        inputTokens: input,
+        cachedInputTokens: cached,
+        outputTokens: output,
+        totalTokens,
+        reasoningOutputTokens: reasoning,
+        cumulativeUsage: {
+          inputTokens: toNumber(total.input_tokens || total.prompt_tokens || total.input),
+          cachedInputTokens: toNumber(total.cached_input_tokens || total.cached_tokens || total.cache_read_input_tokens),
+          outputTokens: toNumber(total.output_tokens || total.completion_tokens || total.output),
+          totalTokens: toNumber(total.total_tokens || total.tokens),
+          reasoningOutputTokens: toNumber(total.reasoning_output_tokens || total.reasoning_tokens)
+        },
+        lastUsage: last ? {
+          inputTokens: toNumber(last.input_tokens || last.prompt_tokens || last.input),
+          cachedInputTokens: toNumber(last.cached_input_tokens || last.cached_tokens || last.cache_read_input_tokens),
+          outputTokens: toNumber(last.output_tokens || last.completion_tokens || last.output),
+          totalTokens: toNumber(last.total_tokens || last.tokens),
+          reasoningOutputTokens: toNumber(last.reasoning_output_tokens || last.reasoning_tokens)
+        } : null
+      };
+    }
+
+    function selectUsageTokens(usage, meta) {
+      if (!usage) return null;
+      if (usage.lastUsage && (usage.lastUsage.totalTokens || usage.lastUsage.inputTokens || usage.lastUsage.outputTokens)) {
+        meta.previousTotal = usage.cumulativeUsage || usage;
+        return usage.lastUsage;
+      }
+      const previous = meta.previousTotal;
+      const cumulative = usage.cumulativeUsage || usage;
+      let tokenSet = usage;
+      if (previous && cumulative.totalTokens >= previous.totalTokens) {
+        tokenSet = {
+          inputTokens: Math.max(cumulative.inputTokens - previous.inputTokens, 0),
+          cachedInputTokens: Math.max(cumulative.cachedInputTokens - previous.cachedInputTokens, 0),
+          outputTokens: Math.max(cumulative.outputTokens - previous.outputTokens, 0),
+          reasoningOutputTokens: Math.max(cumulative.reasoningOutputTokens - previous.reasoningOutputTokens, 0),
+          totalTokens: Math.max(cumulative.totalTokens - previous.totalTokens, 0)
+        };
+      }
+      meta.previousTotal = cumulative;
+      return tokenSet;
     }
 
     function textFromMessagePayload(payload) {
@@ -2922,12 +2987,13 @@
       if (!item || typeof item !== "object") return;
       const payload = item.payload && typeof item.payload === "object" ? item.payload : item;
       if (item.type === "session_meta" || item.type === "turn_context" || payload.model_provider || payload.thread_source || payload.model || payload.cwd) {
-        meta.sessionId = payload.id || payload.session_id || meta.sessionId;
-        meta.provider = payload.model_provider || payload.provider || meta.provider;
-        meta.source = payload.source || payload.thread_source || meta.source;
-        meta.model = payload.model || payload.model_name || meta.model;
-        meta.timestamp = payload.timestamp || item.timestamp || meta.timestamp;
-        meta.cwd = payload.cwd || meta.cwd;
+        meta.sessionId = firstScalar(payload.id, payload.session_id, meta.sessionId);
+        meta.provider = firstScalar(payload.model_provider, payload.provider, meta.provider);
+        meta.source = firstScalar(payload.source, payload.thread_source, meta.source);
+        meta.model = firstScalar(payload.model, payload.model_name, meta.model);
+        meta.timestamp = firstScalar(payload.timestamp, item.timestamp, meta.timestamp);
+        meta.cwd = firstScalar(payload.cwd, meta.cwd);
+        meta.turnId = firstScalar(payload.turn_id, payload.turnId, meta.turnId);
       }
       if (item.type === "response_item" && payload.type === "message" && payload.role === "user") {
         considerSessionTitle(meta, textFromMessagePayload(payload));
@@ -2937,14 +3003,17 @@
       }
       const usage = usageFromObject(item);
       if (usage) {
+        const tokenSet = selectUsageTokens(usage, meta);
+        if (!tokenSet || (!tokenSet.inputTokens && !tokenSet.cachedInputTokens && !tokenSet.outputTokens && !tokenSet.totalTokens)) return;
         records.push(normalizeRecord({
-          ...usage,
-          timestamp: item.timestamp || payload.timestamp || meta.timestamp,
-          sessionId: payload.session_id || payload.sessionId || payload.id || meta.sessionId,
-          model: payload.model || payload.model_name || meta.model,
-          provider: payload.model_provider || payload.provider || meta.provider,
-          source: payload.source || payload.thread_source || meta.source,
-          requestId: payload.request_id || payload.requestId || payload.id || "",
+          ...tokenSet,
+          timestamp: firstScalar(item.timestamp, payload.timestamp, meta.timestamp),
+          sessionId: firstScalar(payload.session_id, payload.sessionId, payload.id, meta.sessionId),
+          model: firstScalar(payload.model, payload.model_name, meta.model),
+          provider: firstScalar(payload.model_provider, payload.provider, meta.provider),
+          source: firstScalar(payload.source, payload.thread_source, meta.source),
+          requestId: firstScalar(payload.request_id, payload.requestId, payload.id),
+          turnId: firstScalar(payload.turn_id, payload.turnId, meta.turnId),
           sessionTitle: meta.title,
           detailText: meta.title,
           projectPath: meta.cwd
@@ -2957,14 +3026,153 @@
       }
     }
 
+    function isSessionImportEntry(entry) {
+      const fileName = entry?.file?.name || "";
+      const relativePath = String(entry?.relativePath || entry?.file?.webkitRelativePath || fileName || "").replace(/\\/g, "/");
+      if (!/\.(jsonl|json|log|txt)$/i.test(fileName)) return false;
+      return /^rollout-/i.test(fileName) ||
+        /(^|\/)sessions\//i.test(relativePath) ||
+        /^\d{4}\//.test(relativePath);
+    }
+
+    function isEndpointEvidenceEntry(entry) {
+      const fileName = entry?.file?.name || "";
+      return /^logs(?:_\d+)?\.sqlite$/i.test(fileName);
+    }
+
+    function createSourceEvidence() {
+      return {
+        byTurnId: {},
+        bySessionId: {},
+        stats: { browserLogFiles: 0, turnRules: 0, relayTurns: 0, officialTurns: 0, sessionRules: 0, relaySessions: 0, officialSessions: 0 }
+      };
+    }
+
+    function addEndpointEvidence(evidence, turnId, source) {
+      if (!turnId || !source || !evidence) return;
+      const current = evidence.byTurnId[turnId] || { relayHits: 0, officialHits: 0 };
+      if (source === "relay") current.relayHits += 1;
+      if (source === "official_plus") current.officialHits += 1;
+      evidence.byTurnId[turnId] = current;
+    }
+
+    function addSessionProviderEvidence(evidence, sessionId, source) {
+      if (!sessionId || !source || !evidence) return;
+      const current = evidence.bySessionId[sessionId] || { relayHits: 0, officialHits: 0 };
+      if (source === "relay") current.relayHits += 1;
+      if (source === "official_plus") current.officialHits += 1;
+      evidence.bySessionId[sessionId] = current;
+    }
+
+    function scanEndpointEvidenceText(text, evidence) {
+      const chunk = String(text || "");
+      if (!chunk) return;
+      const lower = chunk.toLowerCase();
+      const sessionIds = new Set();
+      const sessionPattern = /conversation\.id=([0-9a-f-]{36})/gi;
+      let sessionMatch;
+      while ((sessionMatch = sessionPattern.exec(chunk))) sessionIds.add(sessionMatch[1]);
+      if (sessionIds.size) {
+        const sessionSource = lower.includes("provider_name=rightcode")
+          ? "relay"
+          : (lower.includes("provider_name=openai") || lower.includes("provider_name=chatgpt") ? "official_plus" : "");
+        if (sessionSource) {
+          for (const sessionId of sessionIds) addSessionProviderEvidence(evidence, sessionId, sessionSource);
+        }
+      }
+      const turnIds = new Set();
+      const turnPattern = /(?:turn\.id|turn_id|submission\.id)=["']?([0-9a-f-]{36})["']?/gi;
+      let turnMatch;
+      while ((turnMatch = turnPattern.exec(chunk))) turnIds.add(turnMatch[1]);
+      if (!turnIds.size) return;
+
+      const endpointPattern = /POST to\s+(https?:\/\/[^\s:{"']+)/gi;
+      let endpointMatch;
+      while ((endpointMatch = endpointPattern.exec(chunk))) {
+        let host = "";
+        try {
+          host = new URL(endpointMatch[1]).hostname.toLowerCase();
+        } catch {
+          host = endpointMatch[1].replace(/^https?:\/\//i, "").split("/")[0].toLowerCase();
+        }
+        const source = host === "right.codes" || host.endsWith(".right.codes")
+          ? "relay"
+          : (host === "chatgpt.com" || host.endsWith(".chatgpt.com") || host === "openai.com" || host.endsWith(".openai.com") ? "official_plus" : "");
+        if (!source) continue;
+        for (const turnId of turnIds) addEndpointEvidence(evidence, turnId, source);
+      }
+    }
+
+    async function scanEndpointEvidenceFile(entry, evidence) {
+      if (!entry?.file?.stream) return;
+      evidence.stats.browserLogFiles += 1;
+      const reader = entry.file.stream().getReader();
+      const decoder = new TextDecoder("utf-8", { fatal: false });
+      let carry = "";
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        const text = carry + decoder.decode(value, { stream: true });
+        scanEndpointEvidenceText(text, evidence);
+        carry = text.slice(-3000);
+      }
+      const tail = carry + decoder.decode();
+      scanEndpointEvidenceText(tail, evidence);
+    }
+
+    async function extractBrowserEndpointEvidence(entries) {
+      const evidence = createSourceEvidence();
+      const evidenceFiles = entries.filter(isEndpointEvidenceEntry);
+      for (const entry of evidenceFiles) {
+        await scanEndpointEvidenceFile(entry, evidence);
+      }
+      for (const [turnId, counts] of Object.entries(evidence.byTurnId)) {
+        if (counts.relayHits > 0) {
+          evidence.byTurnId[turnId] = { source: "relay", rule: "browser:rightcode-turn-endpoint", relayHits: counts.relayHits, officialHits: counts.officialHits || 0 };
+          evidence.stats.relayTurns += 1;
+        } else if (counts.officialHits > 0) {
+          evidence.byTurnId[turnId] = { source: "official_plus", rule: "browser:official-turn-endpoint", relayHits: 0, officialHits: counts.officialHits };
+          evidence.stats.officialTurns += 1;
+        }
+      }
+      evidence.stats.turnRules = Object.keys(evidence.byTurnId).length;
+      for (const [sessionId, counts] of Object.entries(evidence.bySessionId)) {
+        if (counts.relayHits > 0) {
+          evidence.bySessionId[sessionId] = { source: "relay", rule: "browser:rightcode-session-provider", relayHits: counts.relayHits, officialHits: counts.officialHits || 0 };
+          evidence.stats.relaySessions += 1;
+        } else if (counts.officialHits > 0) {
+          evidence.bySessionId[sessionId] = { source: "official_plus", rule: "browser:official-session-provider", relayHits: 0, officialHits: counts.officialHits };
+          evidence.stats.officialSessions += 1;
+        }
+      }
+      evidence.stats.sessionRules = Object.keys(evidence.bySessionId).length;
+      return evidence;
+    }
+
+    function applyBrowserSourceEvidence(record, evidence) {
+      if (record.source === "relay") return { ...record, sourceRule: record.sourceRule || "explicit:relay" };
+      const hit = record.turnId && evidence?.byTurnId ? evidence.byTurnId[record.turnId] : null;
+      if (hit) return { ...record, source: hit.source, sourceRule: hit.rule };
+      const sessionHit = record.sessionId && evidence?.bySessionId ? evidence.bySessionId[record.sessionId] : null;
+      if (sessionHit) return { ...record, source: sessionHit.source, sourceRule: sessionHit.rule };
+      if (record.provider === "custom" && record.source === "official_plus") {
+        return { ...record, sourceRule: record.sourceRule || "fallback:custom-without-relay-evidence" };
+      }
+      return record;
+    }
+
     async function collectDirectoryFiles(directoryHandle, prefix = "") {
       const files = [];
+      const skippedDirs = new Set(["cache", "plugins", ".tmp", "tmp", "node_repl", "generated_images", "attachments", "memories", "computer-use", "browser", "pets"]);
       for await (const [name, handle] of directoryHandle.entries()) {
         const relativePath = prefix ? `${prefix}/${name}` : name;
         if (handle.kind === "directory") {
+          if (!prefix && skippedDirs.has(name)) continue;
+          if (!prefix && name !== "sessions" && !/^\d{4}$/.test(name)) continue;
           files.push(...await collectDirectoryFiles(handle, relativePath));
-        } else if (/\.(jsonl|json|log|txt)$/i.test(name)) {
-          files.push({ file: await handle.getFile(), relativePath });
+        } else {
+          const entry = { file: await handle.getFile(), relativePath };
+          if (isSessionImportEntry(entry) || isEndpointEvidenceEntry(entry)) files.push(entry);
         }
       }
       return files.sort((a, b) => a.relativePath.localeCompare(b.relativePath));
@@ -3059,16 +3267,18 @@
     }
 
     async function parseSessionFiles(fileList) {
-      const files = Array.from(fileList || [])
+      const allEntries = Array.from(fileList || [])
         .map(entry => entry?.file ? entry : { file: entry, relativePath: entry?.webkitRelativePath || entry?.name || "" })
-        .filter(entry => entry.file && /\.(jsonl|json|log|txt)$/i.test(entry.file.name));
+        .filter(entry => entry.file);
+      const evidence = await extractBrowserEndpointEvidence(allEntries);
+      const files = allEntries.filter(isSessionImportEntry);
       const records = [];
       let parsedFiles = 0;
       for (const entry of files) {
         const file = entry.file;
         const text = await file.text();
         const relativePath = entry.relativePath || file.webkitRelativePath || file.name;
-        const meta = { sessionId: file.name, provider: "", source: "", model: "unknown", timestamp: new Date(file.lastModified || Date.now()).toISOString(), title: "", cwd: "" };
+        const meta = { sessionId: file.name, provider: "", source: "", model: "unknown", timestamp: new Date(file.lastModified || Date.now()).toISOString(), title: "", cwd: "", turnId: "", previousTotal: null };
         const before = records.length;
         if (/\.json$/i.test(file.name)) {
           const parsed = parseJsonLine(text);
@@ -3114,11 +3324,13 @@
         }
         parsedFiles += 1;
       }
-      return makeStaticPayload(records, {
+      const classifiedRecords = records.map(record => applyBrowserSourceEvidence(record, evidence));
+      return makeStaticPayload(classifiedRecords, {
         sourceLabel: "浏览器 sessions 导入",
         sourceType: state.sessionsDirectoryHandle ? "sessions-folder" : "sessions-files",
         sessionFiles: files.length,
-        parsedFiles
+        parsedFiles,
+        sourceEvidence: evidence.stats
       });
     }
 
@@ -3243,7 +3455,8 @@
           importFiles: options.importFiles || 0,
           reusedFiles: 0,
           parsedFiles: options.parsedFiles || 0,
-          records: normalized.length
+          records: normalized.length,
+          sourceEvidence: options.sourceEvidence || null
         },
         filters: {},
         models,
@@ -3287,7 +3500,8 @@
         generatedAt: source.generatedAt,
         sessionFiles: source.stats?.sessionFiles,
         importFiles: source.stats?.importFiles,
-        parsedFiles: source.stats?.parsedFiles
+        parsedFiles: source.stats?.parsedFiles,
+        sourceEvidence: source.stats?.sourceEvidence
       });
       payload.updatedAt = source.updatedAt;
       payload.models = Array.from(new Set(source.records.map(record => record.model || "unknown"))).sort();
@@ -4279,7 +4493,7 @@
                 <h2>设置 / 关于</h2>
                 <p class="muted">这个页面说明当前运行方式、隐私边界和开源展示口径。</p>
               </div>
-              <span class="badge">版本 0.5.8</span>
+              <span class="badge">版本 0.5.9</span>
             </div>
             <div class="settings-grid">
               <div class="settings-card">
@@ -4671,7 +4885,7 @@
       const summary = summarize(safeRecords.map(record => ({ ...record, activeTokens: activeTokens(record), uncachedInputTokens: uncachedInputTokens(record), hitRate: cacheHitRateOf(record) })));
       return {
         snapshotVersion: 1,
-        appVersion: "0.5.8",
+        appVersion: "0.5.9",
         generatedAt: new Date().toISOString(),
         privacy: {
           anonymized: true,
