@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-08T15:01:18.196Z",
+  "generatedAt": "2026-06-09T02:53:35.906Z",
   "baseUrl": "http://127.0.0.1:8787",
   "screenshotsDir": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current",
   "pages": [
@@ -42,7 +42,7 @@
           },
           {
             "selector": "#cacheTrendChart",
-            "height": 300,
+            "height": 370,
             "hasGraphic": true,
             "hasEmpty": false
           }
@@ -242,7 +242,7 @@
           },
           {
             "selector": "#cacheTrendChart",
-            "height": 300,
+            "height": 370,
             "hasGraphic": true,
             "hasEmpty": false
           }
@@ -422,7 +422,7 @@
           "code": "mobile-buttons-crowded",
           "message": "移动端多个按钮过窄或过矮",
           "detail": {
-            "count": 11
+            "count": 19
           }
         }
       ],
@@ -449,7 +449,7 @@
           },
           {
             "selector": "#cacheTrendChart",
-            "height": 310,
+            "height": 417,
             "hasGraphic": true,
             "hasEmpty": false
           }

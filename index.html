@@ -1174,29 +1174,60 @@
 
     .usage-trend-card {
       border: 1px solid var(--line);
-      border-radius: 12px;
+      border-radius: 14px;
       background:
-        linear-gradient(180deg, color-mix(in srgb, var(--panel) 96%, transparent), color-mix(in srgb, var(--panel-2) 92%, transparent));
-      padding: 12px 14px 10px;
+        radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--active) 10%, transparent), transparent 34%),
+        linear-gradient(180deg, color-mix(in srgb, var(--panel) 97%, transparent), color-mix(in srgb, var(--panel-2) 94%, transparent));
+      padding: 14px 16px 12px;
       display: grid;
-      gap: 8px;
-      min-height: 300px;
+      gap: 10px;
+      min-height: 316px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
+    }
+
+    .usage-trend-topline {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .usage-trend-topline strong {
+      color: var(--ink);
+      font-size: 14px;
+      font-weight: 760;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .usage-trend-badges {
+      display: flex;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .usage-trend-badges .badge {
+      background: color-mix(in srgb, var(--panel) 86%, transparent);
+      font-size: 11px;
     }
 
     .usage-trend-plot {
       position: relative;
-      min-height: 232px;
-      border-radius: 10px;
+      min-height: 246px;
+      border-radius: 12px;
       overflow: hidden;
-      padding-bottom: 28px;
+      padding-bottom: 32px;
     }
 
     .usage-plot-inner {
       position: absolute;
-      left: 58px;
+      left: 62px;
       right: 0;
       top: 0;
-      bottom: 28px;
+      bottom: 32px;
     }
 
     .usage-trend-svg {
@@ -1206,10 +1237,28 @@
       overflow: visible;
     }
 
+    .usage-value-label {
+      position: absolute;
+      z-index: 4;
+      transform: translate(var(--label-shift, -50%), -125%);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--panel) 92%, transparent);
+      color: var(--ink);
+      padding: 2px 6px;
+      font-size: 11px;
+      font-weight: 850;
+      line-height: 1.25;
+      font-variant-numeric: tabular-nums;
+      box-shadow: var(--shadow-soft);
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
     .usage-trend-hit {
       position: absolute;
       top: 0;
-      bottom: 28px;
+      bottom: 32px;
       border: 0;
       background: transparent;
       cursor: crosshair;
@@ -1220,7 +1269,7 @@
     .usage-trend-hit::after {
       content: "";
       position: absolute;
-      top: 14px;
+      top: 10px;
       bottom: 4px;
       left: 50%;
       width: 1px;
@@ -1235,7 +1284,7 @@
     .usage-y-label {
       position: absolute;
       left: 0;
-      width: 48px;
+      width: 52px;
       text-align: right;
       color: var(--muted);
       font-size: 12px;
@@ -1246,7 +1295,7 @@
 
     .usage-x-axis {
       position: absolute;
-      left: 58px;
+      left: 62px;
       right: 0;
       bottom: 0;
       display: flex;
@@ -1260,10 +1309,10 @@
     .usage-legend {
       display: flex;
       justify-content: center;
-      gap: 14px;
+      gap: 16px;
       flex-wrap: wrap;
       color: var(--muted);
-      font-size: 12px;
+      font-size: 13px;
       font-weight: 700;
     }
 
@@ -1274,16 +1323,69 @@
     }
 
     .usage-legend i {
-      width: 10px;
-      height: 10px;
+      width: 14px;
+      height: 3px;
       border-radius: 999px;
       display: inline-block;
     }
 
+    .trend-total { color: #8b5cf6; }
+    .trend-official_plus { color: var(--official); }
+    .trend-relay { color: var(--relay); }
+    .trend-unknown { color: var(--unknown); }
     .trend-cached { color: var(--cache); }
     .trend-uncached { color: var(--uncached); }
     .trend-output { color: var(--output); }
+    .trend-input { color: var(--uncached); }
     .trend-active { color: var(--active); }
+
+    #cacheTrendPanel .usage-trend-card {
+      min-height: 360px;
+      border-color: color-mix(in srgb, var(--line-strong) 62%, transparent);
+      background:
+        radial-gradient(circle at 52% 8%, color-mix(in srgb, var(--active) 12%, transparent), transparent 35%),
+        linear-gradient(180deg, color-mix(in srgb, var(--panel) 98%, white 2%), color-mix(in srgb, var(--panel-2) 94%, transparent));
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.08), var(--shadow-soft);
+    }
+
+    #cacheTrendPanel .usage-trend-topline strong {
+      color: var(--ink);
+      font-size: 16px;
+    }
+
+    #cacheTrendPanel .usage-trend-badges .badge,
+    #cacheTrendPanel .usage-value-label {
+      border-color: color-mix(in srgb, var(--line-strong) 70%, transparent);
+      background: color-mix(in srgb, var(--panel) 90%, transparent);
+      color: var(--ink);
+      box-shadow: var(--shadow-soft);
+    }
+
+    #cacheTrendPanel .usage-y-label,
+    #cacheTrendPanel .usage-x-axis,
+    #cacheTrendPanel .usage-legend {
+      color: var(--muted);
+    }
+
+    #cacheTrendPanel .usage-trend-plot {
+      min-height: 282px;
+    }
+
+    :root[data-theme="dark"] #cacheTrendPanel .usage-trend-card {
+      border-color: rgba(255,255,255,.11);
+      background:
+        radial-gradient(circle at 52% 8%, rgba(139, 92, 246, .14), transparent 35%),
+        linear-gradient(180deg, #222327 0%, #1d1e22 100%);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 18px 42px rgba(0,0,0,.24);
+    }
+
+    :root[data-theme="dark"] #cacheTrendPanel .usage-trend-badges .badge,
+    :root[data-theme="dark"] #cacheTrendPanel .usage-value-label {
+      border-color: rgba(255,255,255,.13);
+      background: rgba(30,31,36,.88);
+      color: #f7f7f8;
+      box-shadow: 0 8px 18px rgba(0,0,0,.22);
+    }
 
     .view-tabs {
       border: 1px solid var(--line);
@@ -2030,6 +2132,14 @@
       }
       .date-field { min-width: 0; grid-template-columns: auto minmax(0, 1fr) auto; }
       .date-display { min-width: 0; }
+      .usage-trend-card { padding: 12px 10px 10px; min-height: 302px; }
+      .usage-trend-topline { align-items: flex-start; flex-direction: column; gap: 6px; }
+      .usage-trend-badges { justify-content: flex-start; }
+      .usage-plot-inner { left: 48px; }
+      .usage-y-label { width: 40px; font-size: 11px; }
+      .usage-x-axis { left: 48px; font-size: 11px; }
+      .usage-legend { justify-content: flex-start; gap: 9px 12px; font-size: 12px; }
+      .usage-value-label { font-size: 10px; padding: 2px 5px; }
       .cache-single { grid-template-columns: 1fr; }
       .cache-plot { grid-template-columns: 58px minmax(0, 1fr); }
       .cache-y-label, .cache-x-axis { font-size: 12px; }
@@ -4150,6 +4260,214 @@
       }).join("");
     }
 
+    function smoothPath(points) {
+      if (!points.length) return "";
+      if (points.length === 1) return `M ${points[0].x.toFixed(1)} ${points[0].y.toFixed(1)}`;
+      let path = `M ${points[0].x.toFixed(1)} ${points[0].y.toFixed(1)}`;
+      for (let index = 0; index < points.length - 1; index += 1) {
+        const p0 = points[Math.max(0, index - 1)];
+        const p1 = points[index];
+        const p2 = points[index + 1];
+        const p3 = points[Math.min(points.length - 1, index + 2)];
+        const cp1x = p1.x + (p2.x - p0.x) / 6;
+        let cp1y = p1.y + (p2.y - p0.y) / 6;
+        const cp2x = p2.x - (p3.x - p1.x) / 6;
+        let cp2y = p2.y - (p3.y - p1.y) / 6;
+        const minY = Math.min(p1.y, p2.y);
+        const maxY = Math.max(p1.y, p2.y);
+        cp1y = Math.min(maxY, Math.max(minY, cp1y));
+        cp2y = Math.min(maxY, Math.max(minY, cp2y));
+        path += ` C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
+      }
+      return path;
+    }
+
+    function trendXAxisLabels(days) {
+      if (days.length <= 2) return days.map(day => day.date.slice(5));
+      const indexes = [0, Math.floor((days.length - 1) * .25), Math.floor((days.length - 1) * .5), Math.floor((days.length - 1) * .75), days.length - 1];
+      return [...new Set(indexes)].map(index => days[index].date.slice(5));
+    }
+
+    function expandChartDays(days) {
+      if (!days.length) return days;
+      const startDate = els.fromDate?.value || days[0].date;
+      const endDate = els.toDate?.value || days[days.length - 1].date;
+      const start = new Date(`${startDate}T00:00:00`);
+      const end = new Date(`${endDate}T00:00:00`);
+      if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || end < start) return days;
+      const dayMs = 24 * 60 * 60 * 1000;
+      const span = Math.round((end - start) / dayMs) + 1;
+      if (span > 90) return days;
+      const byDate = new Map(days.map(day => [day.date, day]));
+      return Array.from({ length: span }, (_, index) => {
+        const date = new Date(start.getTime() + index * dayMs).toISOString().slice(0, 10);
+        return byDate.get(date) || {
+          key: date,
+          date,
+          totalTokens: 0,
+          inputTokens: 0,
+          cachedInputTokens: 0,
+          outputTokens: 0,
+          activeTokens: 0,
+          uncachedInputTokens: 0,
+          records: 0,
+          sessions: 0,
+          estimatedRecords: 0,
+          estimatedTokens: 0,
+          cacheHitRate: 0,
+          bySource: []
+        };
+      });
+    }
+
+    function renderUsageCurveChart({ id, days, series, primaryKey, summaryText, badges = [], ariaLabel }) {
+      const width = 1000;
+      const height = 260;
+      const padTop = 24;
+      const padBottom = 30;
+      const usableHeight = height - padTop - padBottom;
+      const max = Math.max(...series.flatMap(item => item.values), 1);
+      const scaleX = index => days.length === 1 ? width / 2 : index * (width / (days.length - 1));
+      const scaleY = value => padTop + (1 - value / max) * usableHeight;
+      const yTicks = [1, .75, .5, .25, 0].map(ratio => {
+        const value = max * ratio;
+        return { value, y: scaleY(value), top: scaleY(value) / height * 100 };
+      });
+      const primary = series.find(item => item.key === primaryKey) || series[0];
+      const primaryPoints = primary.values.map((value, index) => ({ x: scaleX(index), y: scaleY(value), value, index }));
+      const primaryPath = smoothPath(primaryPoints);
+      const baseline = height - padBottom;
+      const areaPath = `${primaryPath} L ${scaleX(days.length - 1).toFixed(1)} ${baseline} L ${scaleX(0).toFixed(1)} ${baseline} Z`;
+      const labelIndexes = new Set();
+      primaryPoints.forEach(point => {
+        if (point.value && (point.value >= max * .42 || point.index === days.length - 1)) labelIndexes.add(point.index);
+      });
+      const peakIndex = primaryPoints.reduce((best, point) => point.value > primaryPoints[best].value ? point.index : best, 0);
+      labelIndexes.add(peakIndex);
+      const gridLines = yTicks.map(item => `<line x1="0" y1="${item.y.toFixed(1)}" x2="${width}" y2="${item.y.toFixed(1)}" stroke="var(--line)" stroke-opacity=".46" stroke-dasharray="4 7" vector-effect="non-scaling-stroke" />`).join("");
+      const paths = series.map(item => {
+        const points = item.values.map((value, index) => ({ x: scaleX(index), y: scaleY(value) }));
+        const path = smoothPath(points);
+        const widthValue = item.key === primaryKey ? 3.2 : 2.3;
+        const dash = item.dash ? `stroke-dasharray="${item.dash}"` : "";
+        return `<path d="${path}" fill="none" stroke="${item.color}" stroke-width="${widthValue}" ${dash} stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" />`;
+      }).join("");
+      const xLabels = trendXAxisLabels(days);
+      return `
+        <div class="usage-trend-card">
+          <div class="usage-trend-topline">
+            <strong>${escapeHtml(summaryText)}</strong>
+            <div class="usage-trend-badges">${badges.map(item => `<span class="badge">${escapeHtml(item)}</span>`).join("")}</div>
+          </div>
+          <div class="usage-trend-plot">
+            ${yTicks.map(item => `<span class="usage-y-label" style="top:${item.top.toFixed(2)}%">${formatToken(item.value)}</span>`).join("")}
+            <div class="usage-plot-inner">
+              <svg class="usage-trend-svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" role="img" aria-label="${escapeHtml(ariaLabel)}">
+                <defs>
+                  <linearGradient id="${id}-area" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="${primary.color}" stop-opacity=".24" />
+                    <stop offset="100%" stop-color="${primary.color}" stop-opacity="0" />
+                  </linearGradient>
+                </defs>
+                ${gridLines}
+                <path d="${areaPath}" fill="url(#${id}-area)" />
+                ${paths}
+              </svg>
+              ${primaryPoints.filter(point => labelIndexes.has(point.index) && point.value).map(point => `
+                <span class="usage-value-label" style="left:${(point.x / width * 100).toFixed(3)}%;top:${(point.y / height * 100).toFixed(3)}%;--label-shift:${point.index === 0 ? "0%" : point.index === days.length - 1 ? "-100%" : "-50%"}" title="${formatInt(point.value)}">${formatToken(point.value)}</span>
+              `).join("")}
+              ${days.map((day, index) => {
+                const center = scaleX(index) / width * 100;
+                const segment = days.length > 1 ? 100 / days.length : 100;
+                const start = Math.max(0, center - segment / 2);
+                const widthPct = days.length > 1 ? Math.min(segment, 100 - start) : 100;
+                return `<button class="usage-trend-hit" type="button" style="left:${start.toFixed(3)}%;width:${widthPct.toFixed(3)}%" data-day="${day.date}" data-date="${day.date}" data-total="${formatInt(day.totalTokens)}" data-official="${formatInt(groupByKey(day.bySource, "official_plus").totalTokens)}" data-relay="${formatInt(groupByKey(day.bySource, "relay").totalTokens)}" data-unknown="${formatInt(groupByKey(day.bySource, "unknown").totalTokens)}" data-input="${formatInt(day.inputTokens)}" data-output="${formatInt(day.outputTokens)}" data-uncached="${formatInt(day.uncachedInputTokens)}" data-cached="${formatInt(day.cachedInputTokens)}" data-active="${formatInt(day.activeTokens)}" data-hit="${percent(day.cachedInputTokens, day.inputTokens, 1)}"></button>`;
+              }).join("")}
+            </div>
+            <div class="usage-x-axis">
+              ${xLabels.map(label => `<span>${escapeHtml(label)}</span>`).join("")}
+            </div>
+          </div>
+          <div class="usage-legend">
+            ${series.map(item => `<span class="trend-${item.key}"><i style="background:${item.color}"></i>${escapeHtml(item.label)}</span>`).join("")}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderTrend(days) {
+      if (!days.length) {
+        els.trendChart.innerHTML = emptyState("暂无趋势数据。请加载示例数据或导入 usage-index.json。");
+        return;
+      }
+      days = expandChartDays(days);
+      const total = days.reduce((sum, day) => sum + day.totalTokens, 0);
+      const peak = days.reduce((best, day) => !best || day.totalTokens > best.totalTokens ? day : best, null);
+      const hasUnknown = days.some(day => groupByKey(day.bySource, "unknown").totalTokens > 0);
+      const sourceSeries = [
+        { key: "total", label: "总量", color: "#8b5cf6", values: days.map(day => day.totalTokens || 0) },
+        { key: "official_plus", label: "官方 Plus", color: "var(--official)", values: days.map(day => groupByKey(day.bySource, "official_plus").totalTokens || 0) },
+        { key: "relay", label: "中转站", color: "var(--relay)", values: days.map(day => groupByKey(day.bySource, "relay").totalTokens || 0) }
+      ];
+      if (hasUnknown) sourceSeries.push({ key: "unknown", label: "unknown", color: "var(--unknown)", values: days.map(day => groupByKey(day.bySource, "unknown").totalTokens || 0), dash: "4 6" });
+      const tokenSeries = [
+        { key: "input", label: "输入", color: "var(--uncached)", values: days.map(day => day.inputTokens || 0) },
+        { key: "cached", label: "缓存命中", color: "#8b5cf6", values: days.map(day => day.cachedInputTokens || 0) },
+        { key: "output", label: "输出", color: "var(--output)", values: days.map(day => day.outputTokens || 0) },
+        { key: "active", label: "active", color: "var(--active)", values: days.map(day => day.activeTokens || 0), dash: "5 6" }
+      ];
+      const series = state.trendMode === "source" ? sourceSeries : tokenSeries;
+      els.trendChart.innerHTML = renderUsageCurveChart({
+        id: "daily-token-trend",
+        days,
+        series,
+        primaryKey: state.trendMode === "source" ? "total" : "input",
+        summaryText: `${days.length} 天 · ${formatToken(total)}`,
+        badges: [`峰值 ${peak ? peak.date.slice(5) : "-"} ${formatToken(peak?.totalTokens || 0)}`, `日均 ${formatToken(total / Math.max(days.length, 1))}`],
+        ariaLabel: "每日 Token 趋势"
+      });
+    }
+
+    renderTrend = function renderDailyBarTrend(days) {
+      if (!days.length) {
+        els.trendChart.innerHTML = emptyState("暂无趋势数据。请加载示例数据或导入 usage-index.json。");
+        els.trendChart.style.setProperty("--days", 1);
+        return;
+      }
+      days = expandChartDays(days);
+      const max = Math.max(...days.map(day => day.totalTokens), 1);
+      els.trendChart.style.setProperty("--days", days.length);
+      els.trendChart.innerHTML = days.map(day => {
+        const barHeight = Math.max(day.totalTokens / max * 100, day.totalTokens ? 5 : 0);
+        const official = groupByKey(day.bySource, "official_plus").totalTokens;
+        const relay = groupByKey(day.bySource, "relay").totalTokens;
+        const unknown = Math.max(day.totalTokens - official - relay, 0);
+        const parts = state.trendMode === "source"
+          ? [
+              ["official_plus", official],
+              ["relay", relay],
+              ["unknown", unknown]
+            ]
+          : [
+              ["cached", day.cachedInputTokens],
+              ["uncached", day.uncachedInputTokens],
+              ["output", day.outputTokens]
+            ];
+        const title = `${day.date}\n官方 Plus：${formatInt(official)}\n中转站：${formatInt(relay)}\nunknown：${formatInt(unknown)}\n总计：${formatInt(day.totalTokens)}`;
+        return `
+          <button class="day" type="button" data-day="${day.date}" title="${escapeHtml(title)}">
+            <div class="stack-outer" style="--bar-height:${barHeight}%">
+              ${day.totalTokens ? `<div class="bar-value" title="${formatInt(day.totalTokens)}">${formatToken(day.totalTokens)}</div>` : ""}
+              <div class="stack" style="height:${barHeight}%">
+                ${parts.map(([type, value]) => `<span class="${type}" style="height:${day.totalTokens ? value / day.totalTokens * 100 : 0}%"></span>`).join("")}
+              </div>
+            </div>
+            <div class="day-label">${escapeHtml(day.date.slice(5))}</div>
+          </button>
+        `;
+      }).join("");
+    };
+
     function visualDegrees(values) {
       const total = values.reduce((sum, value) => sum + value, 0);
       if (!total) return [0, 0, 0];
@@ -4260,6 +4578,37 @@
           </div>
         </div>
       `;
+    }
+
+    function renderCacheTrend(days) {
+      if (!days.length) {
+        els.cacheTrendChart.innerHTML = emptyState("暂无使用趋势数据。");
+        els.cacheTrendSummary.textContent = "-";
+        return;
+      }
+      days = expandChartDays(days);
+      const totalInput = days.reduce((sum, day) => sum + (day.inputTokens || 0), 0);
+      const totalCached = days.reduce((sum, day) => sum + (day.cachedInputTokens || 0), 0);
+      const totalActive = days.reduce((sum, day) => sum + (day.activeTokens || 0), 0);
+      const avgHit = percent(totalCached, totalInput, 1);
+      const peakActive = days.reduce((best, day) => !best || (day.activeTokens || 0) > (best.activeTokens || 0) ? day : best, null);
+      const series = [
+        { key: "cached", label: "缓存命中", color: "#8b5cf6", values: days.map(day => day.cachedInputTokens || 0) },
+        { key: "uncached", label: "缓存创建", color: "var(--cache)", values: days.map(day => day.uncachedInputTokens || 0) },
+        { key: "input", label: "输入", color: "var(--uncached)", values: days.map(day => day.inputTokens || 0) },
+        { key: "output", label: "输出", color: "var(--output)", values: days.map(day => day.outputTokens || 0) },
+        { key: "active", label: "active", color: "var(--active)", values: days.map(day => day.activeTokens || 0), dash: "5 6" }
+      ];
+      els.cacheTrendSummary.textContent = `命中率 ${avgHit}% / active ${formatToken(totalActive)}`;
+      els.cacheTrendChart.innerHTML = renderUsageCurveChart({
+        id: "cache-efficiency-trend",
+        days,
+        series,
+        primaryKey: "cached",
+        summaryText: `${days.length} 天 · 缓存命中率 ${avgHit}%`,
+        badges: [`缓存 ${formatToken(totalCached)}`, `峰值 active ${peakActive ? peakActive.date.slice(5) : "-"} ${formatToken(peakActive?.activeTokens || 0)}`],
+        ariaLabel: "使用趋势"
+      });
     }
 
     function renderView(summary) {
@@ -4639,7 +4988,7 @@
                 <h2>设置 / 关于</h2>
                 <p class="muted">这个页面说明当前运行方式、隐私边界和开源展示口径。</p>
               </div>
-              <span class="badge">版本 0.5.12</span>
+              <span class="badge">版本 0.5.13</span>
             </div>
             <div class="settings-grid">
               <div class="settings-card">
@@ -5031,7 +5380,7 @@
       const summary = summarize(safeRecords.map(record => ({ ...record, activeTokens: activeTokens(record), uncachedInputTokens: uncachedInputTokens(record), hitRate: cacheHitRateOf(record) })));
       return {
         snapshotVersion: 1,
-        appVersion: "0.5.12",
+        appVersion: "0.5.13",
         generatedAt: new Date().toISOString(),
         privacy: {
           anonymized: true,
@@ -5262,6 +5611,23 @@
       setActiveRange("custom");
       loadUsage();
     });
+    els.trendChart.addEventListener("mousemove", event => {
+      const point = event.target.closest(".usage-trend-hit");
+      if (!point) {
+        hideChartTooltip();
+        return;
+      }
+      showChartTooltip(event, `
+        <strong>${escapeHtml(point.dataset.date)} 每日 Token</strong>
+        <div><span>总计</span><b>${escapeHtml(point.dataset.total)}</b></div>
+        <div><span>官方 Plus</span><b>${escapeHtml(point.dataset.official)}</b></div>
+        <div><span>中转站</span><b>${escapeHtml(point.dataset.relay)}</b></div>
+        <div><span>unknown</span><b>${escapeHtml(point.dataset.unknown)}</b></div>
+        <div><span>active</span><b>${escapeHtml(point.dataset.active)}</b></div>
+        <div><span>缓存命中率</span><b>${escapeHtml(point.dataset.hit)}%</b></div>
+      `);
+    });
+    els.trendChart.addEventListener("mouseleave", hideChartTooltip);
     els.viewPanel.addEventListener("click", event => {
       const actionButton = event.target.closest("[data-action]");
       if (actionButton) {
