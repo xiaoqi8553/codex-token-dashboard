@@ -754,13 +754,6 @@
       line-height: 1.45;
     }
 
-    #cacheTrendSummary {
-      padding: 5px 10px;
-      font-size: 12px;
-      font-weight: 760;
-      letter-spacing: 0;
-    }
-
     .trend {
       height: 308px;
       display: grid;
@@ -1185,35 +1178,6 @@
       box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
     }
 
-    .usage-trend-topline {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      color: var(--muted);
-      font-size: 12px;
-      font-weight: 700;
-    }
-
-    .usage-trend-topline strong {
-      color: var(--ink);
-      font-size: 14px;
-      font-weight: 760;
-      font-variant-numeric: tabular-nums;
-    }
-
-    .usage-trend-badges {
-      display: flex;
-      justify-content: flex-end;
-      flex-wrap: wrap;
-      gap: 6px;
-    }
-
-    .usage-trend-badges .badge {
-      background: color-mix(in srgb, var(--panel) 86%, transparent);
-      font-size: 11px;
-    }
-
     .usage-trend-plot {
       position: relative;
       min-height: 246px;
@@ -1235,24 +1199,6 @@
       width: 100%;
       height: 100%;
       overflow: visible;
-    }
-
-    .usage-value-label {
-      position: absolute;
-      z-index: 4;
-      transform: translate(var(--label-shift, -50%), -125%);
-      border: 1px solid var(--line);
-      border-radius: 999px;
-      background: color-mix(in srgb, var(--panel) 92%, transparent);
-      color: var(--ink);
-      padding: 2px 6px;
-      font-size: 11px;
-      font-weight: 850;
-      line-height: 1.25;
-      font-variant-numeric: tabular-nums;
-      box-shadow: var(--shadow-soft);
-      pointer-events: none;
-      white-space: nowrap;
     }
 
     .usage-trend-hit {
@@ -1348,19 +1294,6 @@
       box-shadow: inset 0 1px 0 rgba(255,255,255,.08), var(--shadow-soft);
     }
 
-    #cacheTrendPanel .usage-trend-topline strong {
-      color: var(--ink);
-      font-size: 16px;
-    }
-
-    #cacheTrendPanel .usage-trend-badges .badge,
-    #cacheTrendPanel .usage-value-label {
-      border-color: color-mix(in srgb, var(--line-strong) 70%, transparent);
-      background: color-mix(in srgb, var(--panel) 90%, transparent);
-      color: var(--ink);
-      box-shadow: var(--shadow-soft);
-    }
-
     #cacheTrendPanel .usage-y-label,
     #cacheTrendPanel .usage-x-axis,
     #cacheTrendPanel .usage-legend {
@@ -1377,14 +1310,6 @@
         radial-gradient(circle at 52% 8%, rgba(139, 92, 246, .14), transparent 35%),
         linear-gradient(180deg, #222327 0%, #1d1e22 100%);
       box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 18px 42px rgba(0,0,0,.24);
-    }
-
-    :root[data-theme="dark"] #cacheTrendPanel .usage-trend-badges .badge,
-    :root[data-theme="dark"] #cacheTrendPanel .usage-value-label {
-      border-color: rgba(255,255,255,.13);
-      background: rgba(30,31,36,.88);
-      color: #f7f7f8;
-      box-shadow: 0 8px 18px rgba(0,0,0,.22);
     }
 
     .view-tabs {
@@ -2133,13 +2058,10 @@
       .date-field { min-width: 0; grid-template-columns: auto minmax(0, 1fr) auto; }
       .date-display { min-width: 0; }
       .usage-trend-card { padding: 12px 10px 10px; min-height: 302px; }
-      .usage-trend-topline { align-items: flex-start; flex-direction: column; gap: 6px; }
-      .usage-trend-badges { justify-content: flex-start; }
       .usage-plot-inner { left: 48px; }
       .usage-y-label { width: 40px; font-size: 11px; }
       .usage-x-axis { left: 48px; font-size: 11px; }
       .usage-legend { justify-content: flex-start; gap: 9px 12px; font-size: 12px; }
-      .usage-value-label { font-size: 10px; padding: 2px 5px; }
       .cache-single { grid-template-columns: 1fr; }
       .cache-plot { grid-template-columns: 58px minmax(0, 1fr); }
       .cache-y-label, .cache-x-axis { font-size: 12px; }
@@ -2357,7 +2279,6 @@
           <h2>使用趋势</h2>
           <p class="muted">输入 / 输出 / 缓存创建 / 缓存命中 / active tokens</p>
         </div>
-        <span class="badge" id="cacheTrendSummary">-</span>
       </div>
       <div id="cacheTrendChart"></div>
     </section>
@@ -2442,7 +2363,6 @@
       cacheTrendPanel: document.querySelector("#cacheTrendPanel"),
       ratioHint: document.querySelector("#ratioHint"),
       cacheTrendChart: document.querySelector("#cacheTrendChart"),
-      cacheTrendSummary: document.querySelector("#cacheTrendSummary"),
       viewPanel: document.querySelector("#viewPanel"),
       importBtn: document.querySelector("#importBtn"),
       importMenu: document.querySelector("#importMenu"),
@@ -2537,11 +2457,17 @@
     const staticParserVersion = 10;
     const browserSourceAttributionMode = localStorage.getItem("codexTokenSourceAttributionMode") || "custom-fast";
 
+    function localDateKey(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    }
+
     function todayString(offsetDays = 0) {
       const date = new Date();
       date.setDate(date.getDate() + offsetDays);
-      const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-      return local.toISOString().slice(0, 10);
+      return localDateKey(date);
     }
 
     function setActiveRange(range) {
@@ -2876,9 +2802,7 @@
     function toDate(value) {
       const iso = toIso(value);
       if (!iso) return "";
-      const date = new Date(iso);
-      const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-      return local.toISOString().slice(0, 10);
+      return localDateKey(new Date(iso));
     }
 
     function estimateTokens(text) {
@@ -4224,42 +4148,6 @@
       ].join("");
     }
 
-    function renderTrend(days) {
-      if (!days.length) {
-        els.trendChart.innerHTML = emptyState("暂无趋势数据。请加载示例数据或导入 usage-index.json。");
-        els.trendChart.style.setProperty("--days", 1);
-        return;
-      }
-      const max = Math.max(...days.map(day => day.totalTokens), 1);
-      els.trendChart.style.setProperty("--days", days.length);
-      els.trendChart.innerHTML = days.map(day => {
-        const barHeight = Math.max(day.totalTokens / max * 100, day.totalTokens ? 5 : 0);
-        const parts = state.trendMode === "source"
-          ? [
-              ["official_plus", groupByKey(day.bySource, "official_plus").totalTokens, "官方 Plus"],
-              ["relay", groupByKey(day.bySource, "relay").totalTokens, "中转站"],
-              ["unknown", Math.max(day.totalTokens - groupByKey(day.bySource, "official_plus").totalTokens - groupByKey(day.bySource, "relay").totalTokens, 0), "未知"]
-            ]
-          : [
-              ["cached", day.cachedInputTokens, "cached input"],
-              ["uncached", day.uncachedInputTokens, "uncached input"],
-              ["output", day.outputTokens, "output"]
-            ];
-        const title = `${day.date}\n官方 Plus：${formatInt(groupByKey(day.bySource, "official_plus").totalTokens)}\n中转站：${formatInt(groupByKey(day.bySource, "relay").totalTokens)}\n未知：${formatInt(groupByKey(day.bySource, "unknown").totalTokens)}\n总计：${formatInt(day.totalTokens)}`;
-        return `
-          <button class="day" type="button" data-day="${day.date}" title="${escapeHtml(title)}">
-            <div class="stack-outer" style="--bar-height:${barHeight}%">
-              <div class="bar-value" title="${formatInt(day.totalTokens)}">${formatToken(day.totalTokens)}</div>
-              <div class="stack" style="height:${barHeight}%">
-                ${parts.map(([type, value]) => `<span class="${type}" style="height:${day.totalTokens ? value / day.totalTokens * 100 : 0}%"></span>`).join("")}
-              </div>
-            </div>
-            <div class="day-label">${escapeHtml(day.date.slice(5))}</div>
-          </button>
-        `;
-      }).join("");
-    }
-
     function smoothPath(points) {
       if (!points.length) return "";
       if (points.length === 1) return `M ${points[0].x.toFixed(1)} ${points[0].y.toFixed(1)}`;
@@ -4295,13 +4183,12 @@
       const start = new Date(`${startDate}T00:00:00`);
       const end = new Date(`${endDate}T00:00:00`);
       if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || end < start) return days;
-      const dayMs = 24 * 60 * 60 * 1000;
-      const span = Math.round((end - start) / dayMs) + 1;
-      if (span > 90) return days;
       const byDate = new Map(days.map(day => [day.date, day]));
-      return Array.from({ length: span }, (_, index) => {
-        const date = new Date(start.getTime() + index * dayMs).toISOString().slice(0, 10);
-        return byDate.get(date) || {
+      const result = [];
+      for (let cursor = new Date(start); cursor <= end; cursor.setDate(cursor.getDate() + 1)) {
+        if (result.length >= 90) return days;
+        const date = localDateKey(cursor);
+        result.push(byDate.get(date) || {
           key: date,
           date,
           totalTokens: 0,
@@ -4316,11 +4203,12 @@
           estimatedTokens: 0,
           cacheHitRate: 0,
           bySource: []
-        };
-      });
+        });
+      }
+      return result;
     }
 
-    function renderUsageCurveChart({ id, days, series, primaryKey, summaryText, badges = [], ariaLabel }) {
+    function renderUsageCurveChart({ id, days, series, primaryKey, ariaLabel }) {
       const width = 1000;
       const height = 260;
       const padTop = 24;
@@ -4338,12 +4226,6 @@
       const primaryPath = smoothPath(primaryPoints);
       const baseline = height - padBottom;
       const areaPath = `${primaryPath} L ${scaleX(days.length - 1).toFixed(1)} ${baseline} L ${scaleX(0).toFixed(1)} ${baseline} Z`;
-      const labelIndexes = new Set();
-      primaryPoints.forEach(point => {
-        if (point.value && (point.value >= max * .42 || point.index === days.length - 1)) labelIndexes.add(point.index);
-      });
-      const peakIndex = primaryPoints.reduce((best, point) => point.value > primaryPoints[best].value ? point.index : best, 0);
-      labelIndexes.add(peakIndex);
       const gridLines = yTicks.map(item => `<line x1="0" y1="${item.y.toFixed(1)}" x2="${width}" y2="${item.y.toFixed(1)}" stroke="var(--line)" stroke-opacity=".46" stroke-dasharray="4 7" vector-effect="non-scaling-stroke" />`).join("");
       const paths = series.map(item => {
         const points = item.values.map((value, index) => ({ x: scaleX(index), y: scaleY(value) }));
@@ -4355,10 +4237,6 @@
       const xLabels = trendXAxisLabels(days);
       return `
         <div class="usage-trend-card">
-          <div class="usage-trend-topline">
-            <strong>${escapeHtml(summaryText)}</strong>
-            <div class="usage-trend-badges">${badges.map(item => `<span class="badge">${escapeHtml(item)}</span>`).join("")}</div>
-          </div>
           <div class="usage-trend-plot">
             ${yTicks.map(item => `<span class="usage-y-label" style="top:${item.top.toFixed(2)}%">${formatToken(item.value)}</span>`).join("")}
             <div class="usage-plot-inner">
@@ -4373,9 +4251,6 @@
                 <path d="${areaPath}" fill="url(#${id}-area)" />
                 ${paths}
               </svg>
-              ${primaryPoints.filter(point => labelIndexes.has(point.index) && point.value).map(point => `
-                <span class="usage-value-label" style="left:${(point.x / width * 100).toFixed(3)}%;top:${(point.y / height * 100).toFixed(3)}%;--label-shift:${point.index === 0 ? "0%" : point.index === days.length - 1 ? "-100%" : "-50%"}" title="${formatInt(point.value)}">${formatToken(point.value)}</span>
-              `).join("")}
               ${days.map((day, index) => {
                 const center = scaleX(index) / width * 100;
                 const segment = days.length > 1 ? 100 / days.length : 100;
@@ -4396,39 +4271,6 @@
     }
 
     function renderTrend(days) {
-      if (!days.length) {
-        els.trendChart.innerHTML = emptyState("暂无趋势数据。请加载示例数据或导入 usage-index.json。");
-        return;
-      }
-      days = expandChartDays(days);
-      const total = days.reduce((sum, day) => sum + day.totalTokens, 0);
-      const peak = days.reduce((best, day) => !best || day.totalTokens > best.totalTokens ? day : best, null);
-      const hasUnknown = days.some(day => groupByKey(day.bySource, "unknown").totalTokens > 0);
-      const sourceSeries = [
-        { key: "total", label: "总量", color: "#8b5cf6", values: days.map(day => day.totalTokens || 0) },
-        { key: "official_plus", label: "官方 Plus", color: "var(--official)", values: days.map(day => groupByKey(day.bySource, "official_plus").totalTokens || 0) },
-        { key: "relay", label: "中转站", color: "var(--relay)", values: days.map(day => groupByKey(day.bySource, "relay").totalTokens || 0) }
-      ];
-      if (hasUnknown) sourceSeries.push({ key: "unknown", label: "unknown", color: "var(--unknown)", values: days.map(day => groupByKey(day.bySource, "unknown").totalTokens || 0), dash: "4 6" });
-      const tokenSeries = [
-        { key: "input", label: "输入", color: "var(--uncached)", values: days.map(day => day.inputTokens || 0) },
-        { key: "cached", label: "缓存命中", color: "#8b5cf6", values: days.map(day => day.cachedInputTokens || 0) },
-        { key: "output", label: "输出", color: "var(--output)", values: days.map(day => day.outputTokens || 0) },
-        { key: "active", label: "active", color: "var(--active)", values: days.map(day => day.activeTokens || 0), dash: "5 6" }
-      ];
-      const series = state.trendMode === "source" ? sourceSeries : tokenSeries;
-      els.trendChart.innerHTML = renderUsageCurveChart({
-        id: "daily-token-trend",
-        days,
-        series,
-        primaryKey: state.trendMode === "source" ? "total" : "input",
-        summaryText: `${days.length} 天 · ${formatToken(total)}`,
-        badges: [`峰值 ${peak ? peak.date.slice(5) : "-"} ${formatToken(peak?.totalTokens || 0)}`, `日均 ${formatToken(total / Math.max(days.length, 1))}`],
-        ariaLabel: "每日 Token 趋势"
-      });
-    }
-
-    renderTrend = function renderDailyBarTrend(days) {
       if (!days.length) {
         els.trendChart.innerHTML = emptyState("暂无趋势数据。请加载示例数据或导入 usage-index.json。");
         els.trendChart.style.setProperty("--days", 1);
@@ -4466,7 +4308,7 @@
           </button>
         `;
       }).join("");
-    };
+    }
 
     function visualDegrees(values) {
       const total = values.reduce((sum, value) => sum + value, 0);
@@ -4518,80 +4360,9 @@
     function renderCacheTrend(days) {
       if (!days.length) {
         els.cacheTrendChart.innerHTML = emptyState("暂无使用趋势数据。");
-        els.cacheTrendSummary.textContent = "-";
-        return;
-      }
-      const width = 1000;
-      const height = 232;
-      const padTop = 16;
-      const padBottom = 22;
-      const usableHeight = height - padTop - padBottom;
-      const series = [
-        { key: "input", label: "输入", color: "var(--uncached)", values: days.map(day => day.inputTokens || 0) },
-        { key: "output", label: "输出", color: "var(--output)", values: days.map(day => day.outputTokens || 0) },
-        { key: "uncached", label: "缓存创建", color: "var(--cache)", values: days.map(day => day.uncachedInputTokens || 0) },
-        { key: "cached", label: "缓存命中", color: "#9654df", values: days.map(day => day.cachedInputTokens || 0) },
-        { key: "active", label: "active", color: "var(--active)", values: days.map(day => day.activeTokens || 0) }
-      ];
-      const max = Math.max(...series.flatMap(item => item.values), 1);
-      const scaleX = index => days.length === 1 ? width / 2 : index * (width / (days.length - 1));
-      const scaleY = value => padTop + (1 - value / max) * usableHeight;
-      const yTicks = [1, .75, .5, .25, 0].map(ratio => {
-        const value = max * ratio;
-        return { value, y: scaleY(value), top: scaleY(value) / height * 100 };
-      });
-      const paths = series.map(item => {
-        const path = item.values.map((value, index) => `${index ? "L" : "M"} ${scaleX(index).toFixed(1)} ${scaleY(value).toFixed(1)}`).join(" ");
-        return `<path d="${path}" fill="none" stroke="${item.color}" stroke-width="${item.key === "input" ? 3 : 2.2}" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" />`;
-      }).join("");
-      const gridLines = yTicks.map(item => `<line x1="0" y1="${item.y.toFixed(1)}" x2="${width}" y2="${item.y.toFixed(1)}" stroke="var(--line)" stroke-opacity=".5" vector-effect="non-scaling-stroke" />`).join("");
-      const hitRateValues = days.map(day => day.inputTokens ? day.cachedInputTokens / day.inputTokens : 0);
-      const avgHit = hitRateValues.reduce((sum, value) => sum + value, 0) / hitRateValues.length;
-      const peakInput = days.reduce((best, day) => !best || day.inputTokens > best.inputTokens ? day : best, null);
-      const xLabels = days.length > 2
-        ? [days[0].date.slice(5), days[Math.floor(days.length / 2)].date.slice(5), days[days.length - 1].date.slice(5)]
-        : [days[0].date.slice(5), days[days.length - 1].date.slice(5)];
-      els.cacheTrendSummary.textContent = `缓存命中 ${percent(avgHit, 1, 1)}% / 峰值输入 ${formatToken(peakInput?.inputTokens || 0)}`;
-      els.cacheTrendChart.innerHTML = `
-        <div class="usage-trend-card">
-          <div class="usage-trend-plot">
-            ${yTicks.map(item => `<span class="usage-y-label" style="top:${item.top.toFixed(2)}%">${formatToken(item.value)}</span>`).join("")}
-            <div class="usage-plot-inner">
-              <svg class="usage-trend-svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" role="img" aria-label="每日使用趋势">
-                ${gridLines}
-                ${paths}
-              </svg>
-              ${days.map((day, index) => {
-                const center = scaleX(index) / width * 100;
-                const segment = days.length > 1 ? 100 / days.length : 100;
-                const start = Math.max(0, center - segment / 2);
-                const widthPct = days.length > 1 ? Math.min(segment, 100 - start) : 100;
-                return `<button class="usage-trend-hit" type="button" style="left:${start.toFixed(3)}%;width:${widthPct.toFixed(3)}%" data-date="${day.date}" data-input="${formatInt(day.inputTokens)}" data-output="${formatInt(day.outputTokens)}" data-uncached="${formatInt(day.uncachedInputTokens)}" data-cached="${formatInt(day.cachedInputTokens)}" data-active="${formatInt(day.activeTokens)}" data-hit="${percent(day.cachedInputTokens, day.inputTokens, 1)}"></button>`;
-              }).join("")}
-            </div>
-            <div class="usage-x-axis">
-              ${xLabels.map(label => `<span>${escapeHtml(label)}</span>`).join("")}
-            </div>
-          </div>
-          <div class="usage-legend">
-            ${series.map(item => `<span class="trend-${item.key}"><i style="background:${item.color}"></i>${escapeHtml(item.label)}</span>`).join("")}
-          </div>
-        </div>
-      `;
-    }
-
-    function renderCacheTrend(days) {
-      if (!days.length) {
-        els.cacheTrendChart.innerHTML = emptyState("暂无使用趋势数据。");
-        els.cacheTrendSummary.textContent = "-";
         return;
       }
       days = expandChartDays(days);
-      const totalInput = days.reduce((sum, day) => sum + (day.inputTokens || 0), 0);
-      const totalCached = days.reduce((sum, day) => sum + (day.cachedInputTokens || 0), 0);
-      const totalActive = days.reduce((sum, day) => sum + (day.activeTokens || 0), 0);
-      const avgHit = percent(totalCached, totalInput, 1);
-      const peakActive = days.reduce((best, day) => !best || (day.activeTokens || 0) > (best.activeTokens || 0) ? day : best, null);
       const series = [
         { key: "cached", label: "缓存命中", color: "#8b5cf6", values: days.map(day => day.cachedInputTokens || 0) },
         { key: "uncached", label: "缓存创建", color: "var(--cache)", values: days.map(day => day.uncachedInputTokens || 0) },
@@ -4599,14 +4370,11 @@
         { key: "output", label: "输出", color: "var(--output)", values: days.map(day => day.outputTokens || 0) },
         { key: "active", label: "active", color: "var(--active)", values: days.map(day => day.activeTokens || 0), dash: "5 6" }
       ];
-      els.cacheTrendSummary.textContent = `命中率 ${avgHit}% / active ${formatToken(totalActive)}`;
       els.cacheTrendChart.innerHTML = renderUsageCurveChart({
         id: "cache-efficiency-trend",
         days,
         series,
         primaryKey: "cached",
-        summaryText: `${days.length} 天 · 缓存命中率 ${avgHit}%`,
-        badges: [`缓存 ${formatToken(totalCached)}`, `峰值 active ${peakActive ? peakActive.date.slice(5) : "-"} ${formatToken(peakActive?.activeTokens || 0)}`],
         ariaLabel: "使用趋势"
       });
     }
@@ -4641,7 +4409,7 @@
       const sorted = [...active].sort();
       let cursor = new Date(`${sorted[sorted.length - 1]}T00:00:00`);
       let streak = 0;
-      while (active.has(new Date(cursor.getTime() - cursor.getTimezoneOffset() * 60000).toISOString().slice(0, 10))) {
+      while (active.has(localDateKey(cursor))) {
         streak += 1;
         cursor.setDate(cursor.getDate() - 1);
       }
@@ -4656,7 +4424,7 @@
       const end = new Date(`${dates[dates.length - 1]}T00:00:00`);
       const result = [];
       for (let date = new Date(start); date <= end; date.setDate(date.getDate() + 1)) {
-        const key = new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+        const key = localDateKey(date);
         result.push(map[key] || finalizeGroup(emptyGroup({ date: key, bySource: [] })));
       }
       return result;
@@ -4671,7 +4439,7 @@
       start.setDate(end.getDate() - span + 1);
       const result = [];
       for (let date = new Date(start); date <= end; date.setDate(date.getDate() + 1)) {
-        const key = new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+        const key = localDateKey(date);
         result.push(map[key] || finalizeGroup(emptyGroup({ date: key, bySource: [] })));
       }
       return result;
@@ -4988,7 +4756,7 @@
                 <h2>设置 / 关于</h2>
                 <p class="muted">这个页面说明当前运行方式、隐私边界和开源展示口径。</p>
               </div>
-              <span class="badge">版本 0.5.13</span>
+              <span class="badge">版本 0.5.14</span>
             </div>
             <div class="settings-grid">
               <div class="settings-card">
@@ -5380,7 +5148,7 @@
       const summary = summarize(safeRecords.map(record => ({ ...record, activeTokens: activeTokens(record), uncachedInputTokens: uncachedInputTokens(record), hitRate: cacheHitRateOf(record) })));
       return {
         snapshotVersion: 1,
-        appVersion: "0.5.13",
+        appVersion: "0.5.14",
         generatedAt: new Date().toISOString(),
         privacy: {
           anonymized: true,
