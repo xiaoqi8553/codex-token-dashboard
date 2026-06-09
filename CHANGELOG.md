@@ -1,5 +1,13 @@
 # 更新日志
 
+## 0.5.12 - 2026-06-09
+
+- 将默认来源归因切回轻量 `custom-fast` 口径，解决浏览器导入 `.codex/sessions` 时扫描 `logs_2.sqlite` 过慢的问题。
+- `custom-fast` 口径下，`model_provider: custom` / `provider: custom` 直接计入中转站；没有 custom 依据的记录保持原始来源或 unknown，不再读取大体积 SQLite 日志做慢速推断。
+- 本地 Node 模式和浏览器导入模式默认保持一致；如需重新启用慢速证据链，可设置 `SOURCE_ATTRIBUTION_MODE=evidence` 或在 `config.json` 中配置 `"sourceAttributionMode": "evidence"`。
+- 浏览器端默认不再扫描 `logs_2.sqlite`，因此 GitHub Pages / Netlify 手动导入文件夹会明显更快。
+- 本地索引版本提升到 17，浏览器静态解析版本提升到 10，旧缓存会按新口径重建。
+
 ## 0.5.11 - 2026-06-08
 
 - 修复 RightCode / 官方 Plus 来源归因再次漂移的问题。

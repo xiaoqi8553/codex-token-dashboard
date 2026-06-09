@@ -2424,7 +2424,8 @@
       store: "handles",
       sessionsKey: "sessionsDirectory"
     };
-    const staticParserVersion = 9;
+    const staticParserVersion = 10;
+    const browserSourceAttributionMode = localStorage.getItem("codexTokenSourceAttributionMode") || "custom-fast";
 
     function todayString(offsetDays = 0) {
       const date = new Date();
@@ -2790,6 +2791,7 @@
         value.includes("right-code") ||
         value.includes("relay")
       ))) return "relay";
+      if (browserSourceAttributionMode === "custom-fast" && values.some(value => value === "custom")) return "relay";
       // Codex++ can wrap official Plus sessions as model_provider=custom and source=vscode.
       // Bare "custom" is therefore treated as official Plus unless there is an explicit relay hint.
       if (values.some(value => value === "custom")) return "official_plus";
@@ -3094,7 +3096,8 @@
           timeRules: 0,
           globalTimeRules: 0,
           relayEvents: 0,
-          officialEvents: 0
+          officialEvents: 0,
+          sourceAttributionMode: browserSourceAttributionMode
         }
       };
     }
@@ -3245,6 +3248,11 @@
     }
 
     function applyBrowserSourceEvidence(record, evidence) {
+      if (browserSourceAttributionMode === "custom-fast") {
+        if (record.provider === "custom") return { ...record, source: "relay", sourceRule: "fallback:custom-fast-provider" };
+        if (record.source === "relay") return { ...record, sourceRule: record.sourceRule || "explicit:relay" };
+        return record;
+      }
       if (record.source === "relay") return { ...record, sourceRule: record.sourceRule || "explicit:relay" };
       const hit = record.turnId && evidence?.byTurnId ? evidence.byTurnId[record.turnId] : null;
       if (hit) return { ...record, source: hit.source, sourceRule: hit.rule };
@@ -3406,7 +3414,9 @@
       const allEntries = Array.from(fileList || [])
         .map(entry => entry?.file ? entry : { file: entry, relativePath: entry?.webkitRelativePath || entry?.name || "" })
         .filter(entry => entry.file);
-      const evidence = await extractBrowserEndpointEvidence(allEntries);
+      const evidence = browserSourceAttributionMode === "evidence"
+        ? await extractBrowserEndpointEvidence(allEntries)
+        : createSourceEvidence();
       const files = allEntries.filter(isSessionImportEntry);
       const records = [];
       let parsedFiles = 0;
@@ -4629,7 +4639,7 @@
                 <h2>设置 / 关于</h2>
                 <p class="muted">这个页面说明当前运行方式、隐私边界和开源展示口径。</p>
               </div>
-              <span class="badge">版本 0.5.11</span>
+              <span class="badge">版本 0.5.12</span>
             </div>
             <div class="settings-grid">
               <div class="settings-card">
@@ -5021,7 +5031,7 @@
       const summary = summarize(safeRecords.map(record => ({ ...record, activeTokens: activeTokens(record), uncachedInputTokens: uncachedInputTokens(record), hitRate: cacheHitRateOf(record) })));
       return {
         snapshotVersion: 1,
-        appVersion: "0.5.11",
+        appVersion: "0.5.12",
         generatedAt: new Date().toISOString(),
         privacy: {
           anonymized: true,

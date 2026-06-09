@@ -9,7 +9,7 @@ const ROOT = __dirname;
 const DATA_DIR = path.join(ROOT, "data");
 const IMPORT_DIR = path.join(DATA_DIR, "imports");
 const INDEX_PATH = path.join(DATA_DIR, "usage-index.json");
-const INDEX_VERSION = 16;
+const INDEX_VERSION = 17;
 const SUPPORTED_SESSION_EXTENSIONS = new Set([".jsonl", ".json", ".log", ".txt"]);
 
 loadDotEnv();
@@ -21,6 +21,7 @@ const PUBLIC_ACCESS = Boolean(CONFIG.allowPublicAccess);
 const ANONYMIZE_DATA = Boolean(CONFIG.anonymizeData);
 const ACCESS_TOKEN = String(CONFIG.publicAccessToken || "").trim();
 const DASHBOARD_PASSWORD = String(CONFIG.dashboardPassword || "").trim();
+const SOURCE_ATTRIBUTION_MODE = normalizeSourceAttributionMode(CONFIG.sourceAttributionMode);
 const SESSIONS_DIR = path.resolve(CONFIG.sessionsDir || path.join(os.homedir(), ".codex", "sessions"));
 let activePort = PORT;
 
@@ -69,8 +70,15 @@ function loadConfig() {
     allowPublicAccess: publicAccess,
     publicAccessToken: envString("ACCESS_TOKEN", envString("PUBLIC_ACCESS_TOKEN", fileConfig.publicAccessToken || "")),
     dashboardPassword: envString("DASHBOARD_PASSWORD", fileConfig.dashboardPassword || ""),
-    anonymizeData: envBool("ANONYMIZE_DATA", publicAccess ? true : Boolean(fileConfig.anonymizeData))
+    anonymizeData: envBool("ANONYMIZE_DATA", publicAccess ? true : Boolean(fileConfig.anonymizeData)),
+    sourceAttributionMode: envString("SOURCE_ATTRIBUTION_MODE", fileConfig.sourceAttributionMode || "custom-fast")
   };
+}
+
+function normalizeSourceAttributionMode(value) {
+  const text = String(value || "").trim().toLowerCase();
+  if (["evidence", "precise", "slow"].includes(text)) return "evidence";
+  return "custom-fast";
 }
 
 function validateSecurityConfig() {
@@ -231,6 +239,7 @@ function normalizeSource(provider, explicitSource = "") {
     value.includes("right-code") ||
     value.includes("relay")
   ))) return "relay";
+  if (SOURCE_ATTRIBUTION_MODE === "custom-fast" && values.some(value => value === "custom")) return "relay";
   // Codex++ can wrap official Plus sessions as model_provider=custom and source=vscode.
   // Bare "custom" is therefore treated as official Plus unless there is an explicit relay hint.
   if (values.some(value => value === "custom")) return "official_plus";
@@ -339,9 +348,11 @@ function loadEndpointEvidence() {
       switchIntervals: 0,
       relaySwitchIntervals: 0,
       officialSwitchIntervals: 0,
-      switchRules: 0
+      switchRules: 0,
+      sourceAttributionMode: SOURCE_ATTRIBUTION_MODE
     }
   };
+  if (SOURCE_ATTRIBUTION_MODE === "custom-fast") return endpointEvidenceCache;
 
   const dbPath = path.join(os.homedir(), ".codex", "logs_2.sqlite");
   if (!fs.existsSync(dbPath)) return endpointEvidenceCache;
@@ -588,6 +599,11 @@ function findSwitchEvidence(record) {
 }
 
 function applyAutomaticSourceEvidence(record) {
+  if (SOURCE_ATTRIBUTION_MODE === "custom-fast") {
+    if (record.provider === "custom") return { ...record, source: "relay", sourceRule: "fallback:custom-fast-provider" };
+    if (record.source === "relay") return { ...record, sourceRule: record.sourceRule || "explicit:relay" };
+    return record;
+  }
   if (record.source === "relay") return { ...record, sourceRule: record.sourceRule || "explicit:relay" };
   const evidence = record.turnId ? loadEndpointEvidence().byTurnId[record.turnId] : null;
   if (evidence) {

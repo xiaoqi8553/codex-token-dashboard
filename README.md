@@ -7,7 +7,7 @@
 ![Codex Token Dashboard cover](screenshots/project-cover.svg)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-0f766e.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.5.11-111827.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.5.12-111827.svg)](CHANGELOG.md)
 [![Netlify Demo](https://img.shields.io/badge/demo-codetoken.netlify.app-2f6fed.svg)](https://codetoken.netlify.app/)
 [![GitHub Pages](https://img.shields.io/badge/pages-github.io-111827.svg)](https://xiaoqi8553.github.io/codex-token-dashboard/)
 
@@ -171,7 +171,8 @@ copy config.example.json config.json
   "allowPublicAccess": false,
   "publicAccessToken": "",
   "dashboardPassword": "",
-  "anonymizeData": false
+  "anonymizeData": false,
+  "sourceAttributionMode": "custom-fast"
 }
 ```
 
@@ -185,6 +186,7 @@ ANONYMIZE_DATA=true
 HOST=127.0.0.1
 PORT=8787
 CODEX_SESSIONS_DIR=
+SOURCE_ATTRIBUTION_MODE=custom-fast
 ```
 
 安全规则：

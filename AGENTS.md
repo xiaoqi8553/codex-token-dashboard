@@ -52,6 +52,7 @@
 - 2026-06-08: Browser/static import cannot run SQLite queries against `logs_2.sqlite`; when mirroring Node source attribution in GitHub Pages mode, derive request event time from UUIDv7 `turn.id` and keep the same sourceRule labels visible for audit.
 - 2026-06-08: Treating any `right.codes` host as relay was too broad. `right.codes/codex/v1` can appear in the user's official validation days, so relay evidence must be path-sensitive and limited to billable RightCode API paths such as `www.right.codes/codex-pro/v1` / `www.right.codes/v1`.
 - 2026-06-08: Global nearest endpoint attribution caused cross-project contamination, for example applying `E:\小车\小车上位机设计` RightCode requests to `html-codex-token-codex-plus-token` usage records. Source time evidence must be scoped to the same `cwd` or supported by explicit Codex++ switch intervals.
+- 2026-06-09: Browser/static import became too slow when it defaulted to scanning `logs_2.sqlite`. Public browser mode should default to the fast custom-provider attribution path and keep slow endpoint evidence as an opt-in diagnostic mode.
 
 ## Before Finishing
 
