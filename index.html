@@ -757,10 +757,11 @@
     .trend {
       height: 308px;
       display: grid;
-      grid-template-columns: repeat(var(--days, 1), minmax(24px, 1fr));
+      grid-template-columns: repeat(var(--days, 1), minmax(0, 1fr));
       align-items: end;
-      gap: 8px;
+      gap: var(--bar-gap, 8px);
       padding-top: 4px;
+      min-width: 0;
     }
 
     .day {
@@ -798,6 +799,17 @@
       pointer-events: none;
     }
 
+    .day:first-child .bar-value {
+      left: 0;
+      transform: none;
+    }
+
+    .day:last-child .bar-value {
+      left: auto;
+      right: 0;
+      transform: none;
+    }
+
     .stack {
       width: 100%;
       display: flex;
@@ -820,13 +832,35 @@
 
     .day-label {
       color: var(--muted);
-      font-size: 11px;
       text-align: center;
-      writing-mode: vertical-rl;
-      text-orientation: upright;
+      display: grid;
+      gap: 0;
       justify-self: center;
-      letter-spacing: .02em;
-      line-height: 1;
+      align-content: center;
+      width: min(32px, 100%);
+      min-height: 24px;
+      border: 1px solid color-mix(in srgb, var(--line) 78%, transparent);
+      border-radius: 7px;
+      background: color-mix(in srgb, var(--panel) 82%, transparent);
+      box-shadow: 0 3px 8px rgba(15, 23, 42, .04);
+      line-height: 1.05;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .day-label span {
+      display: block;
+    }
+
+    .day-label-month {
+      font-size: 9px;
+      font-weight: 680;
+      color: color-mix(in srgb, var(--muted) 82%, transparent);
+    }
+
+    .day-label-day {
+      font-size: 11px;
+      font-weight: 850;
+      color: var(--ink);
     }
 
     .ratio-wrap {
@@ -4281,6 +4315,7 @@
       days = expandChartDays(days);
       const max = Math.max(...days.map(day => day.totalTokens), 1);
       els.trendChart.style.setProperty("--days", days.length);
+      els.trendChart.style.setProperty("--bar-gap", days.length > 21 ? "3px" : days.length > 14 ? "4px" : "8px");
       els.trendChart.innerHTML = days.map(day => {
         const barHeight = Math.max(day.totalTokens / max * 100, day.totalTokens ? 5 : 0);
         const official = groupByKey(day.bySource, "official_plus").totalTokens;
@@ -4298,7 +4333,7 @@
               ["output", day.outputTokens]
             ];
         const title = `${day.date}\n官方 Plus：${formatInt(official)}\n中转站：${formatInt(relay)}\nunknown：${formatInt(unknown)}\n总计：${formatInt(day.totalTokens)}`;
-        const label = day.date.slice(5).replace("-", "/");
+        const [monthLabel, dayLabel] = day.date.slice(5).split("-");
         return `
           <button class="day" type="button" data-day="${day.date}" title="${escapeHtml(title)}">
             <div class="stack-outer" style="--bar-height:${barHeight}%">
@@ -4307,7 +4342,10 @@
                 ${parts.map(([type, value]) => `<span class="${type}" style="height:${day.totalTokens ? value / day.totalTokens * 100 : 0}%"></span>`).join("")}
               </div>
             </div>
-            <div class="day-label">${escapeHtml(label)}</div>
+            <div class="day-label" aria-label="${escapeHtml(day.date)}">
+              <span class="day-label-month">${escapeHtml(monthLabel)}</span>
+              <span class="day-label-day">${escapeHtml(dayLabel)}</span>
+            </div>
           </button>
         `;
       }).join("");
@@ -4759,7 +4797,7 @@
                 <h2>设置 / 关于</h2>
                 <p class="muted">这个页面说明当前运行方式、隐私边界和开源展示口径。</p>
               </div>
-              <span class="badge">版本 0.5.15</span>
+              <span class="badge">版本 0.5.16</span>
             </div>
             <div class="settings-grid">
               <div class="settings-card">
@@ -5151,7 +5189,7 @@
       const summary = summarize(safeRecords.map(record => ({ ...record, activeTokens: activeTokens(record), uncachedInputTokens: uncachedInputTokens(record), hitRate: cacheHitRateOf(record) })));
       return {
         snapshotVersion: 1,
-        appVersion: "0.5.15",
+        appVersion: "0.5.16",
         generatedAt: new Date().toISOString(),
         privacy: {
           anonymized: true,

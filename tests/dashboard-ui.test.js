@@ -63,9 +63,20 @@ test("daily Token trend remains a stacked bar chart", () => {
   assert.doesNotMatch(trendSource, /renderUsageCurveChart/);
 });
 
-test("daily Token trend date labels are not ellipsized", () => {
+test("daily Token trend date labels fit within the chart card", () => {
+  const trendSource = extractFunction("renderTrend");
+  const trendCss = indexSource.match(/\.trend\s*\{[^}]+\}/)?.[0] || "";
   const dayLabelCss = indexSource.match(/\.day-label\s*\{[^}]+\}/)?.[0] || "";
-  assert.match(dayLabelCss, /writing-mode:\s*vertical-rl/);
+  assert.match(trendCss, /minmax\(0,\s*1fr\)/);
+  assert.match(trendCss, /gap:\s*var\(--bar-gap/);
+  assert.doesNotMatch(trendCss, /minmax\(24px,\s*1fr\)/);
+  assert.match(dayLabelCss, /display:\s*grid/);
+  assert.match(trendSource, /--bar-gap/);
+  assert.match(trendSource, /day-label-month/);
+  assert.match(trendSource, /day-label-day/);
+  assert.match(indexSource, /\.day:first-child\s+\.bar-value/);
+  assert.match(indexSource, /\.day:last-child\s+\.bar-value/);
+  assert.doesNotMatch(dayLabelCss, /writing-mode:\s*vertical-rl/);
   assert.doesNotMatch(dayLabelCss, /text-overflow:\s*ellipsis/);
   assert.doesNotMatch(dayLabelCss, /overflow:\s*hidden/);
 });
