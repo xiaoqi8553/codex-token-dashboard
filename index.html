@@ -822,9 +822,11 @@
       color: var(--muted);
       font-size: 11px;
       text-align: center;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      writing-mode: vertical-rl;
+      text-orientation: upright;
+      justify-self: center;
+      letter-spacing: .02em;
+      line-height: 1;
     }
 
     .ratio-wrap {
@@ -4296,6 +4298,7 @@
               ["output", day.outputTokens]
             ];
         const title = `${day.date}\n官方 Plus：${formatInt(official)}\n中转站：${formatInt(relay)}\nunknown：${formatInt(unknown)}\n总计：${formatInt(day.totalTokens)}`;
+        const label = day.date.slice(5).replace("-", "/");
         return `
           <button class="day" type="button" data-day="${day.date}" title="${escapeHtml(title)}">
             <div class="stack-outer" style="--bar-height:${barHeight}%">
@@ -4304,7 +4307,7 @@
                 ${parts.map(([type, value]) => `<span class="${type}" style="height:${day.totalTokens ? value / day.totalTokens * 100 : 0}%"></span>`).join("")}
               </div>
             </div>
-            <div class="day-label">${escapeHtml(day.date.slice(5))}</div>
+            <div class="day-label">${escapeHtml(label)}</div>
           </button>
         `;
       }).join("");
@@ -4756,7 +4759,7 @@
                 <h2>设置 / 关于</h2>
                 <p class="muted">这个页面说明当前运行方式、隐私边界和开源展示口径。</p>
               </div>
-              <span class="badge">版本 0.5.14</span>
+              <span class="badge">版本 0.5.15</span>
             </div>
             <div class="settings-grid">
               <div class="settings-card">
@@ -5148,7 +5151,7 @@
       const summary = summarize(safeRecords.map(record => ({ ...record, activeTokens: activeTokens(record), uncachedInputTokens: uncachedInputTokens(record), hitRate: cacheHitRateOf(record) })));
       return {
         snapshotVersion: 1,
-        appVersion: "0.5.14",
+        appVersion: "0.5.15",
         generatedAt: new Date().toISOString(),
         privacy: {
           anonymized: true,

@@ -63,6 +63,13 @@ test("daily Token trend remains a stacked bar chart", () => {
   assert.doesNotMatch(trendSource, /renderUsageCurveChart/);
 });
 
+test("daily Token trend date labels are not ellipsized", () => {
+  const dayLabelCss = indexSource.match(/\.day-label\s*\{[^}]+\}/)?.[0] || "";
+  assert.match(dayLabelCss, /writing-mode:\s*vertical-rl/);
+  assert.doesNotMatch(dayLabelCss, /text-overflow:\s*ellipsis/);
+  assert.doesNotMatch(dayLabelCss, /overflow:\s*hidden/);
+});
+
 test("usage trend has no persistent numeric overlays or summaries", () => {
   const curveSource = extractFunction("renderUsageCurveChart");
   const cacheSource = extractFunction("renderCacheTrend");
