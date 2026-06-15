@@ -81,6 +81,23 @@ test("daily Token trend date labels fit within the chart card", () => {
   assert.doesNotMatch(dayLabelCss, /overflow:\s*hidden/);
 });
 
+test("daily Token trend supports one year range with a total summary", () => {
+  const applyRangeSource = extractFunction("applyRange");
+  const trendSource = extractFunction("renderTrend");
+  const totalSource = extractFunction("renderTrendTotal");
+  const monthlySource = extractFunction("bucketTrendDays");
+  const summaryCss = indexSource.match(/\.trend-total-card\s*\{[^}]+\}/)?.[0] || "";
+
+  assert.match(indexSource, /data-range="1y"[^>]*>1年/);
+  assert.match(applyRangeSource, /range === "1y"/);
+  assert.match(applyRangeSource, /todayString\(-364\)/);
+  assert.match(monthlySource, /const bucketKey = date\.slice\(0, 7\)/);
+  assert.match(trendSource, /bucketTrendDays\(expandedDays\)/);
+  assert.match(indexSource, /id="trendTotal"/);
+  assert.match(totalSource, /累计 Token/);
+  assert.match(summaryCss, /min-width:\s*150px/);
+});
+
 test("usage trend has no persistent numeric overlays or summaries", () => {
   const curveSource = extractFunction("renderUsageCurveChart");
   const cacheSource = extractFunction("renderCacheTrend");

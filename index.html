@@ -764,6 +764,69 @@
       min-width: 0;
     }
 
+    .trend-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(150px, .22fr);
+      gap: 12px;
+      align-items: stretch;
+      min-width: 0;
+    }
+
+    .trend-total-card {
+      min-width: 150px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background:
+        radial-gradient(circle at 82% 10%, color-mix(in srgb, var(--official) 18%, transparent), transparent 32%),
+        color-mix(in srgb, var(--panel-2) 84%, transparent);
+      padding: 13px;
+      display: grid;
+      align-content: space-between;
+      gap: 12px;
+      box-shadow: var(--shadow-soft);
+    }
+
+    .trend-total-kicker {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 820;
+    }
+
+    .trend-total-value {
+      margin-top: 6px;
+      font-size: clamp(28px, 2vw, 38px);
+      line-height: .95;
+      font-weight: 880;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .trend-total-note {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .trend-total-list {
+      display: grid;
+      gap: 8px;
+      font-size: 12px;
+    }
+
+    .trend-total-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      min-width: 0;
+      color: var(--muted);
+    }
+
+    .trend-total-row strong {
+      color: var(--ink);
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
     .day {
       border: 0;
       background: transparent;
@@ -2093,6 +2156,8 @@
       }
       .date-field { min-width: 0; grid-template-columns: auto minmax(0, 1fr) auto; }
       .date-display { min-width: 0; }
+      .trend-layout { grid-template-columns: 1fr; }
+      .trend-total-card { min-height: 148px; }
       .usage-trend-card { padding: 12px 10px 10px; min-height: 302px; }
       .usage-plot-inner { left: 48px; }
       .usage-y-label { width: 40px; font-size: 11px; }
@@ -2231,6 +2296,7 @@
           <button type="button" data-range="today">今天</button>
           <button class="active" type="button" data-range="7d">7 天</button>
           <button type="button" data-range="30d">30 天</button>
+          <button type="button" data-range="1y">1年</button>
           <button type="button" data-range="custom">自定义</button>
         </div>
         <label class="date-field">
@@ -2295,7 +2361,10 @@
             <option value="token">按 input / cached / output 堆叠</option>
           </select>
         </div>
-        <div class="trend" id="trendChart"></div>
+        <div class="trend-layout">
+          <div class="trend" id="trendChart"></div>
+          <aside class="trend-total-card" id="trendTotal" aria-live="polite"></aside>
+        </div>
       </article>
 
       <article class="panel">
@@ -2394,6 +2463,8 @@
       metrics: document.querySelector("#metrics"),
       chartsSection: document.querySelector("#chartsSection"),
       trendChart: document.querySelector("#trendChart"),
+      trendTotal: document.querySelector("#trendTotal"),
+      trendHint: document.querySelector("#trendHint"),
       trendMode: document.querySelector("#trendMode"),
       ratioChart: document.querySelector("#ratioChart"),
       cacheTrendPanel: document.querySelector("#cacheTrendPanel"),
@@ -2534,6 +2605,9 @@
         els.toDate.value = todayString();
       } else if (range === "30d") {
         els.fromDate.value = todayString(-29);
+        els.toDate.value = todayString();
+      } else if (range === "1y") {
+        els.fromDate.value = todayString(-364);
         els.toDate.value = todayString();
       }
       syncDateDisplays();
@@ -4222,7 +4296,7 @@
       const byDate = new Map(days.map(day => [day.date, day]));
       const result = [];
       for (let cursor = new Date(start); cursor <= end; cursor.setDate(cursor.getDate() + 1)) {
-        if (result.length >= 90) return days;
+        if (result.length >= 370) return days;
         const date = localDateKey(cursor);
         result.push(byDate.get(date) || {
           key: date,
@@ -4242,6 +4316,80 @@
         });
       }
       return result;
+    }
+
+    function bucketTrendDays(days) {
+      if (state.range !== "1y") return days;
+      const buckets = new Map();
+      for (const day of days) {
+        const date = day.date;
+        const bucketKey = date.slice(0, 7);
+        if (!buckets.has(bucketKey)) {
+          buckets.set(bucketKey, {
+            key: bucketKey,
+            bucketKey,
+            date: bucketKey,
+            fromDate: day.date,
+            toDate: day.date,
+            labelParts: [bucketKey.slice(0, 4), `${bucketKey.slice(5)}月`],
+            totalTokens: 0,
+            inputTokens: 0,
+            cachedInputTokens: 0,
+            outputTokens: 0,
+            activeTokens: 0,
+            uncachedInputTokens: 0,
+            records: 0,
+            sessions: 0,
+            estimatedRecords: 0,
+            estimatedTokens: 0,
+            bySource: {}
+          });
+        }
+        const bucket = buckets.get(bucketKey);
+        bucket.toDate = day.date;
+        bucket.totalTokens += Number(day.totalTokens || 0);
+        bucket.inputTokens += Number(day.inputTokens || 0);
+        bucket.cachedInputTokens += Number(day.cachedInputTokens || 0);
+        bucket.outputTokens += Number(day.outputTokens || 0);
+        bucket.activeTokens += Number(day.activeTokens || 0);
+        bucket.uncachedInputTokens += Number(day.uncachedInputTokens || 0);
+        bucket.records += Number(day.records || 0);
+        bucket.sessions += Number(day.sessions || 0);
+        bucket.estimatedRecords += Number(day.estimatedRecords || 0);
+        bucket.estimatedTokens += Number(day.estimatedTokens || 0);
+        for (const source of day.bySource || []) {
+          if (!bucket.bySource[source.key]) {
+            bucket.bySource[source.key] = {
+              key: source.key,
+              totalTokens: 0,
+              inputTokens: 0,
+              cachedInputTokens: 0,
+              outputTokens: 0,
+              activeTokens: 0,
+              uncachedInputTokens: 0,
+              records: 0,
+              sessions: 0,
+              estimatedRecords: 0,
+              estimatedTokens: 0
+            };
+          }
+          bucket.bySource[source.key].totalTokens += Number(source.totalTokens || 0);
+          bucket.bySource[source.key].inputTokens += Number(source.inputTokens || 0);
+          bucket.bySource[source.key].cachedInputTokens += Number(source.cachedInputTokens || 0);
+          bucket.bySource[source.key].outputTokens += Number(source.outputTokens || 0);
+          bucket.bySource[source.key].activeTokens += Number(source.activeTokens || 0);
+          bucket.bySource[source.key].uncachedInputTokens += Number(source.uncachedInputTokens || 0);
+          bucket.bySource[source.key].records += Number(source.records || 0);
+          bucket.bySource[source.key].sessions += Number(source.sessions || 0);
+          bucket.bySource[source.key].estimatedRecords += Number(source.estimatedRecords || 0);
+          bucket.bySource[source.key].estimatedTokens += Number(source.estimatedTokens || 0);
+        }
+      }
+      return [...buckets.values()].map(bucket => ({
+        ...bucket,
+        cacheHitRate: bucket.inputTokens ? bucket.cachedInputTokens / bucket.inputTokens : 0,
+        bySource: Object.values(bucket.bySource).map(finalizeGroup)
+      }));
     }
 
     function renderUsageCurveChart({ id, days, series, primaryKey, ariaLabel }) {
@@ -4307,12 +4455,22 @@
     }
 
     function renderTrend(days) {
+      els.trendHint.textContent = state.range === "1y" ? "一年范围按月汇总，点击柱子可筛选到该月" : "点击柱子可筛选到当天";
       if (!days.length) {
         els.trendChart.innerHTML = emptyState("暂无趋势数据。请加载示例数据或导入 usage-index.json。");
         els.trendChart.style.setProperty("--days", 1);
+        els.trendTotal.innerHTML = `
+          <div>
+            <div class="trend-total-kicker">累计 Token</div>
+            <div class="trend-total-value">0</div>
+            <p class="trend-total-note">当前筛选范围暂无数据</p>
+          </div>
+        `;
         return;
       }
-      days = expandChartDays(days);
+      const expandedDays = expandChartDays(days);
+      renderTrendTotal(expandedDays);
+      days = bucketTrendDays(expandedDays);
       const max = Math.max(...days.map(day => day.totalTokens), 1);
       els.trendChart.style.setProperty("--days", days.length);
       els.trendChart.style.setProperty("--bar-gap", days.length > 21 ? "3px" : days.length > 14 ? "4px" : "8px");
@@ -4332,10 +4490,11 @@
               ["uncached", day.uncachedInputTokens],
               ["output", day.outputTokens]
             ];
-        const title = `${day.date}\n官方 Plus：${formatInt(official)}\n中转站：${formatInt(relay)}\nunknown：${formatInt(unknown)}\n总计：${formatInt(day.totalTokens)}`;
-        const [monthLabel, dayLabel] = day.date.slice(5).split("-");
+        const titleDate = day.bucketKey ? `${day.fromDate} ~ ${day.toDate}` : day.date;
+        const title = `${titleDate}\n官方 Plus：${formatInt(official)}\n中转站：${formatInt(relay)}\nunknown：${formatInt(unknown)}\n总计：${formatInt(day.totalTokens)}`;
+        const [monthLabel, dayLabel] = day.labelParts || day.date.slice(5).split("-");
         return `
-          <button class="day" type="button" data-day="${day.date}" title="${escapeHtml(title)}">
+          <button class="day" type="button" data-day="${escapeHtml(day.date)}" data-from="${escapeHtml(day.fromDate || day.date)}" data-to="${escapeHtml(day.toDate || day.date)}" title="${escapeHtml(title)}">
             <div class="stack-outer" style="--bar-height:${barHeight}%">
               ${day.totalTokens ? `<div class="bar-value" title="${formatInt(day.totalTokens)}">${formatToken(day.totalTokens)}</div>` : ""}
               <div class="stack" style="height:${barHeight}%">
@@ -4349,6 +4508,29 @@
           </button>
         `;
       }).join("");
+    }
+
+    function renderTrendTotal(days) {
+      const totals = days.reduce((sum, day) => ({
+        totalTokens: sum.totalTokens + Number(day.totalTokens || 0),
+        inputTokens: sum.inputTokens + Number(day.inputTokens || 0),
+        outputTokens: sum.outputTokens + Number(day.outputTokens || 0),
+        activeTokens: sum.activeTokens + Number(day.activeTokens || 0)
+      }), { totalTokens: 0, inputTokens: 0, outputTokens: 0, activeTokens: 0 });
+      const activeDays = days.filter(day => day.totalTokens > 0).length;
+      const rangeLabel = state.range === "1y" ? "近一年累计" : "当前范围累计";
+      els.trendTotal.innerHTML = `
+        <div>
+          <div class="trend-total-kicker">累计 Token</div>
+          <div class="trend-total-value" title="${formatInt(totals.totalTokens)}">${formatToken(totals.totalTokens)}</div>
+          <p class="trend-total-note">${rangeLabel} · ${activeDays} 个活跃日</p>
+        </div>
+        <div class="trend-total-list">
+          <div class="trend-total-row"><span>输入</span><strong title="${formatInt(totals.inputTokens)}">${formatToken(totals.inputTokens)}</strong></div>
+          <div class="trend-total-row"><span>输出</span><strong title="${formatInt(totals.outputTokens)}">${formatToken(totals.outputTokens)}</strong></div>
+          <div class="trend-total-row"><span>active</span><strong title="${formatInt(totals.activeTokens)}">${formatToken(totals.activeTokens)}</strong></div>
+        </div>
+      `;
     }
 
     function visualDegrees(values) {
@@ -4797,7 +4979,7 @@
                 <h2>设置 / 关于</h2>
                 <p class="muted">这个页面说明当前运行方式、隐私边界和开源展示口径。</p>
               </div>
-              <span class="badge">版本 0.5.16</span>
+              <span class="badge">版本 0.5.17</span>
             </div>
             <div class="settings-grid">
               <div class="settings-card">
@@ -5189,7 +5371,7 @@
       const summary = summarize(safeRecords.map(record => ({ ...record, activeTokens: activeTokens(record), uncachedInputTokens: uncachedInputTokens(record), hitRate: cacheHitRateOf(record) })));
       return {
         snapshotVersion: 1,
-        appVersion: "0.5.16",
+        appVersion: "0.5.17",
         generatedAt: new Date().toISOString(),
         privacy: {
           anonymized: true,
@@ -5412,8 +5594,8 @@
     els.trendChart.addEventListener("click", event => {
       const button = event.target.closest("[data-day]");
       if (!button) return;
-      els.fromDate.value = button.dataset.day;
-      els.toDate.value = button.dataset.day;
+      els.fromDate.value = button.dataset.from || button.dataset.day;
+      els.toDate.value = button.dataset.to || button.dataset.day;
       syncDateDisplays();
       state.range = "custom";
       state.page = 1;

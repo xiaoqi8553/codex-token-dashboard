@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-10T11:06:30.181Z",
+  "generatedAt": "2026-06-15T13:47:02.376Z",
   "baseUrl": "http://127.0.0.1:8787",
   "screenshotsDir": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current",
   "pages": [
@@ -186,7 +186,7 @@
         "charts": [
           {
             "selector": ".timeline-board",
-            "height": 2144.5625,
+            "height": 2774.0625,
             "hasGraphic": true,
             "hasEmpty": false
           }
@@ -196,7 +196,7 @@
         "activeNav": "",
         "replay": {
           "hasTimeline": true,
-          "nodeCount": 81,
+          "nodeCount": 105,
           "sideWidth": 380,
           "hasGlow": false,
           "hasControls": true
@@ -386,7 +386,7 @@
         "charts": [
           {
             "selector": ".timeline-board",
-            "height": 2144.5625,
+            "height": 2774.0625,
             "hasGraphic": true,
             "hasEmpty": false
           }
@@ -396,7 +396,7 @@
         "activeNav": "",
         "replay": {
           "hasTimeline": true,
-          "nodeCount": 81,
+          "nodeCount": 105,
           "sideWidth": 380,
           "hasGlow": false,
           "hasControls": true
@@ -532,7 +532,7 @@
         "charts": [
           {
             "selector": ".task-layout",
-            "height": 1442.71875,
+            "height": 1441.71875,
             "hasGraphic": true,
             "hasEmpty": true
           }
@@ -624,7 +624,7 @@
         "charts": [
           {
             "selector": ".timeline-board",
-            "height": 3119.09375,
+            "height": 4037.34375,
             "hasGraphic": true,
             "hasEmpty": false
           }
@@ -634,7 +634,7 @@
         "activeNav": "",
         "replay": {
           "hasTimeline": true,
-          "nodeCount": 81,
+          "nodeCount": 105,
           "sideWidth": 374,
           "hasGlow": false,
           "hasControls": true
