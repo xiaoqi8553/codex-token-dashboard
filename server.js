@@ -23,7 +23,11 @@ const ACCESS_TOKEN = String(CONFIG.publicAccessToken || "").trim();
 const DASHBOARD_PASSWORD = String(CONFIG.dashboardPassword || "").trim();
 const SOURCE_ATTRIBUTION_MODE = normalizeSourceAttributionMode(CONFIG.sourceAttributionMode);
 const SESSIONS_DIR = path.resolve(CONFIG.sessionsDir || path.join(os.homedir(), ".codex", "sessions"));
+const INDEX_REFRESH_INTERVAL_MS = Number(envString("INDEX_REFRESH_INTERVAL_MS", "5000"));
 let activePort = PORT;
+let indexCache = null;
+let indexCacheUpdatedAt = 0;
+let indexRefreshPromise = null;
 
 function loadDotEnv() {
   const envPath = path.join(ROOT, ".env");
@@ -1166,6 +1170,34 @@ function buildIndex() {
   return index;
 }
 
+function refreshIndexCache(options = {}) {
+  if (indexRefreshPromise && !options.force) return indexRefreshPromise;
+  indexRefreshPromise = Promise.resolve()
+    .then(() => {
+      const index = buildIndex();
+      indexCache = index;
+      indexCacheUpdatedAt = Date.now();
+      return index;
+    })
+    .catch(error => {
+      if (!indexCache) throw error;
+      console.warn(`Index refresh failed, keeping cached index: ${error.message}`);
+      return indexCache;
+    })
+    .finally(() => {
+      indexRefreshPromise = null;
+    });
+  return indexRefreshPromise;
+}
+
+async function getUsageIndex(options = {}) {
+  if (options.force || !indexCache) return refreshIndexCache({ force: true });
+  if (Date.now() - indexCacheUpdatedAt > INDEX_REFRESH_INTERVAL_MS) {
+    refreshIndexCache().catch(error => console.warn(`Background index refresh failed: ${error.message}`));
+  }
+  return indexCache;
+}
+
 function dedupeRecords(records) {
   const map = new Map();
   for (const record of records) {
@@ -1271,10 +1303,12 @@ function objectValues(groups) {
   }));
 }
 
-function apiUsage(url) {
+async function apiUsage(url) {
   const started = Date.now();
-  const index = buildIndex();
+  const force = url.searchParams.get("force") === "1";
+  const index = await getUsageIndex({ force });
   const query = Object.fromEntries(url.searchParams.entries());
+  delete query.force;
   const records = filterRecords(index.records, query);
   const calendarQuery = { ...query };
   delete calendarQuery.from;
@@ -1418,16 +1452,16 @@ const server = http.createServer(async (req, res) => {
         defaultDateRange: CONFIG.defaultDateRange
       });
     }
-    if (req.method === "GET" && url.pathname === "/api/usage") return sendJson(res, apiUsage(url));
+    if (req.method === "GET" && url.pathname === "/api/usage") return sendJson(res, await apiUsage(url));
     if (req.method === "GET" && url.pathname === "/api/index") {
       if (PUBLIC_ACCESS) return sendJson(res, { ok: false, error: "Raw index is disabled in public access mode." }, 403);
-      return sendJson(res, loadIndex());
+      return sendJson(res, indexCache || loadIndex());
     }
     if (req.method === "POST" && url.pathname === "/api/import/relay") {
       const body = await readRequestBody(req);
       const payload = JSON.parse(body || "{}");
       const filePath = saveImport(payload);
-      const index = buildIndex();
+      const index = await refreshIndexCache({ force: true });
       return sendJson(res, { ok: true, importedPath: PUBLIC_ACCESS || ANONYMIZE_DATA ? "[hidden]" : filePath, updatedAt: index.updatedAt });
     }
     serveStatic(req, res, url);
@@ -1469,13 +1503,19 @@ function listenWithFallback(port, attemptsLeft = 3) {
   });
 }
 
+function startIndexRefreshLoop() {
+  setInterval(() => refreshIndexCache().catch(error => console.warn(`Background index refresh failed: ${error.message}`)), INDEX_REFRESH_INTERVAL_MS);
+}
+
 try {
   validateSecurityConfig();
   ensureDirs();
-  buildIndex();
+  indexCache = buildIndex();
+  indexCacheUpdatedAt = Date.now();
   if (process.argv.includes("--scan")) {
     console.log(`Scan complete. Index written to: ${INDEX_PATH}`);
   } else {
+    startIndexRefreshLoop();
     listenWithFallback(PORT, 3);
   }
 } catch (error) {

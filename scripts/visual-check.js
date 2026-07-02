@@ -29,8 +29,9 @@ const viewports = [
 function addBundledPlaywrightPaths() {
   const base = path.join(process.env.USERPROFILE || "", ".cache", "codex-runtimes", "codex-primary-runtime", "dependencies", "node", "node_modules", ".pnpm");
   const paths = [];
-  for (const name of ["playwright@1.60.0", "playwright-core@1.60.0"]) {
-    const candidate = path.join(base, name, "node_modules");
+  for (const entry of fs.existsSync(base) ? fs.readdirSync(base, { withFileTypes: true }) : []) {
+    if (!entry.isDirectory() || !/^playwright(?:-core)?@/.test(entry.name)) continue;
+    const candidate = path.join(base, entry.name, "node_modules");
     if (fs.existsSync(candidate)) paths.push(candidate);
   }
   for (const candidate of paths) {

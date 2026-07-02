@@ -2438,7 +2438,9 @@
       staticReadOnly: false,
       staticSourceType: "empty",
       sessionsDirectoryHandle: null,
-      sessionsDirectoryName: ""
+      sessionsDirectoryName: "",
+      refreshFailures: 0,
+      lastRefreshAt: 0
     };
 
     const els = {
@@ -2859,14 +2861,30 @@
       `;
     }
 
-    function buildQuery() {
+    function buildQuery(options = {}) {
       const params = new URLSearchParams();
       if (els.fromDate.value) params.set("from", els.fromDate.value);
       if (els.toDate.value) params.set("to", els.toDate.value);
       if (els.sourceFilter.value !== "all") params.set("source", els.sourceFilter.value);
       if (els.modelFilter.value !== "all") params.set("model", els.modelFilter.value);
       if (els.searchInput.value.trim()) params.set("search", els.searchInput.value.trim());
+      if (options.force) params.set("force", "1");
       return params;
+    }
+
+    function wait(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    async function fetchWithTimeout(url, options = {}) {
+      const { timeoutMs, retries, ...fetchOptions } = options;
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), timeoutMs || 12000);
+      try {
+        return await fetch(url, { ...fetchOptions, signal: controller.signal });
+      } finally {
+        clearTimeout(timeout);
+      }
     }
 
     async function apiFetch(url, options = {}) {
@@ -2876,7 +2894,20 @@
         headers.set("x-dashboard-password", state.authSecret);
         headers.set("authorization", `Bearer ${state.authSecret}`);
       }
-      const response = await fetch(url, { ...options, headers });
+      const retries = options.retries ?? 1;
+      let response;
+      let lastError;
+      for (let attempt = 0; attempt <= retries; attempt += 1) {
+        try {
+          response = await fetchWithTimeout(url, { ...options, headers });
+          if (![502, 503, 504].includes(response.status) || attempt === retries) break;
+        } catch (error) {
+          lastError = error;
+          if (attempt === retries) throw error;
+        }
+        await wait(350);
+      }
+      if (!response && lastError) throw lastError;
       if (response.status !== 401) return response;
       const secret = window.prompt("公开访问模式需要访问密码或 Access Token");
       if (!secret) return response;
@@ -2885,7 +2916,7 @@
       headers.set("x-access-token", secret);
       headers.set("x-dashboard-password", secret);
       headers.set("authorization", `Bearer ${secret}`);
-      return fetch(url, { ...options, headers });
+      return fetchWithTimeout(url, { ...options, headers });
     }
 
     function simpleHash(text) {
@@ -3913,18 +3944,23 @@
       setStatus(message || `浏览器本地数据已更新：${formatInt(state.records.length)} 条记录。`);
     }
 
-    async function loadUsage() {
+    async function loadUsage(options = {}) {
       if (state.loading) return;
+      const silent = Boolean(options.silent || options.auto);
+      const setBusy = value => {
+        if (silent) state.loading = value;
+        else setLoading(value);
+      };
       if (state.dataMode === "static") {
         if (state.staticSourceType === "demo") {
           try {
-            setLoading(true);
+            setBusy(true);
             await loadDemoData("示例数据已重新加载。");
             refreshWeatherFromSavedLocation({ silent: true, force: true });
           } catch (error) {
-            setStatus("示例数据加载失败，你可以手动导入 usage-index.json 或脱敏快照。", "error");
+            if (!silent) setStatus("示例数据加载失败，你可以手动导入 usage-index.json 或脱敏快照。", "error");
           } finally {
-            setLoading(false);
+            setBusy(false);
           }
           return;
         }
@@ -3933,13 +3969,13 @@
         }
         if (state.staticSourceType === "sessions-folder" && state.sessionsDirectoryHandle) {
           try {
-            setLoading(true);
-            await refreshSessionsDirectoryHandle("sessions 文件夹已刷新：");
+            setBusy(true);
+            await refreshSessionsDirectoryHandle(silent ? "" : "sessions 文件夹已刷新：", { silent });
             refreshWeatherFromSavedLocation({ silent: true, force: true });
           } catch (error) {
-            setStatus(error.message || "sessions 文件夹刷新失败，请重新选择文件夹。", "error");
+            if (!silent) setStatus(error.message || "sessions 文件夹刷新失败，请重新选择文件夹。", "error");
           } finally {
-            setLoading(false);
+            setBusy(false);
           }
           return;
         }
@@ -3954,14 +3990,16 @@
         refreshWeatherFromSavedLocation({ silent: true, force: true });
         return;
       }
-      setLoading(true);
+      setBusy(true);
       try {
-        const response = await apiFetch(`/api/usage?${buildQuery().toString()}`);
+        const response = await apiFetch(`/api/usage?${buildQuery(options).toString()}`, { retries: options.auto ? 1 : 2, timeoutMs: options.auto ? 9000 : 14000 });
         const contentType = response.headers.get("content-type") || "";
         if (!contentType.includes("application/json")) throw new Error("未发现本地 API，切换到静态浏览器模式");
         const payload = await response.json();
         if (!response.ok || !payload.ok) throw new Error(payload.error || `请求失败：${response.status}`);
         state.dataMode = "server";
+        state.refreshFailures = 0;
+        state.lastRefreshAt = Date.now();
         els.staticPanel.classList.remove("show");
         state.data = payload;
         const rawRecords = Array.isArray(payload.records) ? payload.records : [];
@@ -3970,12 +4008,24 @@
         pruneSelection();
         renderModelOptions(payload.models || []);
         render(payload);
-        setStatus(`扫描完成：${payload.scanMs ?? 0} ms，更新于 ${formatDateTime(payload.updatedAt)}。`);
+        if (!silent) setStatus(`扫描完成：${payload.scanMs ?? 0} ms，更新于 ${formatDateTime(payload.updatedAt)}。`);
         refreshWeatherFromSavedLocation({ silent: true, force: true });
       } catch (error) {
+        state.refreshFailures += 1;
+        if (state.data && options.auto) {
+          if (state.refreshFailures === 3) {
+            setStatus(`自动刷新暂时失败，已保留当前数据。最近错误：${error.message || "本地 API 暂不可用"}`);
+          }
+          return;
+        }
+        if (state.data && silent) return;
+        if (state.data) {
+          setStatus(error.message || "刷新失败，已保留当前数据。", "error");
+          return;
+        }
         await enterStaticMode(error.message || "本地 API 不可用");
       } finally {
-        setLoading(false);
+        setBusy(false);
       }
     }
 
@@ -4979,7 +5029,7 @@
                 <h2>设置 / 关于</h2>
                 <p class="muted">这个页面说明当前运行方式、隐私边界和开源展示口径。</p>
               </div>
-              <span class="badge">版本 0.5.17</span>
+              <span class="badge">版本 0.5.18</span>
             </div>
             <div class="settings-grid">
               <div class="settings-card">
@@ -5371,7 +5421,7 @@
       const summary = summarize(safeRecords.map(record => ({ ...record, activeTokens: activeTokens(record), uncachedInputTokens: uncachedInputTokens(record), hitRate: cacheHitRateOf(record) })));
       return {
         snapshotVersion: 1,
-        appVersion: "0.5.17",
+        appVersion: "0.5.18",
         generatedAt: new Date().toISOString(),
         privacy: {
           anonymized: true,
@@ -5511,7 +5561,7 @@
       if (state.data) renderTrend(summarize(state.records).byDay);
     });
 
-    document.querySelector("#refreshBtn").addEventListener("click", loadUsage);
+    document.querySelector("#refreshBtn").addEventListener("click", () => loadUsage({ force: true, manual: true }));
     document.querySelector("#themeButtons").addEventListener("click", event => {
       const button = event.target.closest("[data-theme-choice]");
       if (button) setTheme(button.dataset.themeChoice);
@@ -5992,16 +6042,32 @@
     setTheme(localStorage.getItem("codexTokenTheme") || "system");
     restoreSavedSessionsDirectory({ silent: true });
     applyRange("7d");
+    const serverAutoRefreshMs = 5000;
+    function refreshServerInBackground(options = {}) {
+      if (state.dataMode === "server" && !state.loading) {
+        loadUsage({ silent: true, auto: true, ...options });
+      }
+    }
+    function refreshServerNow() {
+      if (state.dataMode === "server" && !state.loading) {
+        loadUsage({ silent: true, auto: true, force: true });
+      }
+    }
     setInterval(() => {
-      if (state.dataMode === "server") loadUsage();
-    }, 15000);
+      refreshServerInBackground();
+    }, serverAutoRefreshMs);
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") refreshServerNow();
+    });
+    window.addEventListener("focus", () => {
+      refreshServerNow();
+    });
     setInterval(() => {
       if (
         state.dataMode === "static" &&
         state.staticSourceType === "sessions-folder" &&
         state.sessionsDirectoryHandle &&
-        !state.loading &&
-        document.visibilityState === "visible"
+        !state.loading
       ) {
         refreshSessionsDirectoryHandle("", { silent: true }).catch(() => {});
       }
