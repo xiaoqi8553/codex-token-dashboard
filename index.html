@@ -2870,7 +2870,7 @@
         </div>
         <div class="rail-version">
           <span>LOCAL-FIRST</span>
-          <strong>v0.6.0</strong>
+          <strong>v0.6.1</strong>
         </div>
       </div>
     </aside>
@@ -4259,7 +4259,98 @@
       return false;
     }
 
-    async function parseSessionFiles(fileList) {
+    function isRelevantSessionImportLine(line) {
+      const text = String(line || "");
+      if (!text) return false;
+      const prefix = text.slice(0, 2048);
+      const typeMatch = prefix.match(/"type"\s*:\s*"([^"]+)"/);
+      const recordType = typeMatch?.[1] || "";
+      const usagePattern = /total_token_usage|last_token_usage|token_usage|input_tokens|prompt_tokens|cached_input_tokens|cache_read_input_tokens|output_tokens|completion_tokens|total_tokens/;
+
+      if (recordType === "session_meta" || recordType === "turn_context") return true;
+      if (recordType === "event_msg") return usagePattern.test(prefix);
+      if (recordType === "response_item") {
+        return /"role"\s*:\s*"user"/.test(prefix);
+      }
+      if (["compacted", "world_state", "inter_agent_communication_metadata"].includes(recordType)) return false;
+      if (recordType) return usagePattern.test(text);
+      return usagePattern.test(text) || text.includes("model_provider") || text.includes("thread_source");
+    }
+
+    function yieldSessionImport() {
+      return new Promise(resolve => setTimeout(resolve, 0));
+    }
+
+    async function readSessionFileLines(file, visitLine, options = {}) {
+      const onProgress = typeof options.onProgress === "function" ? options.onProgress : null;
+      const decoder = new TextDecoder("utf-8", { fatal: false });
+      let lineParts = [];
+      let lineNumber = 0;
+      let bytesRead = 0;
+      let preview = "";
+      let lastYieldAt = performance.now();
+
+      const completeLine = segment => {
+        let line = segment;
+        if (lineParts.length) {
+          lineParts.push(segment);
+          line = lineParts.join("");
+          lineParts = [];
+        }
+        if (line.endsWith("\r")) line = line.slice(0, -1);
+        lineNumber += 1;
+        visitLine(line, lineNumber);
+      };
+
+      const consumeChunk = chunk => {
+        if (!chunk) return;
+        if (preview.length < 2000) preview += chunk.slice(0, 2000 - preview.length);
+        let start = 0;
+        let end = chunk.indexOf("\n", start);
+        while (end !== -1) {
+          completeLine(chunk.slice(start, end));
+          start = end + 1;
+          end = chunk.indexOf("\n", start);
+        }
+        if (start < chunk.length) lineParts.push(chunk.slice(start));
+      };
+
+      const maybeYield = async force => {
+        const now = performance.now();
+        if (!force && now - lastYieldAt < 32) return;
+        onProgress?.(bytesRead);
+        await yieldSessionImport();
+        lastYieldAt = performance.now();
+      };
+
+      if (file.stream) {
+        const reader = file.stream().getReader();
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          bytesRead += value?.byteLength || 0;
+          consumeChunk(decoder.decode(value, { stream: true }));
+          await maybeYield(false);
+        }
+        consumeChunk(decoder.decode());
+      } else {
+        const text = await file.text();
+        bytesRead = file.size || text.length;
+        consumeChunk(text);
+      }
+
+      if (lineParts.length) completeLine("");
+      await maybeYield(true);
+      return { bytesRead, lineCount: lineNumber, preview };
+    }
+
+    function reportSessionImportProgress(progress) {
+      const total = Math.max(progress.totalBytes || 0, 1);
+      const percent = Math.min(100, Math.round((progress.loadedBytes || 0) / total * 100));
+      setStatus(`正在解析 sessions：${percent}% · ${formatInt(progress.parsedFiles || 0)}/${formatInt(progress.totalFiles || 0)} 个文件 · 已发现 ${formatInt(progress.records || 0)} 条记录`);
+    }
+
+    async function parseSessionFiles(fileList, options = {}) {
       const allEntries = Array.from(fileList || [])
         .map(entry => entry?.file ? entry : { file: entry, relativePath: entry?.webkitRelativePath || entry?.name || "" })
         .filter(entry => entry.file);
@@ -4269,26 +4360,41 @@
       const files = allEntries.filter(isSessionImportEntry);
       const records = [];
       let parsedFiles = 0;
+      let loadedBytes = 0;
+      const totalBytes = files.reduce((sum, entry) => sum + toNumber(entry.file?.size), 0);
+      const emitProgress = currentFileBytes => options.onProgress?.({
+        loadedBytes: Math.min(loadedBytes + currentFileBytes, totalBytes),
+        totalBytes,
+        parsedFiles,
+        totalFiles: files.length,
+        records: records.length
+      });
       for (const entry of files) {
         const file = entry.file;
-        const text = await file.text();
         const relativePath = entry.relativePath || file.webkitRelativePath || file.name;
         const meta = { sessionId: file.name, provider: "", source: "", model: "unknown", timestamp: new Date(file.lastModified || Date.now()).toISOString(), title: "", cwd: "", turnId: "", previousTotal: null };
         const before = records.length;
+        let preview = "";
+        let fallbackText = "";
         if (/\.json$/i.test(file.name)) {
+          const text = await file.text();
+          fallbackText = text;
+          preview = text.slice(0, 2000);
           const parsed = parseJsonLine(text);
           if (parsed) visitUsageObjects(parsed, 1, meta, relativePath, records);
         } else {
-          text.split(/\r?\n/).forEach((line, index) => {
-            if (!line.trim()) return;
+          const scan = await readSessionFileLines(file, (line, lineNumber) => {
+            if (!isRelevantSessionImportLine(line)) return;
             const parsed = parseJsonLine(line);
-            if (parsed) visitUsageObjects(parsed, index + 1, meta, relativePath, records);
-          });
+            if (parsed) visitUsageObjects(parsed, lineNumber, meta, relativePath, records);
+          }, { onProgress: emitProgress });
+          preview = scan.preview;
         }
-        if (records.length === before && text.trim()) {
-          const estimated = estimateTokens(text);
+        if (records.length === before && file.size > 0) {
+          fallbackText = fallbackText || await file.text();
+          const estimated = estimateTokens(fallbackText);
           records.push(normalizeRecord({
-            id: simpleHash([relativePath, estimated, text.length].join("|")),
+            id: simpleHash([relativePath, estimated, fallbackText.length].join("|")),
             timestamp: meta.timestamp,
             sessionId: meta.sessionId,
             model: meta.model,
@@ -4299,7 +4405,7 @@
             estimated: true,
             estimateReason: "browser_missing_usage_fields_text_length",
             sessionTitle: meta.title,
-            detailText: text.slice(0, 2000),
+            detailText: fallbackText.slice(0, 2000) || preview,
             projectPath: meta.cwd
           }, { relativePath, projectPath: meta.cwd }));
         }
@@ -4318,6 +4424,9 @@
           }
         }
         parsedFiles += 1;
+        loadedBytes += toNumber(file.size);
+        emitProgress(0);
+        await yieldSessionImport();
       }
       const classifiedRecords = records.map(record => applyBrowserSourceEvidence(record, evidence));
       return makeStaticPayload(classifiedRecords, {
@@ -4341,7 +4450,9 @@
       }
       if (!options.silent) setStatus(`正在重新读取 ${state.sessionsDirectoryName || "sessions"} 文件夹...`);
       const files = await collectDirectoryFiles(state.sessionsDirectoryHandle);
-      const payload = await parseSessionFiles(files);
+      const payload = await parseSessionFiles(files, {
+        onProgress: options.silent ? null : reportSessionImportProgress
+      });
       state.dataMode = "static";
       state.staticPayload = payload;
       state.staticSourceType = "sessions-folder";
@@ -4460,12 +4571,15 @@
     }
 
     function fitDateRangeToRecords(records, options = {}) {
-      if (options.preservePreset && state.range !== "custom" && els.fromDate.value && els.toDate.value) {
-        syncDateDisplays();
-        return;
-      }
       const dates = records.map(record => record.date).filter(Boolean).sort();
       if (!dates.length) return;
+      if (options.preservePreset && state.range !== "custom" && els.fromDate.value && els.toDate.value) {
+        const overlapsCurrentRange = dates.some(date => date >= els.fromDate.value && date <= els.toDate.value);
+        if (overlapsCurrentRange) {
+          syncDateDisplays();
+          return;
+        }
+      }
       els.fromDate.value = dates[0];
       els.toDate.value = dates[dates.length - 1];
       syncDateDisplays();
@@ -5721,7 +5835,7 @@
                 <h2>设置 / 关于</h2>
                 <p class="muted">检查当前运行方式、隐私边界、版本和公开部署状态。</p>
               </div>
-              <span class="badge">版本 0.6.0</span>
+              <span class="badge">版本 0.6.1</span>
             </div>
             <div class="settings-grid">
               <div class="settings-card">
@@ -6113,7 +6227,7 @@
       const summary = summarize(safeRecords.map(record => ({ ...record, activeTokens: activeTokens(record), uncachedInputTokens: uncachedInputTokens(record), hitRate: cacheHitRateOf(record) })));
       return {
         snapshotVersion: 1,
-        appVersion: "0.6.0",
+        appVersion: "0.6.1",
         generatedAt: new Date().toISOString(),
         privacy: {
           anonymized: true,
@@ -6712,7 +6826,7 @@
         state.sessionsDirectoryHandle = null;
         state.sessionsDirectoryName = "";
         setStatus(`正在浏览器本地解析 ${formatInt(files.length)} 个文件...`);
-        const payload = await parseSessionFiles(files);
+        const payload = await parseSessionFiles(files, { onProgress: reportSessionImportProgress });
         state.dataMode = "static";
         state.staticPayload = payload;
         state.staticSourceType = payload.sourceType || "sessions-files";

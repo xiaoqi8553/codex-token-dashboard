@@ -14,7 +14,9 @@ function extractFunction(name) {
   const start = indexSource.lastIndexOf(marker);
   assert.notEqual(start, -1, `Missing ${name}`);
 
-  const bodyStart = indexSource.indexOf("{", start);
+  const signatureEnd = indexSource.indexOf(") {", start);
+  assert.notEqual(signatureEnd, -1, `Missing body for ${name}`);
+  const bodyStart = signatureEnd + 2;
   let depth = 0;
   let quote = "";
   let escaped = false;
@@ -57,6 +59,57 @@ test("chart date expansion preserves local date keys in UTC+8", () => {
 
   assert.deepEqual(Array.from(result, day => day.date), ["2026-06-08", "2026-06-09"]);
   assert.equal(result[1].totalTokens, 20);
+});
+
+test("sessions import streams large files and ignores irrelevant rollout records", () => {
+  const relevantStart = indexSource.lastIndexOf("function isRelevantSessionImportLine(");
+  const relevantEnd = indexSource.indexOf("function yieldSessionImport(", relevantStart);
+  const relevantSource = indexSource.slice(relevantStart, relevantEnd);
+  const readerSource = extractFunction("readSessionFileLines");
+  const parserSource = extractFunction("parseSessionFiles");
+
+  assert.match(relevantSource, /recordType === "session_meta" \|\| recordType === "turn_context"/);
+  assert.match(relevantSource, /recordType === "event_msg"/);
+  assert.match(relevantSource, /recordType === "response_item"/);
+  assert.match(relevantSource, /"compacted", "world_state", "inter_agent_communication_metadata"/);
+  assert.match(relevantSource, /if \(recordType\) return usagePattern\.test\(text\)/);
+  assert.match(readerSource, /file\.stream/);
+  assert.match(readerSource, /yieldSessionImport/);
+  assert.match(parserSource, /readSessionFileLines/);
+  assert.match(parserSource, /fallbackText = fallbackText \|\| await file\.text\(\)/);
+  assert.match(parserSource, /const estimated = estimateTokens\(fallbackText\)/);
+  assert.match(indexSource, /onProgress:\s*reportSessionImportProgress/);
+});
+
+test("sessions import fits dates only when the current preset hides every record", () => {
+  const makeContext = () => ({
+    state: { range: "7d" },
+    els: {
+      fromDate: { value: "2026-07-04" },
+      toDate: { value: "2026-07-10" }
+    },
+    syncDateDisplays() {},
+    setActiveRange(value) { this.activeRange = value; }
+  });
+
+  const hiddenContext = makeContext();
+  vm.createContext(hiddenContext);
+  vm.runInContext(`${extractFunction("fitDateRangeToRecords")}; this.fitDateRangeToRecords = fitDateRangeToRecords;`, hiddenContext);
+  hiddenContext.fitDateRangeToRecords([
+    { date: "2026-05-01" },
+    { date: "2026-05-03" }
+  ], { preservePreset: true });
+  assert.equal(hiddenContext.els.fromDate.value, "2026-05-01");
+  assert.equal(hiddenContext.els.toDate.value, "2026-05-03");
+  assert.equal(hiddenContext.state.range, "custom");
+
+  const overlappingContext = makeContext();
+  vm.createContext(overlappingContext);
+  vm.runInContext(`${extractFunction("fitDateRangeToRecords")}; this.fitDateRangeToRecords = fitDateRangeToRecords;`, overlappingContext);
+  overlappingContext.fitDateRangeToRecords([{ date: "2026-07-10" }], { preservePreset: true });
+  assert.equal(overlappingContext.els.fromDate.value, "2026-07-04");
+  assert.equal(overlappingContext.els.toDate.value, "2026-07-10");
+  assert.equal(overlappingContext.state.range, "7d");
 });
 
 test("daily Token trend remains a stacked bar chart", () => {
@@ -111,11 +164,11 @@ test("usage trend has no persistent numeric overlays or summaries", () => {
   assert.doesNotMatch(cacheSource, /峰值 active|缓存 \$\{formatToken|命中率 \$\{avgHit\}% \/ active/);
 });
 
-test("0.6.0 uses the engineering workspace shell and removes Work Replay", () => {
-  assert.equal(packageJson.version, "0.6.0");
+test("0.6.1 uses the engineering workspace shell and removes Work Replay", () => {
+  assert.equal(packageJson.version, "0.6.1");
   assert.match(indexSource, /class="side-rail shell"/);
   assert.match(indexSource, /id="viewTitle"/);
-  assert.match(indexSource, /v0\.6\.0/);
+  assert.match(indexSource, /v0\.6\.1/);
   assert.doesNotMatch(indexSource, /replayBtn|replay\.html|工作回放/);
   assert.doesNotMatch(buildSource, /replay\.html/);
   assert.equal(fs.existsSync(path.join(root, "replay.html")), false);

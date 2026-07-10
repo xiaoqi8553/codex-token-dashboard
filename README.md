@@ -7,7 +7,7 @@
 ![Codex Token Dashboard cover](screenshots/project-cover.svg)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-0f766e.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.6.0-17202e.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.6.1-17202e.svg)](CHANGELOG.md)
 [![OpenAI Sites](https://img.shields.io/badge/deploy-OpenAI%20Sites-275dcc.svg)](.openai/hosting.json)
 [![Netlify Demo](https://img.shields.io/badge/demo-codetoken.netlify.app-2f6fed.svg)](https://codetoken.netlify.app/)
 [![GitHub Pages](https://img.shields.io/badge/pages-github.io-111827.svg)](https://xiaoqi8553.github.io/codex-token-dashboard/)
