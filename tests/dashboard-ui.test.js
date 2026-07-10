@@ -6,6 +6,8 @@ const vm = require("node:vm");
 
 const root = path.resolve(__dirname, "..");
 const indexSource = fs.readFileSync(path.join(root, "index.html"), "utf8");
+const buildSource = fs.readFileSync(path.join(root, "scripts", "build-static.js"), "utf8");
+const packageJson = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
 
 function extractFunction(name) {
   const marker = `function ${name}(`;
@@ -107,4 +109,22 @@ test("usage trend has no persistent numeric overlays or summaries", () => {
   assert.doesNotMatch(curveSource, /usage-trend-badges/);
   assert.doesNotMatch(indexSource, /cacheTrendSummary/);
   assert.doesNotMatch(cacheSource, /峰值 active|缓存 \$\{formatToken|命中率 \$\{avgHit\}% \/ active/);
+});
+
+test("0.6.0 uses the engineering workspace shell and removes Work Replay", () => {
+  assert.equal(packageJson.version, "0.6.0");
+  assert.match(indexSource, /class="side-rail shell"/);
+  assert.match(indexSource, /id="viewTitle"/);
+  assert.match(indexSource, /v0\.6\.0/);
+  assert.doesNotMatch(indexSource, /replayBtn|replay\.html|工作回放/);
+  assert.doesNotMatch(buildSource, /replay\.html/);
+  assert.equal(fs.existsSync(path.join(root, "replay.html")), false);
+});
+
+test("static build emits the OpenAI Sites worker contract", () => {
+  const workerSource = fs.readFileSync(path.join(root, "sites-worker.js"), "utf8");
+  assert.match(buildSource, /dist, "server"/);
+  assert.match(buildSource, /sites-worker\.js/);
+  assert.match(workerSource, /env\.ASSETS\.fetch/);
+  assert.match(workerSource, /export default/);
 });

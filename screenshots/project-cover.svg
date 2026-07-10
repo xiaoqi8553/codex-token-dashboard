@@ -25,8 +25,8 @@
   <rect x="150" y="112" width="980" height="416" rx="24" fill="url(#panel)" stroke="#d6dfdc" filter="url(#shadow)"/>
   <rect x="190" y="154" width="78" height="78" rx="18" fill="#111827"/>
   <text x="209" y="204" font-family="Consolas, monospace" font-size="34" font-weight="700" fill="#f8fafc">&gt;_</text>
-  <text x="296" y="184" font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="54" font-weight="800" fill="#0f172a">Codex Token 用量看板</text>
-  <text x="298" y="228" font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="22" font-weight="600" fill="#0f766e">本地优先 · 官方 Plus + 中转站 · 真实/估算分离 · Netlify 静态演示</text>
+  <text x="296" y="184" font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="54" font-weight="800" fill="#17202e">Codex Token 工程工作台</text>
+  <text x="298" y="228" font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="22" font-weight="600" fill="#275dcc">0.6.0 · 本地优先 · 官方 Plus + 中转站 · OpenAI Sites</text>
   <g transform="translate(190 286)">
     <rect width="230" height="118" rx="18" fill="#101827"/>
     <text x="24" y="36" font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="17" font-weight="700" fill="#cbd5e1">总 Token</text>

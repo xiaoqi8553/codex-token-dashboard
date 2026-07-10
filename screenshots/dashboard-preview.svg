@@ -1,12 +1,12 @@
 <svg width="1280" height="760" viewBox="0 0 1280 760" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
   <title id="title">Codex Token Dashboard preview</title>
   <desc id="desc">A README preview image showing the dashboard layout with metrics, charts, and a detail table.</desc>
-  <rect width="1280" height="760" fill="#eef4f2"/>
+  <rect width="1280" height="760" fill="#f3f6f8"/>
   <rect x="32" y="30" width="1216" height="96" rx="16" fill="#ffffff" stroke="#d5dfdc"/>
   <rect x="58" y="52" width="54" height="54" rx="13" fill="#111827"/>
   <text x="71" y="87" font-family="Consolas, monospace" font-size="23" font-weight="800" fill="#ffffff">&gt;_</text>
-  <text x="132" y="76" font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="32" font-weight="850" fill="#0f172a">Codex Token 用量</text>
-  <text x="132" y="104" font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="15" font-weight="700" fill="#0f766e">作者：车辆研究生笔记</text>
+  <text x="132" y="76" font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="32" font-weight="850" fill="#17202e">Codex Token · 运行总览</text>
+  <text x="132" y="104" font-family="Consolas, monospace" font-size="13" font-weight="700" fill="#275dcc">0.6.0 · ENGINEERING WORKSPACE</text>
   <g transform="translate(760 55)" font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="13" font-weight="700">
     <rect width="106" height="34" rx="9" fill="#111827"/>
     <text x="22" y="22" fill="#ffffff">7 天</text>

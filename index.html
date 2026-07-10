@@ -3,37 +3,39 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Codex Token 用量</title>
+  <title>Codex Token Console</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23111827'/%3E%3Cpath d='M18 22l10 10-10 10' fill='none' stroke='%23f8fafc' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M32 43h14' stroke='%232f6fed' stroke-width='5' stroke-linecap='round'/%3E%3C/svg%3E">
   <style>
     :root {
       color-scheme: light;
-      --bg: #eef3f6;
-      --bg-texture: linear-gradient(180deg, rgba(255,255,255,.9), rgba(255,255,255,.55));
+      --bg: #f3f6f8;
+      --bg-texture: linear-gradient(180deg, rgba(255,255,255,.98), rgba(251,252,253,.96));
       --panel: #ffffff;
-      --panel-2: #f7fafc;
-      --ink: #111827;
-      --muted: #64717f;
-      --line: #d8e1e8;
-      --line-strong: #c5d1da;
-      --official: #2f6fed;
-      --relay: #008f7a;
-      --unknown: #7b8794;
-      --cache: #d78723;
-      --uncached: #2f6fed;
-      --output: #d44d4d;
-      --active: #1f9ab0;
+      --panel-2: #f6f8fa;
+      --ink: #17202e;
+      --muted: #657286;
+      --line: #dce3e9;
+      --line-strong: #bcc8d2;
+      --official: #275dcc;
+      --relay: #008b72;
+      --unknown: #85909d;
+      --cache: #c97817;
+      --uncached: #275dcc;
+      --output: #d1495b;
+      --active: #1689a5;
+      --accent: #275dcc;
+      --accent-soft: #e9f0ff;
       --hero-ink: #f8fafc;
-      --hero-muted: #cbd5e1;
-      --hero-bg-a: #0f172a;
-      --hero-bg-b: #1e3a5f;
-      --good: #0e8f63;
+      --hero-muted: #cbd6e5;
+      --hero-bg-a: #17202e;
+      --hero-bg-b: #17202e;
+      --good: #087f5b;
       --warn: #b7791f;
-      --bad: #c2410c;
-      --shadow: 0 16px 42px rgba(25, 36, 52, .08);
-      --shadow-soft: 0 8px 22px rgba(25, 36, 52, .06);
-      --radius: 10px;
-      --grid-alpha: .026;
+      --bad: #c24152;
+      --shadow: 0 18px 42px rgba(27, 39, 51, .08);
+      --shadow-soft: 0 4px 14px rgba(27, 39, 51, .045);
+      --radius: 12px;
+      --grid-alpha: .018;
     }
 
     @media (prefers-color-scheme: dark) {
@@ -54,6 +56,8 @@
         --uncached: #6fa0ff;
         --output: #ff7575;
         --active: #55c5d6;
+        --accent: #79a1ff;
+        --accent-soft: #1d2b43;
         --hero-ink: #ffffff;
         --hero-muted: #d9e6f2;
         --hero-bg-a: #172033;
@@ -80,6 +84,8 @@
       --uncached: #6fa0ff;
       --output: #ff7575;
       --active: #55c5d6;
+      --accent: #79a1ff;
+      --accent-soft: #1d2b43;
       --hero-ink: #ffffff;
       --hero-muted: #d9e6f2;
       --hero-bg-a: #172033;
@@ -95,10 +101,11 @@
       min-height: 100vh;
       color: var(--ink);
       background:
-        linear-gradient(90deg, rgba(129,151,166,var(--grid-alpha)) 1px, transparent 1px) 0 0 / 28px 28px,
-        linear-gradient(rgba(129,151,166,var(--grid-alpha)) 1px, transparent 1px) 0 0 / 28px 28px,
+        radial-gradient(circle at 82% -8%, color-mix(in srgb, var(--official) 8%, transparent), transparent 28%),
+        linear-gradient(90deg, rgba(129,151,166,var(--grid-alpha)) 1px, transparent 1px) 0 0 / 32px 32px,
+        linear-gradient(rgba(129,151,166,var(--grid-alpha)) 1px, transparent 1px) 0 0 / 32px 32px,
         var(--bg);
-      font-family: "Inter", "PingFang SC", "Microsoft YaHei", "Noto Sans SC", "Segoe UI", sans-serif;
+      font-family: "IBM Plex Sans", "HarmonyOS Sans SC", "MiSans", "Noto Sans SC", "Microsoft YaHei", sans-serif;
       font-size: 14px;
     }
 
@@ -2189,29 +2196,671 @@
       .view-tabs.page-nav button { flex: 1 1 100%; justify-content: center; }
     }
   </style>
+  <style id="v060-design">
+    html { scrollbar-gutter: stable; }
+
+    .app {
+      width: min(1760px, calc(100% - 32px));
+      margin: 16px auto;
+      padding: 0;
+      display: grid;
+      grid-template-columns: 224px minmax(0, 1fr);
+      gap: 14px;
+      align-items: start;
+    }
+
+    .workspace {
+      min-width: 0;
+      display: grid;
+      gap: 12px;
+      animation: workspace-in 280ms ease-out both;
+    }
+
+    @keyframes workspace-in {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .shell,
+    .panel {
+      background: var(--panel);
+      border-color: var(--line);
+      box-shadow: var(--shadow-soft);
+    }
+
+    .side-rail {
+      position: sticky;
+      top: 16px;
+      height: calc(100vh - 32px);
+      min-height: 560px;
+      padding: 16px 12px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      overflow: hidden;
+      background:
+        linear-gradient(180deg, color-mix(in srgb, var(--panel) 98%, white), var(--panel));
+    }
+
+    .side-rail::after {
+      content: "";
+      position: absolute;
+      inset: auto 12px 0;
+      height: 3px;
+      border-radius: 3px 3px 0 0;
+      background: linear-gradient(90deg, var(--official) 0 58%, var(--relay) 58% 78%, var(--cache) 78% 94%, var(--output) 94%);
+    }
+
+    .brand {
+      grid-template-columns: 42px minmax(0, 1fr);
+      gap: 11px;
+      padding: 2px 4px 14px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .brand-icon {
+      width: 42px;
+      height: 42px;
+      border: 0;
+      border-radius: 10px;
+      background: var(--ink);
+      color: var(--panel);
+      box-shadow: none;
+      font-family: "JetBrains Mono", "Cascadia Code", Consolas, monospace;
+      font-size: 14px;
+      letter-spacing: -.08em;
+    }
+
+    .brand-copy { min-width: 0; display: grid; gap: 2px; }
+    .brand-name {
+      color: var(--ink);
+      font-size: 16px;
+      line-height: 1.2;
+      letter-spacing: -.02em;
+      white-space: nowrap;
+    }
+    .brand-caption {
+      color: var(--muted);
+      font-family: "JetBrains Mono", "Cascadia Code", Consolas, monospace;
+      font-size: 10px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .rail-section-label {
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      padding: 0 8px;
+    }
+
+    .view-tabs.page-nav {
+      position: static;
+      z-index: auto;
+      padding: 0;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      box-shadow: none;
+      backdrop-filter: none;
+      display: grid;
+      gap: 5px;
+      align-content: start;
+    }
+
+    .view-tabs.page-nav button {
+      width: 100%;
+      min-width: 0;
+      min-height: 42px;
+      padding: 7px 9px;
+      justify-content: flex-start;
+      gap: 10px;
+      border: 1px solid transparent;
+      border-radius: 9px;
+      color: var(--muted);
+      font-weight: 720;
+      text-align: left;
+      transition: color 140ms ease, background 140ms ease, border-color 140ms ease;
+    }
+
+    .view-tabs.page-nav button:hover {
+      color: var(--ink);
+      border-color: var(--line);
+      background: var(--panel-2);
+    }
+
+    .view-tabs.page-nav button.active {
+      color: #fff;
+      border-color: var(--ink);
+      background: var(--ink);
+      box-shadow: 0 7px 18px color-mix(in srgb, var(--ink) 16%, transparent);
+    }
+
+    .view-tabs.page-nav button span {
+      width: 29px;
+      height: 25px;
+      border: 0;
+      border-radius: 6px;
+      background: color-mix(in srgb, var(--ink) 5%, transparent);
+      color: inherit;
+      font-family: "JetBrains Mono", "Cascadia Code", Consolas, monospace;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .04em;
+    }
+
+    .view-tabs.page-nav button.active span {
+      border: 0;
+      background: rgba(255,255,255,.12);
+      color: #fff;
+    }
+
+    .rail-footer {
+      margin-top: auto;
+      display: grid;
+      gap: 14px;
+      padding: 12px 4px 4px;
+      border-top: 1px solid var(--line);
+    }
+
+    .rail-footer .theme-control { display: grid; gap: 7px; }
+    .rail-footer .theme-control .rail-section-label { padding: 0 4px; }
+    .rail-footer .segmented { width: 100%; }
+    .rail-footer .segmented button { flex: 1; padding-inline: 5px; font-size: 11px; }
+    .rail-footer #themeState { display: none; }
+
+    .rail-version {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      color: var(--muted);
+      font-family: "JetBrains Mono", "Cascadia Code", Consolas, monospace;
+      font-size: 10px;
+      letter-spacing: .06em;
+    }
+    .rail-version strong { color: var(--ink); font-size: 11px; }
+
+    .header {
+      min-height: 104px;
+      padding: 17px 18px;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 18px;
+      align-items: center;
+      box-shadow: var(--shadow-soft);
+    }
+
+    .header-context { min-width: 0; }
+    .eyebrow {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--official);
+      font-family: "JetBrains Mono", "Cascadia Code", Consolas, monospace;
+      font-size: 10px;
+      font-weight: 750;
+      letter-spacing: .12em;
+    }
+    .title-line { gap: 8px 10px; }
+    h1 {
+      font-size: clamp(24px, 2vw, 31px);
+      line-height: 1.05;
+      letter-spacing: -.035em;
+      font-weight: 780;
+    }
+    .view-description {
+      margin-top: 7px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+    #updateMeta {
+      border: 0;
+      border-radius: 4px;
+      background: var(--panel-2);
+      font-family: "JetBrains Mono", "Cascadia Code", Consolas, monospace;
+      font-size: 10px;
+      padding: 5px 7px;
+    }
+
+    .status-drawer {
+      margin-top: 10px;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 6px;
+    }
+    .status-drawer .pill {
+      min-width: 0;
+      border-radius: 6px;
+      padding: 6px 8px;
+      background: var(--panel-2);
+      font-size: 10px;
+    }
+
+    .command-bar { align-self: center; }
+    .header .data-actions { gap: 7px; flex-wrap: nowrap; }
+    .header .btn,
+    .header .action-menu summary {
+      min-height: 36px;
+      padding: 7px 11px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+      box-shadow: none;
+    }
+    .btn {
+      border-color: var(--line);
+      border-radius: 8px;
+      box-shadow: none;
+    }
+    .btn:hover {
+      border-color: var(--line-strong);
+      box-shadow: none;
+      transform: none;
+    }
+    .btn.primary {
+      background: var(--official);
+      border-color: var(--official);
+      color: #fff;
+    }
+    .btn.primary:hover { filter: brightness(.96); }
+
+    .action-menu { position: relative; }
+    .action-menu summary { list-style: none; }
+    .action-menu summary::-webkit-details-marker { display: none; }
+    .action-menu summary::after { content: "⌄"; margin-left: 7px; color: var(--muted); }
+    .action-menu[open] summary { border-color: var(--line-strong); background: var(--panel-2); }
+    .export-menu {
+      position: absolute;
+      top: calc(100% + 8px);
+      right: 0;
+      z-index: 32;
+      width: 180px;
+      display: grid;
+      gap: 5px;
+      padding: 8px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+    .export-menu .btn { width: 100%; justify-content: flex-start; }
+
+    .notice { border-radius: 8px; }
+    #estimateNotice.show { margin: 0; }
+    .welcome,
+    .static-panel { box-shadow: var(--shadow-soft); }
+
+    .filters {
+      margin: 0;
+      padding: 12px 14px;
+      gap: 10px;
+      box-shadow: var(--shadow-soft);
+    }
+    .filter-head { min-height: 24px; }
+    .filter-title {
+      font-family: "JetBrains Mono", "Cascadia Code", Consolas, monospace;
+      font-size: 10px;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+    .filter-hint { font-size: 11px; }
+    .range-filter button { padding-inline: 9px; }
+    .segmented { border-radius: 8px; background: var(--panel-2); }
+    .segmented button { border-radius: 6px; }
+    .segmented button.active { background: var(--ink); color: #fff; }
+    input,
+    select,
+    .date-field { border-radius: 8px; background: var(--panel); }
+
+    .kpi-deck {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .kpi-deck > .today-status,
+    .kpi-deck > .metrics { display: contents; }
+
+    .metric,
+    .today-card,
+    .calendar-stat,
+    .task-type-card,
+    .settings-card {
+      border-color: var(--line);
+      background: var(--panel);
+      box-shadow: var(--shadow-soft);
+    }
+    .metric,
+    .today-card {
+      min-height: 136px;
+      padding: 15px;
+      border-radius: var(--radius);
+      overflow: hidden;
+      position: relative;
+    }
+    .metric::before,
+    .today-card::before {
+      content: "";
+      position: absolute;
+      left: 15px;
+      top: 0;
+      width: 30px;
+      height: 3px;
+      border-radius: 0 0 3px 3px;
+      background: var(--line-strong);
+    }
+    .metric.hero::before { background: #79a1ff; }
+    .today-card::before { background: var(--active); }
+    .metric:hover,
+    .story-card:hover { transform: none; border-color: var(--line-strong); box-shadow: var(--shadow-soft); }
+    .metric.hero {
+      border-color: var(--ink);
+      background: var(--ink);
+      color: #fff;
+    }
+    .metric-value,
+    .today-clock strong,
+    .mini-stat strong,
+    .trend-total-value,
+    .donut-center strong,
+    .num {
+      font-family: "Bahnschrift", "DIN Alternate", "IBM Plex Sans", sans-serif;
+      font-variant-numeric: tabular-nums;
+    }
+    .metric-value { font-size: clamp(28px, 2vw, 38px); letter-spacing: -.035em; }
+    .metric:not(.hero) .metric-value { font-size: clamp(27px, 1.7vw, 34px); }
+    .metric-title { font-size: 11px; letter-spacing: .02em; }
+    .metric-update { display: none; }
+    .metric-foot { justify-content: flex-start; }
+    .icon {
+      width: 27px;
+      height: 27px;
+      border-radius: 7px;
+      font-family: "JetBrains Mono", "Cascadia Code", Consolas, monospace;
+      font-size: 11px;
+    }
+    .today-card {
+      gap: 11px;
+      background: var(--panel);
+    }
+    .today-clock { align-items: flex-end; }
+    .today-clock strong { font-size: clamp(30px, 2.3vw, 40px); letter-spacing: -.04em; }
+    .mini-stat { border-radius: 7px; background: var(--panel-2); }
+    .badge { border-radius: 6px; padding: 3px 6px; font-size: 10px; }
+
+    .charts {
+      grid-template-columns: minmax(0, 1.55fr) minmax(330px, .65fr);
+      gap: 12px;
+    }
+    .panel {
+      padding: 17px;
+      gap: 14px;
+      border-radius: var(--radius);
+    }
+    .panel h2 { font-size: 17px; font-weight: 760; letter-spacing: -.018em; }
+    .panel-head .muted { font-size: 11px; }
+    .trend { height: 320px; }
+    .stack-outer { height: 270px; }
+    .stack {
+      border-radius: 6px 6px 2px 2px;
+      border-color: color-mix(in srgb, var(--line-strong) 70%, transparent);
+      background: var(--panel-2);
+    }
+    .bar-value {
+      border: 0;
+      border-radius: 4px;
+      padding: 2px 4px;
+      background: color-mix(in srgb, var(--panel) 94%, transparent);
+      box-shadow: none;
+      font-size: 10px;
+      font-family: "Bahnschrift", "DIN Alternate", sans-serif;
+    }
+    .day-label {
+      width: min(34px, 100%);
+      min-height: 27px;
+      border-radius: 6px;
+      box-shadow: none;
+      background: var(--panel);
+    }
+    .trend-total-card {
+      border-radius: 9px;
+      border-top: 3px solid var(--official);
+      background: var(--panel-2);
+      box-shadow: none;
+      padding: 14px;
+    }
+    .trend-total-kicker {
+      font-family: "JetBrains Mono", "Cascadia Code", Consolas, monospace;
+      font-size: 10px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .trend-total-value { color: var(--ink); letter-spacing: -.035em; }
+    .ratio-wrap { min-height: 320px; }
+    .donut-row { grid-template-columns: 160px minmax(0, 1fr); gap: 20px; }
+    .donut { width: 160px; height: 160px; box-shadow: inset 0 0 0 1px var(--line); }
+    .donut::after { inset: 37px; }
+    .track { height: 12px; border-radius: 5px; }
+    .fill { border-radius: 4px; }
+
+    .usage-trend-card,
+    #cacheTrendPanel .usage-trend-card {
+      min-height: 340px;
+      padding: 14px 15px 11px;
+      border-radius: 10px;
+      border-color: var(--line);
+      background: var(--panel-2);
+      box-shadow: none;
+    }
+    #cacheTrendPanel .usage-trend-plot { min-height: 270px; }
+    .usage-trend-plot { border-radius: 8px; }
+    .usage-legend { font-size: 11px; font-weight: 700; }
+    .usage-y-label,
+    .usage-x-axis { font-family: "Bahnschrift", "DIN Alternate", sans-serif; font-size: 11px; }
+    .chart-tooltip {
+      border-radius: 8px;
+      background: var(--ink);
+      color: #fff;
+      box-shadow: var(--shadow);
+    }
+    .chart-tooltip div { color: #c7d0dc; }
+    .chart-tooltip b { color: #fff; }
+
+    .content-grid,
+    .calendar-page,
+    .tasks-page,
+    .settings-page { gap: 12px; }
+    .calendar-heatmap,
+    .project-row,
+    .settings-card,
+    .task-type-card,
+    .table-wrap { border-radius: 9px; }
+    .calendar-heatmap { background: var(--panel-2); }
+    .calendar-cell { border-radius: 3px; box-shadow: none; }
+    .calendar-cell:hover { transform: none; box-shadow: 0 0 0 2px var(--panel), 0 0 0 3px var(--official); }
+    .page-title h2 { font-size: clamp(22px, 2vw, 28px); letter-spacing: -.03em; }
+    .project-row { background: var(--panel-2); }
+    .task-layout > .panel { height: 430px; min-height: 430px; }
+    .settings-grid { gap: 10px; }
+    .settings-card { padding: 16px; background: var(--panel-2); box-shadow: none; }
+    .table-wrap { box-shadow: none; }
+    th {
+      background: var(--panel-2);
+      font-family: "JetBrains Mono", "Cascadia Code", Consolas, monospace;
+      font-size: 10px;
+      letter-spacing: .02em;
+    }
+    tr.data-row:hover td { background: var(--accent-soft); }
+    .empty { border-radius: 9px; background: var(--panel-2); }
+    dialog { border-radius: 12px; }
+    .toast { border-radius: 8px; font-size: 12px; box-shadow: var(--shadow); }
+
+    @media (max-width: 1240px) {
+      .app { grid-template-columns: 194px minmax(0, 1fr); }
+      .brand-name { font-size: 15px; }
+      .header { grid-template-columns: 1fr; align-items: start; }
+      .command-bar { width: 100%; }
+      .header .data-actions { justify-content: flex-start; }
+      .kpi-deck { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .charts { grid-template-columns: 1fr; }
+      .ratio-wrap { min-height: 260px; }
+      .donut-row { grid-template-columns: 180px minmax(0, 1fr); }
+    }
+
+    @media (min-width: 901px) {
+      .filter-row.primary {
+        display: grid;
+        grid-template-columns: max-content repeat(2, minmax(150px, 220px)) repeat(3, minmax(130px, 1fr)) auto;
+        gap: 10px;
+      }
+      .filter-row.primary .date-field,
+      .filter-row.primary select,
+      #taskTypeFilter {
+        width: 100%;
+        min-width: 0;
+        max-width: none;
+        flex: none;
+      }
+      .filter-row.primary .advanced-toggle { justify-self: start; }
+    }
+
+    @media (max-width: 900px) {
+      html { scrollbar-gutter: auto; }
+      .app {
+        width: 100%;
+        margin: 0;
+        display: block;
+      }
+      .side-rail {
+        position: sticky;
+        top: 0;
+        z-index: 30;
+        width: 100%;
+        height: auto;
+        min-height: 0;
+        padding: 9px 10px 8px;
+        border-width: 0 0 1px;
+        border-radius: 0;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 8px 12px;
+        overflow: visible;
+      }
+      .side-rail::after { display: none; }
+      .side-rail > .rail-section-label { display: none; }
+      .brand {
+        grid-column: 1;
+        grid-row: 1;
+        grid-template-columns: 34px minmax(0, 1fr);
+        padding: 0;
+        border: 0;
+      }
+      .brand-icon { width: 34px; height: 34px; border-radius: 8px; font-size: 12px; }
+      .brand-copy { align-content: center; }
+      .brand-name { font-size: 14px; }
+      .brand-caption { font-size: 9px; }
+      .rail-footer {
+        grid-column: 2;
+        grid-row: 1;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+      }
+      .rail-footer .theme-control { display: block; }
+      .rail-footer .theme-control .rail-section-label,
+      .rail-footer #themeState,
+      .rail-version { display: none; }
+      .rail-footer .segmented { width: auto; }
+      .rail-footer .segmented button { min-width: 44px; min-height: 32px; padding: 4px 7px; font-size: 10px; }
+      .view-tabs.page-nav {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        display: flex;
+        justify-content: flex-start;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        gap: 5px;
+        scrollbar-width: none;
+      }
+      .view-tabs.page-nav::-webkit-scrollbar { display: none; }
+      .view-tabs.page-nav button {
+        width: auto;
+        flex: 0 0 auto;
+        min-width: 112px;
+        min-height: 36px;
+        padding: 5px 8px;
+        justify-content: center;
+      }
+      .view-tabs.page-nav button span { width: 25px; height: 22px; }
+      .workspace { padding: 10px; gap: 10px; }
+      .header { min-height: 0; padding: 14px; gap: 13px; }
+      .status-drawer { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .header .data-actions { width: 100%; overflow-x: auto; padding-bottom: 2px; }
+      .header .data-actions > * { flex: 0 0 auto; }
+      .filters { margin: 0; }
+      .content-grid,
+      .task-layout,
+      .day-detail-grid,
+      .settings-grid { grid-template-columns: 1fr; }
+      .task-layout > .panel { height: auto; min-height: 0; }
+      .project-list { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 620px) {
+      .workspace { padding: 8px; }
+      .header { padding: 10px; gap: 8px; }
+      .header .btn,
+      .header .action-menu summary { min-height: 32px; padding: 5px 8px; }
+      .eyebrow { margin-bottom: 2px; }
+      h1 { font-size: 22px; }
+      .view-description { max-width: 38ch; }
+      .view-description,
+      #updateMeta { display: none; }
+      .kpi-deck { grid-template-columns: 1fr; }
+      .metric,
+      .today-card { min-height: 128px; }
+      .today-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .trend-layout { grid-template-columns: 1fr; }
+      .trend-total-card { min-height: 140px; }
+      .donut-row { grid-template-columns: 1fr; justify-items: center; }
+      .donut-row .bars { width: 100%; }
+      .status-drawer { grid-template-columns: 1fr; }
+      .export-menu { left: 0; right: auto; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .workspace { animation: none; }
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
+    }
+  </style>
 </head>
 <body>
   <main class="app">
-    <header class="header shell">
+    <aside class="side-rail shell">
       <div class="brand">
         <div class="brand-icon">&gt;_</div>
-        <div>
-          <div class="title-line">
-            <h1>Codex Token 用量</h1>
-            <span class="pill" id="updateMeta">最后更新：-</span>
-            <button class="btn compact" id="statusToggleBtn" type="button">状态详情</button>
-          </div>
-          <div class="status-drawer" id="statusDrawer">
-            <span class="pill" id="modeMeta">当前模式：初始化</span>
-            <span class="pill" id="pathMeta">数据来源：等待加载</span>
-            <span class="pill" id="fileMeta">记录数：-</span>
-            <span class="pill" id="scanMeta">隐私状态：本地优先</span>
-          </div>
+        <div class="brand-copy">
+          <strong class="brand-name">Codex Token</strong>
+          <span class="brand-caption">Usage telemetry</span>
         </div>
       </div>
-      <div class="toolbar">
-        <div class="toolbar-group theme-control">
-          <span class="group-label">主题</span>
+
+      <div class="rail-section-label">数据工作台</div>
+      <nav class="view-tabs page-nav" id="viewTabs" aria-label="页面导航">
+        <button class="active" type="button" data-view="overview"><span>01</span>运行总览</button>
+        <button type="button" data-view="calendar"><span>02</span>AI 日历</button>
+        <button type="button" data-view="tasks"><span>03</span>任务复盘</button>
+        <button type="button" data-view="details"><span>04</span>用量明细</button>
+        <button type="button" data-view="settings"><span>05</span>系统设置</button>
+      </nav>
+
+      <div class="rail-footer">
+        <div class="theme-control">
+          <span class="rail-section-label">界面主题</span>
           <div class="segmented" id="themeButtons" aria-label="主题模式">
             <button type="button" data-theme-choice="system">系统</button>
             <button type="button" data-theme-choice="light">浅色</button>
@@ -2219,9 +2868,32 @@
           </div>
           <span class="muted" id="themeState">系统</span>
         </div>
-        <div class="toolbar-group data-actions">
-          <span class="group-label">数据</span>
-          <button class="btn" id="replayBtn" type="button">工作回放</button>
+        <div class="rail-version">
+          <span>LOCAL-FIRST</span>
+          <strong>v0.6.0</strong>
+        </div>
+      </div>
+    </aside>
+
+    <div class="workspace">
+      <header class="header shell">
+        <div class="header-context">
+          <span class="eyebrow" id="viewEyebrow">OVERVIEW / LIVE</span>
+          <div class="title-line">
+            <h1 id="viewTitle">运行总览</h1>
+            <span class="pill" id="updateMeta">最后更新：-</span>
+            <button class="btn compact" id="statusToggleBtn" type="button">运行状态</button>
+          </div>
+          <p class="view-description" id="viewDescription">查看当前 Token 成本、来源结构与每日使用走势。</p>
+          <div class="status-drawer" id="statusDrawer">
+            <span class="pill" id="modeMeta">当前模式：初始化</span>
+            <span class="pill" id="pathMeta">数据来源：等待加载</span>
+            <span class="pill" id="fileMeta">记录数：-</span>
+            <span class="pill" id="scanMeta">隐私状态：本地优先</span>
+          </div>
+        </div>
+        <div class="toolbar command-bar">
+          <div class="data-actions">
           <button class="btn" id="importBtn" type="button" aria-haspopup="menu" aria-expanded="false">导入数据</button>
           <div class="import-menu" id="importMenu" role="menu" aria-label="导入数据">
             <button class="btn import-option" id="importFileBtn" type="button" role="menuitem">
@@ -2237,16 +2909,21 @@
               </span>
             </button>
           </div>
-          <button class="btn" id="exportCsvBtn" type="button">导出 CSV</button>
-          <button class="btn" id="exportJsonBtn" type="button">导出 JSON</button>
-          <button class="btn" id="exportSnapshotBtn" type="button">脱敏快照</button>
-          <button class="btn" id="exportSnapshotHtmlBtn" type="button">快照 HTML</button>
-          <button class="btn primary" id="refreshBtn" type="button">刷新</button>
+            <details class="action-menu">
+              <summary class="btn">导出与分享</summary>
+              <div class="export-menu">
+                <button class="btn" id="exportCsvBtn" type="button">导出 CSV</button>
+                <button class="btn" id="exportJsonBtn" type="button">导出 JSON</button>
+                <button class="btn" id="exportSnapshotBtn" type="button">脱敏快照</button>
+                <button class="btn" id="exportSnapshotHtmlBtn" type="button">快照 HTML</button>
+              </div>
+            </details>
+            <button class="btn primary" id="refreshBtn" type="button">同步数据</button>
+          </div>
         </div>
         <input class="hidden" id="importFile" type="file" accept=".csv,.json,application/json,text/csv">
         <input class="hidden" id="sessionsFolderInput" type="file" webkitdirectory directory multiple>
-      </div>
-    </header>
+      </header>
 
     <section class="notice" id="estimateNotice" title="官方 Plus token 未在日志中提供精确 usage，本页部分数据为估算。">含估算数据</section>
     <section class="notice" id="statusNotice"></section>
@@ -2336,18 +3013,11 @@
       </div>
     </section>
 
-    <nav class="view-tabs page-nav" id="viewTabs" aria-label="页面导航">
-      <button class="active" type="button" data-view="overview"><span>◎</span>总览</button>
-      <button type="button" data-view="calendar"><span>▦</span>AI 日历</button>
-      <button type="button" data-view="tasks"><span>◇</span>任务复盘</button>
-      <button type="button" data-view="details"><span>≡</span>明细</button>
-      <button type="button" data-view="settings"><span>?</span>设置</button>
-    </nav>
-
-    <section class="today-status overview-only" id="todayStatus"></section>
-    <section class="story-grid overview-only" id="storyCards"></section>
-
-    <section class="metrics overview-only" id="metrics"></section>
+      <section class="kpi-deck overview-only">
+        <section class="today-status overview-only" id="todayStatus"></section>
+        <section class="metrics overview-only" id="metrics"></section>
+      </section>
+      <section class="story-grid overview-only" id="storyCards"></section>
 
     <section class="charts overview-only" id="chartsSection">
       <article class="panel">
@@ -2388,7 +3058,8 @@
       <div id="cacheTrendChart"></div>
     </section>
 
-    <section id="viewPanel"></section>
+      <section id="viewPanel"></section>
+    </div>
   </main>
 
   <dialog id="detailDialog">
@@ -2487,6 +3158,9 @@
       filterHint: document.querySelector(".filter-hint"),
       statusDrawer: document.querySelector("#statusDrawer"),
       statusToggleBtn: document.querySelector("#statusToggleBtn"),
+      viewEyebrow: document.querySelector("#viewEyebrow"),
+      viewTitle: document.querySelector("#viewTitle"),
+      viewDescription: document.querySelector("#viewDescription"),
       themeButtons: document.querySelector("#themeButtons"),
       themeState: document.querySelector("#themeState"),
       welcomePanel: document.querySelector("#welcomePanel"),
@@ -2819,8 +3493,8 @@
     function setLoading(isLoading) {
       state.loading = isLoading;
       els.refreshBtn.disabled = isLoading;
-      els.refreshBtn.textContent = isLoading ? (state.dataMode === "server" ? "正在扫描" : "正在加载") : "刷新";
-      if (isLoading) setStatus(state.dataMode === "server" ? "正在扫描 sessions 和导入数据..." : "正在加载浏览器本地数据...");
+      const idleLabel = state.dataMode === "static" && state.staticSourceType === "demo" ? "重新载入示例" : "同步数据";
+      els.refreshBtn.textContent = isLoading ? (state.dataMode === "server" ? "正在扫描" : "正在加载") : idleLabel;
     }
 
     function closeImportMenu() {
@@ -4008,7 +4682,7 @@
         pruneSelection();
         renderModelOptions(payload.models || []);
         render(payload);
-        if (!silent) setStatus(`扫描完成：${payload.scanMs ?? 0} ms，更新于 ${formatDateTime(payload.updatedAt)}。`);
+        if (options.manual) setStatus(`扫描完成：${payload.scanMs ?? 0} ms，更新于 ${formatDateTime(payload.updatedAt)}。`);
         refreshWeatherFromSavedLocation({ silent: true, force: true });
       } catch (error) {
         state.refreshFailures += 1;
@@ -4142,6 +4816,24 @@
 
     function syncFilterPresentation() {
       const view = state.view;
+      const pageCopy = {
+        overview: ["OVERVIEW / LIVE", "运行总览", "查看当前 Token 成本、来源结构与每日使用走势。"],
+        calendar: ["CALENDAR / HISTORY", "AI 使用日历", "按日期检查使用强度、活跃周期与单日成本。"],
+        tasks: ["TASKS / REVIEW", "任务复盘", "按项目和任务类型定位主要 Token 消耗。"],
+        details: ["RECORDS / AUDIT", "用量明细", "筛选、核对并导出每一条 Token 使用记录。"],
+        settings: ["SYSTEM / LOCAL", "系统设置", "检查运行模式、隐私边界与本地数据状态。"]
+      }[view] || ["CODEX / TELEMETRY", "Codex Token", "本地优先的 Codex 用量分析工作台。"];
+      els.viewEyebrow.textContent = pageCopy[0];
+      els.viewTitle.textContent = pageCopy[1];
+      els.viewDescription.textContent = pageCopy[2];
+      document.title = `${pageCopy[1]} · Codex Token`;
+      const activeTab = document.querySelector("#viewTabs button.active");
+      if (window.innerWidth <= 900 && activeTab) {
+        requestAnimationFrame(() => {
+          const tabs = document.querySelector("#viewTabs");
+          tabs.scrollLeft = Math.max(0, activeTab.offsetLeft - 8);
+        });
+      }
       els.filters.className = `filters shell mode-${view === "tasks" ? "tasks" : view} ${state.overviewAdvanced ? "advanced-open" : ""}`;
       if (els.filters.dataset.mobileOpen === "true") els.filters.classList.add("mobile-open");
       const copy = {
@@ -4178,7 +4870,7 @@
       els.staticPanel.classList.toggle("show", state.dataMode === "static" && state.records.length === 0);
       els.welcomePanel.classList.toggle("show", state.dataMode === "static" && state.records.length === 0);
       els.welcomePanel.classList.remove("compact");
-      els.refreshBtn.textContent = payload.staticMode && sourceType === "demo" ? "重新加载示例" : "刷新";
+      els.refreshBtn.textContent = payload.staticMode && sourceType === "demo" ? "重新载入示例" : "同步数据";
       els.estimateNotice.classList.toggle("show", summary.estimatedRecords > 0);
       toggleOverviewSections(state.view === "overview");
       if (state.view === "overview") {
@@ -5027,9 +5719,9 @@
             <div class="panel-head">
               <div>
                 <h2>设置 / 关于</h2>
-                <p class="muted">这个页面说明当前运行方式、隐私边界和开源展示口径。</p>
+                <p class="muted">检查当前运行方式、隐私边界、版本和公开部署状态。</p>
               </div>
-              <span class="badge">版本 0.5.18</span>
+              <span class="badge">版本 0.6.0</span>
             </div>
             <div class="settings-grid">
               <div class="settings-card">
@@ -5081,7 +5773,7 @@
                 <div class="privacy-list">
                   <span>项目：Codex Token 用量看板</span>
                   <span>定位：本地优先的 AI 使用账本</span>
-                  <span>开源展示：支持 Netlify 静态演示版</span>
+                  <span>公开部署：OpenAI Sites / Netlify / GitHub Pages</span>
                 </div>
               </div>
             </div>
@@ -5421,7 +6113,7 @@
       const summary = summarize(safeRecords.map(record => ({ ...record, activeTokens: activeTokens(record), uncachedInputTokens: uncachedInputTokens(record), hitRate: cacheHitRateOf(record) })));
       return {
         snapshotVersion: 1,
-        appVersion: "0.5.18",
+        appVersion: "0.6.0",
         generatedAt: new Date().toISOString(),
         privacy: {
           anonymized: true,
@@ -5597,9 +6289,6 @@
     document.querySelector("#exportJsonBtn").addEventListener("click", () => exportJson());
     document.querySelector("#exportSnapshotBtn").addEventListener("click", exportSnapshotJson);
     document.querySelector("#exportSnapshotHtmlBtn").addEventListener("click", exportSnapshotHtml);
-    document.querySelector("#replayBtn").addEventListener("click", () => {
-      window.open("replay.html", "_blank", "noopener,noreferrer");
-    });
     els.importBtn.addEventListener("click", event => {
       event.stopPropagation();
       toggleImportMenu();

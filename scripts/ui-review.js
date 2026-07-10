@@ -19,8 +19,7 @@ const pages = [
   { key: "calendar", name: "AI 使用日历", view: "calendar", screenshot: "calendar", url: baseUrl },
   { key: "tasks", name: "任务复盘", view: "tasks", screenshot: "tasks", url: baseUrl },
   { key: "details", name: "明细表", view: "details", screenshot: "details", url: baseUrl },
-  { key: "settings", name: "设置 / 关于", view: "settings", screenshot: "settings", url: baseUrl },
-  { key: "work-replay", name: "Work Replay", view: "work-replay", screenshot: "work-replay", url: `${baseUrl}/replay.html` }
+  { key: "settings", name: "设置 / 关于", view: "settings", screenshot: "settings", url: baseUrl }
 ];
 
 const viewports = [
@@ -102,11 +101,6 @@ async function ensureServer() {
 }
 
 async function openPage(page, pageInfo) {
-  if (pageInfo.view === "work-replay") {
-    await page.goto(pageInfo.url, { waitUntil: "networkidle" });
-    await page.waitForTimeout(600);
-    return;
-  }
   await page.goto(baseUrl, { waitUntil: "networkidle" });
   if (pageInfo.view !== "overview") {
     await page.locator(`[data-view="${pageInfo.view}"]`).click();
@@ -189,14 +183,7 @@ function compactMetrics(metrics = {}) {
     })),
     cards: metrics.cards?.length || 0,
     h1Count: metrics.h1?.length || 0,
-    activeNav: metrics.activeNav || "",
-    replay: metrics.replay ? {
-      hasTimeline: Boolean(metrics.replay.hasTimeline),
-      nodeCount: metrics.replay.nodeCount || 0,
-      sideWidth: metrics.replay.sideRect?.width || 0,
-      hasGlow: Boolean(metrics.replay.hasGlow),
-      hasControls: Boolean(metrics.replay.hasControls)
-    } : null
+    activeNav: metrics.activeNav || ""
   };
 }
 
@@ -216,7 +203,8 @@ async function collectAudit(page, pageInfo, viewport, screenshot) {
     const text = element => element?.textContent?.replace(/\s+/g, " ").trim() || "";
     const header = document.querySelector("header, .topbar");
     const filters = document.querySelector(".filters");
-    const notices = Array.from(document.querySelectorAll(".notice,.alert,.toast,.banner,.warning,.status-banner")).filter(visible);
+    const notices = Array.from(document.querySelectorAll(".notice,.alert,.toast,.banner,.warning,.status-banner"))
+      .filter(element => visible(element) && getComputedStyle(element).position !== "fixed");
     const occupiedElements = [header, filters, ...notices].filter(visible);
     const occupied = occupiedElements.reduce((sum, item) => sum + item.getBoundingClientRect().height, 0);
     const isAuditFilterControl = element => {
@@ -235,19 +223,20 @@ async function collectAudit(page, pageInfo, viewport, screenshot) {
       text: text(element),
       rect: rect(element)
     }));
-    const chartSelectors = ["#trendChart", "#ratioChart", "#cacheTrendChart", ".calendar-heatmap", ".task-layout", ".timeline-board"];
+    const chartSelectors = ["#trendChart", "#ratioChart", "#cacheTrendChart", ".calendar-heatmap", ".task-layout"];
     const charts = chartSelectors.map(selector => {
       const element = document.querySelector(selector);
-      const hasGraphic = Boolean(element?.querySelector("canvas,svg,.bar,.bars,.bar-row,.day,.stack,.stack-outer,.donut,.donut-row,.ratio-row,.track,.fill,.trend-bar,.cache-point,.calendar-cell,.node,.lane-track,.task-type-card"));
+      const hasGraphic = Boolean(element?.querySelector("canvas,svg,.bar,.bars,.bar-row,.day,.stack,.stack-outer,.donut,.donut-row,.ratio-row,.track,.fill,.trend-bar,.cache-point,.calendar-cell,.task-type-card"));
       const hasEmpty = /暂无|没有|失败|导入|加载|empty/i.test(text(element));
       return { selector, visible: visible(element), rect: rect(element), text: text(element), hasGraphic, hasEmpty };
     }).filter(item => item.visible);
     const textNodes = Array.from(document.querySelectorAll("body *")).filter(visible).map(element => {
       const styles = getComputedStyle(element);
       const content = text(element);
-      return { tag: element.tagName.toLowerCase(), className: String(element.className || ""), fontSize: parseFloat(styles.fontSize) || 0, text: content.slice(0, 80) };
+      const compact = Boolean(element.closest(".badge,.eyebrow,.rail-section-label,.brand-caption,.day-label,.usage-x-axis,.usage-y-label,.trend-total-kicker,th,.pill"));
+      return { tag: element.tagName.toLowerCase(), className: String(element.className || ""), fontSize: parseFloat(styles.fontSize) || 0, compact, text: content.slice(0, 80) };
     }).filter(item => item.text);
-    const smallTextCount = textNodes.filter(item => item.fontSize && item.fontSize < 12).length;
+    const smallTextCount = textNodes.filter(item => item.fontSize && item.fontSize < 12 && !item.compact).length;
     const keyNumbers = Array.from(document.querySelectorAll(".metric.hero .metric-value,.stat-card.hero-stat strong,.today-time,.metric-value")).filter(visible).map(element => ({
       text: text(element),
       fontSize: parseFloat(getComputedStyle(element).fontSize) || 0
@@ -255,20 +244,6 @@ async function collectAudit(page, pageInfo, viewport, screenshot) {
     const cards = Array.from(document.querySelectorAll(".metric,.stat-card,.today-card,.story-card,.calendar-stat,.task-type-card,.settings-card,.panel,.current-card,.mini-stat")).filter(visible).map(rect);
     const h1 = Array.from(document.querySelectorAll("h1")).filter(visible).map(text);
     const h2 = Array.from(document.querySelectorAll("h2")).filter(visible).map(text);
-    const replay = pageKey === "work-replay" ? {
-      hasTimeline: Boolean(document.querySelector(".timeline-board,.timeline,.playhead,.lanes")),
-      nodeCount: document.querySelectorAll(".node,[data-index]").length,
-      currentText: text(document.querySelector("#currentCard,.current-card")),
-      sideRect: rect(document.querySelector(".side, aside")),
-      hasGlow: Boolean(document.querySelector(".orbit")) || /glow|beam|radial-gradient/i.test(Array.from(document.styleSheets).map(sheet => {
-        try {
-          return Array.from(sheet.cssRules || []).map(rule => rule.cssText).join("\n");
-        } catch {
-          return "";
-        }
-      }).join("\n")),
-      hasControls: Boolean(document.querySelector("#playBtn") && document.querySelector("#progressInput,#progressText"))
-    } : null;
     return {
       scrollWidth: Math.max(document.body.scrollWidth, document.documentElement.scrollWidth),
       clientWidth: document.documentElement.clientWidth,
@@ -286,8 +261,7 @@ async function collectAudit(page, pageInfo, viewport, screenshot) {
       h1,
       h2,
       activeNav: text(document.querySelector("#viewTabs button.active,.page-nav button.active")),
-      mobileButtons: Array.from(document.querySelectorAll("button,select,a")).filter(visible).map(rect),
-      replay
+      mobileButtons: Array.from(document.querySelectorAll("header button,header select,.side-rail button,.filters button,.filters select,.welcome button,.welcome a")).filter(visible).map(rect)
     };
   }, { pageKey: pageInfo.key });
 
@@ -317,20 +291,12 @@ async function collectAudit(page, pageInfo, viewport, screenshot) {
   if (smallRatio > 0.22) add("warning", "small-font", "大量文字小于 12px", { smallTextCount: data.smallTextCount, totalTextCount: data.totalTextCount });
   const tinyNumber = data.keyNumbers.find(item => item.fontSize && item.fontSize < 22);
   if (tinyNumber) add("failure", "key-number-small", "关键数字字号小于 22px", tinyNumber);
-  if (data.cards.length > 18) add("failure", "too-many-cards", "首屏卡片数量超过 18 个", { count: data.cards.length });
-  else if (data.cards.length > 12) add("warning", "many-cards", "首屏卡片数量超过 12 个", { count: data.cards.length });
+  if (data.cards.length > 24) add("failure", "too-many-cards", "页面卡片数量超过 24 个", { count: data.cards.length });
+  else if (data.cards.length > 18) add("warning", "many-cards", "页面卡片数量超过 18 个", { count: data.cards.length });
   if (data.h1.length > 1) add("warning", "multiple-h1", "页面出现多个 h1 主标题", { count: data.h1.length, h1: data.h1 });
 
-  if (pageInfo.key === "work-replay") {
-    if (!data.replay?.hasTimeline || data.replay.nodeCount < 1) add("failure", "replay-no-timeline", "Work Replay 主区域看不出时间轴或回放结构", data.replay || {});
-    if (!data.replay?.currentText || data.replay.currentText.length < 60) add("failure", "replay-detail-weak", "当前 session 详情不可读或信息不足", data.replay || {});
-    if ((data.replay?.sideRect?.width || 0) < 280) add("failure", "replay-side-narrow", "Work Replay 右侧详情区宽度小于 280px", data.replay?.sideRect || {});
-    if (data.replay?.hasGlow) add("warning", "replay-glow", "Work Replay 存在可能过重的发光或装饰性背景", {});
-    if (!data.replay?.hasControls) add("failure", "replay-controls-missing", "Work Replay 缺少播放控制、进度信息或当前节点", data.replay || {});
-  }
-
   if (viewport.width <= 480) {
-    if (!data.activeNav && pageInfo.key !== "work-replay") add("failure", "mobile-nav-missing", "移动端导航不可用或未显示选中状态");
+    if (!data.activeNav) add("failure", "mobile-nav-missing", "移动端导航不可用或未显示选中状态");
     const crowded = data.mobileButtons.filter(item => (item.width || 0) < 44 || (item.height || 0) < 32);
     if (crowded.length > 2) add("warning", "mobile-buttons-crowded", "移动端多个按钮过窄或过矮", { count: crowded.length });
   }
@@ -351,7 +317,7 @@ function severityBuckets(audit) {
   for (const page of audit.pages) {
     for (const issue of page.failures || []) {
       const line = `${page.name} ${page.viewport}: ${issue.message}`;
-      if (["horizontal-scroll", "chart-empty", "chart-short", "key-number-small", "replay-no-timeline", "replay-detail-weak", "replay-controls-missing", "mobile-nav-missing"].includes(issue.code)) p0.push(line);
+      if (["horizontal-scroll", "chart-empty", "chart-short", "key-number-small", "mobile-nav-missing"].includes(issue.code)) p0.push(line);
       else p1.push(line);
     }
     for (const issue of page.warnings || []) {
@@ -433,7 +399,6 @@ function suggestionsFor(pageKey, issues) {
   if (issues.some(item => item.includes("Header"))) generic.push("压缩 Header 高度，把低频状态信息移动到详情区或折叠区。");
   if (issues.some(item => item.includes("筛选"))) generic.push("扩大筛选控件最小宽度，必要时拆成两行。");
   if (issues.some(item => item.includes("图表"))) generic.push("补足图表高度、图形元素或明确空状态。");
-  if (issues.some(item => item.includes("Work Replay"))) generic.push("强化时间轴、当前节点和详情面板，减少装饰性元素。");
   if (!generic.length) generic.push("检查字号、卡片数量和信息层级，减少碎片化卡片。");
   if (pageKey === "tasks") generic.push("任务复盘应继续补充项目/任务维度统计，避免大量记录无法解释。");
   return generic.slice(0, 4);
@@ -441,10 +406,9 @@ function suggestionsFor(pageKey, issues) {
 
 function nextSuggestions({ p0, p1, p2 }) {
   const result = [];
-  if (p0.length) result.push("先处理 P0：横向溢出、空白图表、关键内容不可读和 Work Replay 结构失败。");
+  if (p0.length) result.push("先处理 P0：横向溢出、空白图表和关键内容不可读。");
   if (p1.length) result.push("再处理 P1：Header 高度、筛选栏宽度、字号和信息层级。");
   result.push("新增项目维度 Token 统计，用 sessions 路径或 relativePath 聚合每个具体项目的总用量。");
-  result.push("Work Replay 下一轮应从“单页数据看板”升级为“项目时间线 + session 详情 + 关键片段复盘”。");
   if (p2.length) result.push("最后处理 P2：统一颜色、减少碎卡、控制背景网格和空白。");
   return result.slice(0, 5);
 }

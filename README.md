@@ -1,13 +1,14 @@
 # Codex Token 用量看板
 
-本地优先的 Codex Token 用量分析工具。支持官方 Plus、中转站导入、缓存命中率、明细表分析、脱敏快照和 Netlify 静态演示版。
+本地优先的 Codex Token 工程级用量工作台。支持官方 Plus、中转站导入、缓存命中率、任务复盘、明细审计和脱敏快照，并可部署到 OpenAI Sites、Netlify 与 GitHub Pages。
 
 > 核心原则：真实数据默认留在你的电脑或浏览器里，不上传。
 
 ![Codex Token Dashboard cover](screenshots/project-cover.svg)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-0f766e.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.5.18-111827.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.6.0-17202e.svg)](CHANGELOG.md)
+[![OpenAI Sites](https://img.shields.io/badge/deploy-OpenAI%20Sites-275dcc.svg)](.openai/hosting.json)
 [![Netlify Demo](https://img.shields.io/badge/demo-codetoken.netlify.app-2f6fed.svg)](https://codetoken.netlify.app/)
 [![GitHub Pages](https://img.shields.io/badge/pages-github.io-111827.svg)](https://xiaoqi8553.github.io/codex-token-dashboard/)
 
@@ -16,6 +17,8 @@
 - Netlify Demo: https://codetoken.netlify.app/
 - GitHub Pages Demo: https://xiaoqi8553.github.io/codex-token-dashboard/
 - GitHub: https://github.com/xiaoqi8553/codex-token-dashboard
+
+0.6.0 同时接入 OpenAI Sites。Sites 生产地址会在首次生产发布完成后写入本节，站点版本始终对应仓库中已经推送的 commit。
 
 公开演示站默认加载模拟数据，不会读取访问者电脑。用户可以通过顶部“导入数据”菜单选择自己的 `usage-index.json`、脱敏快照、中转站 CSV/JSON，也可以直接选择整个 `.codex/sessions` 文件夹。所有解析都发生在浏览器本地。
 
@@ -33,7 +36,6 @@
 - 支持总览卡片、今日状态卡、每日趋势、输入/输出/缓存占比、缓存命中率趋势、Top 会话、按模型统计。
 - 支持 AI 使用日历，用热力图查看每日 Token、active tokens、输出、缓存命中率和记录数。
 - 支持任务复盘，用本地规则识别写代码、调试、前端 UI、文档、部署、数据分析、重构、项目规划等任务类型。
-- 支持 Codex Work Replay 子页面，把 session 聚合成可播放的 AI 工作回放。
 - 今日状态卡支持手动授权定位后查询 Open-Meteo 天气；不会自动读取位置。
 - 明细表支持搜索、筛选、排序、分页、多选、选中导出 CSV / JSON。
 - 支持脱敏快照 JSON / HTML，适合公开分享。
@@ -67,7 +69,7 @@ npm start
 npm start      # 启动本地看板
 npm run dev    # 启动本地看板
 npm run scan   # 只扫描并更新 data/usage-index.json
-npm run build  # 构建 Netlify 静态版到 dist/
+npm run build  # 构建 OpenAI Sites / Netlify / GitHub Pages 发布目录
 npm run visual:shot  # 生成 UI 验收截图
 npm run visual:test  # 生成截图并自动检查明显视觉问题
 ```
@@ -106,14 +108,13 @@ npm run visual:test  # 生成截图并自动检查明显视觉问题
 
 ## 页面模块
 
-0.4.0 之后，看板按页面组织：
+0.6.0 使用左侧工程工作区导航，按以下页面组织：
 
-- **总览**：大数字卡片、今日状态卡、数据故事、每日 Token 趋势、Token 构成、缓存命中率、Top 会话和模型统计。
-- **工作回放**：通过 `replay.html` 打开沉浸式 AI 工作回放。节点大小代表 Token，颜色代表任务类型，边框代表官方 Plus / 中转站 / unknown。
+- **运行总览**：核心指标、今日状态、每日 Token 柱状趋势、Token 构成、使用趋势、来源和模型统计。
 - **AI 使用日历**：类似 GitHub contribution graph 的热力图，可切换总 Token、active tokens、输出 Token、缓存命中率、记录数。点击日期会自动筛选明细表到当天。
 - **任务复盘**：基于本地规则识别任务类型，并统计各类任务消耗。识别结果仅供参考，用户可以在页面里手动修正，修正结果只保存在浏览器 `localStorage`。
-- **明细表**：逐条 usage 记录，支持排序、搜索、筛选、分页、多选和导出。
-- **设置 / 关于**：展示当前模式、数据来源、隐私边界、定位和任务识别说明。
+- **用量明细**：逐条 usage 记录，支持排序、搜索、筛选、分页、多选和导出。
+- **系统设置**：展示当前模式、数据来源、隐私边界、定位、版本和部署方式。
 
 今日状态卡中的定位必须由用户主动点击授权才会读取。授权后，页面会用粗略经纬度请求 OpenStreetMap 反查城市名，并请求 Open-Meteo 获取天气；这些请求只在用户点击授权后发生，不会上传 sessions 或原始对话内容。
 
@@ -121,10 +122,12 @@ npm run visual:test  # 生成截图并自动检查明显视觉问题
 
 视觉标准写在 [`docs/UI_ACCEPTANCE.md`](docs/UI_ACCEPTANCE.md)。
 
-每次改 UI 后建议执行：
+每次改 UI 后执行：
 
 ```bash
-npm run visual:shot
+npm run ui:shot
+npm run ui:audit
+npm run ui:report
 npm run visual:test
 ```
 
@@ -142,9 +145,9 @@ docs/screenshots/current/
 
 这个目录默认被 `.gitignore` 排除，因为截图可能包含本地真实用量数据。
 
-### 3. Netlify 静态演示版
+### 3. 托管静态版
 
-适合公开展示和开源体验。
+适合通过 OpenAI Sites、Netlify 或 GitHub Pages 公开展示和开源体验。
 
 - 只发布 `index.html`、`sample-data/` 和静态资源。
 - 没有 Node 扫描能力，不能自动读取访问者电脑。
@@ -194,6 +197,16 @@ SOURCE_ATTRIBUTION_MODE=custom-fast
 - 默认 `HOST=127.0.0.1`，只允许本机访问。
 - 如果 `PUBLIC_ACCESS=true`，必须设置 `DASHBOARD_PASSWORD` 或 `ACCESS_TOKEN`。
 - 如果监听公网地址但没有开启公开访问保护，服务会拒绝启动。
+
+## OpenAI Sites 部署
+
+仓库已包含 `.openai/hosting.json` 和 Cloudflare Worker 兼容入口。Codex 的 Sites 功能会执行以下发布链路：
+
+```text
+build -> push commit -> 保存 Sites 版本 -> 生产部署
+```
+
+生产发布使用已经推送到 Git 的同一 commit，不会部署未同步的本地文件。
 
 ## Netlify 部署
 
@@ -306,12 +319,17 @@ source = relay
 .
 ├── index.html                    # 前端页面，包含 UI、图表、导入、导出逻辑
 ├── server.js                     # 本地 Node 服务，扫描 sessions 并提供 API
+├── sites-worker.js               # OpenAI Sites / Cloudflare Worker 静态入口
 ├── start-dashboard.bat           # Windows 双击启动脚本
 ├── package.json                  # npm scripts
 ├── config.example.json           # 配置模板
 ├── netlify.toml                  # Netlify 部署配置
+├── .openai/
+│   └── hosting.json              # OpenAI Sites 项目标识与资源声明
 ├── scripts/
-│   ├── build-static.js           # 构建 dist/ 静态发布目录
+│   ├── build-static.js           # 构建多平台 dist/ 发布目录
+│   ├── ui-review.js              # UI 截图、审计与报告
+│   ├── visual-check.js           # 交互和响应式视觉冒烟测试
 │   └── generate-demo-data.js     # 生成模拟 demo 数据
 ├── sample-data/
 │   ├── demo-usage-index.json     # 公开演示数据
@@ -333,6 +351,7 @@ codex
 token-dashboard
 token-usage
 openai
+openai-sites
 ai-tools
 usage-analytics
 local-first
@@ -384,7 +403,7 @@ screenshots/dashboard-preview.svg
 
 ## 常见问题
 
-### Netlify 版为什么不能自动读取我的 `.codex/sessions`？
+### 托管静态版为什么不能自动读取我的 `.codex/sessions`？
 
 浏览器网页没有权限自动读取你电脑上的任意文件夹。公开版必须由用户手动选择文件，解析也只在浏览器本地发生。
 

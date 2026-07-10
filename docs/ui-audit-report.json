@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-02T08:03:23.967Z",
+  "generatedAt": "2026-07-10T04:34:04.173Z",
   "baseUrl": "http://127.0.0.1:8787",
   "screenshotsDir": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current",
   "pages": [
@@ -10,47 +10,38 @@
       "width": 1920,
       "height": 1080,
       "screenshot": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current\\overview-1920.png",
-      "warnings": [
-        {
-          "code": "many-cards",
-          "message": "首屏卡片数量超过 12 个",
-          "detail": {
-            "count": 17
-          }
-        }
-      ],
+      "warnings": [],
       "failures": [],
       "metrics": {
-        "scrollWidth": 1920,
+        "scrollWidth": 1905,
         "clientWidth": 1920,
-        "headerHeight": 62,
-        "occupiedHeight": 202,
+        "headerHeight": 113.390625,
+        "occupiedHeight": 211.390625,
         "viewportHeight": 1080,
         "filtersVisible": true,
         "charts": [
           {
             "selector": "#trendChart",
-            "height": 308,
+            "height": 320,
             "hasGraphic": true,
             "hasEmpty": false
           },
           {
             "selector": "#ratioChart",
-            "height": 308,
+            "height": 320,
             "hasGraphic": true,
             "hasEmpty": false
           },
           {
             "selector": "#cacheTrendChart",
-            "height": 360,
+            "height": 340,
             "hasGraphic": true,
             "hasEmpty": false
           }
         ],
         "cards": 17,
         "h1Count": 1,
-        "activeNav": "◎总览",
-        "replay": null
+        "activeNav": "01运行总览"
       }
     },
     {
@@ -63,10 +54,10 @@
       "warnings": [],
       "failures": [],
       "metrics": {
-        "scrollWidth": 1920,
+        "scrollWidth": 1905,
         "clientWidth": 1920,
-        "headerHeight": 62,
-        "occupiedHeight": 204,
+        "headerHeight": 113.390625,
+        "occupiedHeight": 213.390625,
         "viewportHeight": 1080,
         "filtersVisible": true,
         "charts": [
@@ -79,8 +70,7 @@
         ],
         "cards": 7,
         "h1Count": 1,
-        "activeNav": "▦AI 日历",
-        "replay": null
+        "activeNav": "02AI 日历"
       }
     },
     {
@@ -93,24 +83,23 @@
       "warnings": [],
       "failures": [],
       "metrics": {
-        "scrollWidth": 1920,
+        "scrollWidth": 1905,
         "clientWidth": 1920,
-        "headerHeight": 62,
-        "occupiedHeight": 250,
+        "headerHeight": 113.390625,
+        "occupiedHeight": 257.390625,
         "viewportHeight": 1080,
         "filtersVisible": true,
         "charts": [
           {
             "selector": ".task-layout",
-            "height": 420,
+            "height": 430,
             "hasGraphic": true,
             "hasEmpty": true
           }
         ],
-        "cards": 12,
+        "cards": 15,
         "h1Count": 1,
-        "activeNav": "◇任务复盘",
-        "replay": null
+        "activeNav": "03任务复盘"
       }
     },
     {
@@ -123,17 +112,16 @@
       "warnings": [],
       "failures": [],
       "metrics": {
-        "scrollWidth": 1920,
+        "scrollWidth": 1905,
         "clientWidth": 1920,
-        "headerHeight": 62,
-        "occupiedHeight": 251,
+        "headerHeight": 113.390625,
+        "occupiedHeight": 257.390625,
         "viewportHeight": 1080,
         "filtersVisible": true,
         "charts": [],
         "cards": 2,
         "h1Count": 1,
-        "activeNav": "≡明细",
-        "replay": null
+        "activeNav": "04用量明细"
       }
     },
     {
@@ -146,53 +134,16 @@
       "warnings": [],
       "failures": [],
       "metrics": {
-        "scrollWidth": 1920,
+        "scrollWidth": 1905,
         "clientWidth": 1920,
-        "headerHeight": 62,
-        "occupiedHeight": 101,
+        "headerHeight": 113.390625,
+        "occupiedHeight": 113.390625,
         "viewportHeight": 1080,
         "filtersVisible": false,
         "charts": [],
         "cards": 7,
         "h1Count": 1,
-        "activeNav": "?设置",
-        "replay": null
-      }
-    },
-    {
-      "page": "work-replay",
-      "name": "Work Replay",
-      "viewport": "1920",
-      "width": 1920,
-      "height": 1080,
-      "screenshot": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current\\work-replay-1920.png",
-      "warnings": [],
-      "failures": [],
-      "metrics": {
-        "scrollWidth": 1920,
-        "clientWidth": 1920,
-        "headerHeight": 96.421875,
-        "occupiedHeight": 96.421875,
-        "viewportHeight": 1080,
-        "filtersVisible": false,
-        "charts": [
-          {
-            "selector": ".timeline-board",
-            "height": 1279,
-            "hasGraphic": true,
-            "hasEmpty": false
-          }
-        ],
-        "cards": 8,
-        "h1Count": 1,
-        "activeNav": "",
-        "replay": {
-          "hasTimeline": true,
-          "nodeCount": 48,
-          "sideWidth": 380,
-          "hasGlow": false,
-          "hasControls": true
-        }
+        "activeNav": "05系统设置"
       }
     },
     {
@@ -202,47 +153,38 @@
       "width": 1366,
       "height": 768,
       "screenshot": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current\\overview-1366.png",
-      "warnings": [
-        {
-          "code": "many-cards",
-          "message": "首屏卡片数量超过 12 个",
-          "detail": {
-            "count": 17
-          }
-        }
-      ],
+      "warnings": [],
       "failures": [],
       "metrics": {
-        "scrollWidth": 1366,
+        "scrollWidth": 1351,
         "clientWidth": 1366,
-        "headerHeight": 62,
-        "occupiedHeight": 202,
+        "headerHeight": 113.390625,
+        "occupiedHeight": 211.390625,
         "viewportHeight": 768,
         "filtersVisible": true,
         "charts": [
           {
             "selector": "#trendChart",
-            "height": 308,
+            "height": 320,
             "hasGraphic": true,
             "hasEmpty": false
           },
           {
             "selector": "#ratioChart",
-            "height": 308,
+            "height": 320,
             "hasGraphic": true,
             "hasEmpty": false
           },
           {
             "selector": "#cacheTrendChart",
-            "height": 360,
+            "height": 340,
             "hasGraphic": true,
             "hasEmpty": false
           }
         ],
         "cards": 17,
         "h1Count": 1,
-        "activeNav": "◎总览",
-        "replay": null
+        "activeNav": "01运行总览"
       }
     },
     {
@@ -255,10 +197,10 @@
       "warnings": [],
       "failures": [],
       "metrics": {
-        "scrollWidth": 1366,
+        "scrollWidth": 1351,
         "clientWidth": 1366,
-        "headerHeight": 62,
-        "occupiedHeight": 204,
+        "headerHeight": 113.390625,
+        "occupiedHeight": 213.390625,
         "viewportHeight": 768,
         "filtersVisible": true,
         "charts": [
@@ -271,8 +213,7 @@
         ],
         "cards": 7,
         "h1Count": 1,
-        "activeNav": "▦AI 日历",
-        "replay": null
+        "activeNav": "02AI 日历"
       }
     },
     {
@@ -285,24 +226,23 @@
       "warnings": [],
       "failures": [],
       "metrics": {
-        "scrollWidth": 1366,
+        "scrollWidth": 1351,
         "clientWidth": 1366,
-        "headerHeight": 62,
-        "occupiedHeight": 250,
+        "headerHeight": 113.390625,
+        "occupiedHeight": 257.390625,
         "viewportHeight": 768,
         "filtersVisible": true,
         "charts": [
           {
             "selector": ".task-layout",
-            "height": 420,
+            "height": 430,
             "hasGraphic": true,
             "hasEmpty": true
           }
         ],
-        "cards": 12,
+        "cards": 15,
         "h1Count": 1,
-        "activeNav": "◇任务复盘",
-        "replay": null
+        "activeNav": "03任务复盘"
       }
     },
     {
@@ -315,17 +255,16 @@
       "warnings": [],
       "failures": [],
       "metrics": {
-        "scrollWidth": 1366,
+        "scrollWidth": 1351,
         "clientWidth": 1366,
-        "headerHeight": 62,
-        "occupiedHeight": 251,
+        "headerHeight": 113.390625,
+        "occupiedHeight": 257.390625,
         "viewportHeight": 768,
         "filtersVisible": true,
         "charts": [],
         "cards": 2,
         "h1Count": 1,
-        "activeNav": "≡明细",
-        "replay": null
+        "activeNav": "04用量明细"
       }
     },
     {
@@ -338,53 +277,16 @@
       "warnings": [],
       "failures": [],
       "metrics": {
-        "scrollWidth": 1366,
+        "scrollWidth": 1351,
         "clientWidth": 1366,
-        "headerHeight": 62,
-        "occupiedHeight": 101,
+        "headerHeight": 113.390625,
+        "occupiedHeight": 113.390625,
         "viewportHeight": 768,
         "filtersVisible": false,
         "charts": [],
         "cards": 7,
         "h1Count": 1,
-        "activeNav": "?设置",
-        "replay": null
-      }
-    },
-    {
-      "page": "work-replay",
-      "name": "Work Replay",
-      "viewport": "1366",
-      "width": 1366,
-      "height": 768,
-      "screenshot": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current\\work-replay-1366.png",
-      "warnings": [],
-      "failures": [],
-      "metrics": {
-        "scrollWidth": 1366,
-        "clientWidth": 1366,
-        "headerHeight": 117.640625,
-        "occupiedHeight": 117.640625,
-        "viewportHeight": 768,
-        "filtersVisible": false,
-        "charts": [
-          {
-            "selector": ".timeline-board",
-            "height": 1279,
-            "hasGraphic": true,
-            "hasEmpty": false
-          }
-        ],
-        "cards": 8,
-        "h1Count": 1,
-        "activeNav": "",
-        "replay": {
-          "hasTimeline": true,
-          "nodeCount": 48,
-          "sideWidth": 380,
-          "hasGlow": false,
-          "hasControls": true
-        }
+        "activeNav": "05系统设置"
       }
     },
     {
@@ -394,54 +296,38 @@
       "width": 390,
       "height": 844,
       "screenshot": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current\\overview-mobile.png",
-      "warnings": [
-        {
-          "code": "many-cards",
-          "message": "首屏卡片数量超过 12 个",
-          "detail": {
-            "count": 17
-          }
-        },
-        {
-          "code": "mobile-buttons-crowded",
-          "message": "移动端多个按钮过窄或过矮",
-          "detail": {
-            "count": 19
-          }
-        }
-      ],
+      "warnings": [],
       "failures": [],
       "metrics": {
         "scrollWidth": 390,
         "clientWidth": 390,
-        "headerHeight": 114,
-        "occupiedHeight": 230,
+        "headerHeight": 111,
+        "occupiedHeight": 189,
         "viewportHeight": 844,
         "filtersVisible": true,
         "charts": [
           {
             "selector": "#trendChart",
-            "height": 308,
+            "height": 320,
             "hasGraphic": true,
             "hasEmpty": false
           },
           {
             "selector": "#ratioChart",
-            "height": 323,
+            "height": 299,
             "hasGraphic": true,
             "hasEmpty": false
           },
           {
             "selector": "#cacheTrendChart",
-            "height": 360,
+            "height": 342,
             "hasGraphic": true,
             "hasEmpty": false
           }
         ],
         "cards": 17,
         "h1Count": 1,
-        "activeNav": "◎总览",
-        "replay": null
+        "activeNav": "01运行总览"
       }
     },
     {
@@ -451,21 +337,13 @@
       "width": 390,
       "height": 844,
       "screenshot": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current\\calendar-mobile.png",
-      "warnings": [
-        {
-          "code": "mobile-buttons-crowded",
-          "message": "移动端多个按钮过窄或过矮",
-          "detail": {
-            "count": 102
-          }
-        }
-      ],
+      "warnings": [],
       "failures": [],
       "metrics": {
         "scrollWidth": 390,
         "clientWidth": 390,
-        "headerHeight": 114,
-        "occupiedHeight": 230,
+        "headerHeight": 111,
+        "occupiedHeight": 189,
         "viewportHeight": 844,
         "filtersVisible": true,
         "charts": [
@@ -478,8 +356,7 @@
         ],
         "cards": 7,
         "h1Count": 1,
-        "activeNav": "▦AI 日历",
-        "replay": null
+        "activeNav": "02AI 日历"
       }
     },
     {
@@ -489,35 +366,26 @@
       "width": 390,
       "height": 844,
       "screenshot": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current\\tasks-mobile.png",
-      "warnings": [
-        {
-          "code": "mobile-buttons-crowded",
-          "message": "移动端多个按钮过窄或过矮",
-          "detail": {
-            "count": 4
-          }
-        }
-      ],
+      "warnings": [],
       "failures": [],
       "metrics": {
         "scrollWidth": 390,
         "clientWidth": 390,
-        "headerHeight": 114,
-        "occupiedHeight": 230,
+        "headerHeight": 111,
+        "occupiedHeight": 189,
         "viewportHeight": 844,
         "filtersVisible": true,
         "charts": [
           {
             "selector": ".task-layout",
-            "height": 1105.96875,
+            "height": 1355.5625,
             "hasGraphic": true,
             "hasEmpty": true
           }
         ],
-        "cards": 12,
+        "cards": 15,
         "h1Count": 1,
-        "activeNav": "◇任务复盘",
-        "replay": null
+        "activeNav": "03任务复盘"
       }
     },
     {
@@ -527,28 +395,19 @@
       "width": 390,
       "height": 844,
       "screenshot": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current\\details-mobile.png",
-      "warnings": [
-        {
-          "code": "mobile-buttons-crowded",
-          "message": "移动端多个按钮过窄或过矮",
-          "detail": {
-            "count": 109
-          }
-        }
-      ],
+      "warnings": [],
       "failures": [],
       "metrics": {
         "scrollWidth": 390,
         "clientWidth": 390,
-        "headerHeight": 114,
-        "occupiedHeight": 230,
+        "headerHeight": 111,
+        "occupiedHeight": 189,
         "viewportHeight": 844,
         "filtersVisible": true,
         "charts": [],
         "cards": 2,
         "h1Count": 1,
-        "activeNav": "≡明细",
-        "replay": null
+        "activeNav": "04用量明细"
       }
     },
     {
@@ -558,64 +417,19 @@
       "width": 390,
       "height": 844,
       "screenshot": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current\\settings-mobile.png",
-      "warnings": [
-        {
-          "code": "mobile-buttons-crowded",
-          "message": "移动端多个按钮过窄或过矮",
-          "detail": {
-            "count": 4
-          }
-        }
-      ],
-      "failures": [],
-      "metrics": {
-        "scrollWidth": 390,
-        "clientWidth": 390,
-        "headerHeight": 114,
-        "occupiedHeight": 153,
-        "viewportHeight": 844,
-        "filtersVisible": false,
-        "charts": [],
-        "cards": 7,
-        "h1Count": 1,
-        "activeNav": "?设置",
-        "replay": null
-      }
-    },
-    {
-      "page": "work-replay",
-      "name": "Work Replay",
-      "viewport": "mobile",
-      "width": 390,
-      "height": 844,
-      "screenshot": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current\\work-replay-mobile.png",
       "warnings": [],
       "failures": [],
       "metrics": {
         "scrollWidth": 390,
         "clientWidth": 390,
-        "headerHeight": 114.40625,
-        "occupiedHeight": 114.40625,
+        "headerHeight": 111,
+        "occupiedHeight": 111,
         "viewportHeight": 844,
         "filtersVisible": false,
-        "charts": [
-          {
-            "selector": ".timeline-board",
-            "height": 1856.5,
-            "hasGraphic": true,
-            "hasEmpty": false
-          }
-        ],
-        "cards": 8,
+        "charts": [],
+        "cards": 7,
         "h1Count": 1,
-        "activeNav": "",
-        "replay": {
-          "hasTimeline": true,
-          "nodeCount": 48,
-          "sideWidth": 374,
-          "hasGlow": false,
-          "hasControls": true
-        }
+        "activeNav": "05系统设置"
       }
     }
   ],

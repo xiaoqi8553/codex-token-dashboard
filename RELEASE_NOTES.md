@@ -1,63 +1,40 @@
 # Release Notes
 
-## v0.3.0 - Public Static Demo + Local-First Imports
+## v0.6.0 - Engineering Workspace + OpenAI Sites
 
-Codex Token 用量看板 0.3.0 把项目从“本地统计工具”升级为“本地版 + Netlify 静态公开版”的双模式产品。
+Codex Token Dashboard 0.6.0 是一次产品级前端重构。版本重点从“继续叠加卡片”转向建立稳定的信息架构、统一的工程视觉语言，以及可复现的多平台发布流程。
 
-### Highlights
+### 视觉与交互
 
-- 新增 Netlify 静态演示版，公开网址打开后默认加载模拟数据。
-- 新增浏览器本地导入，支持 `.codex/sessions` 文件夹、`usage-index.json`、脱敏快照、CSV/JSON。
-- 新增脱敏快照 JSON / HTML 导出，适合公开分享用量结果。
-- 修复主题三态切换，支持系统 / 浅色 / 深色。
-- 优化暗色模式下总 Token 卡片、badge、图表、表格的可读性。
-- 优化公开版空状态、欢迎引导、模式提示和隐私说明。
-- 优化明细表交互：搜索、筛选、排序、分页、多选、选中导出。
+- 桌面端采用左侧工作区导航和右侧数据画布，导航、页面上下文与数据操作各自归位。
+- 顶部命令栏只保留运行状态、导入、导出与同步，低频导出项收进菜单。
+- 使用明亮中性色、石墨主色和克制的来源色，减少渐变、阴影和装饰噪声。
+- 今日状态与核心指标组成统一 KPI 网格，重复更新时间从卡片中移除。
+- 每日 Token 趋势继续使用堆叠柱状图，保留累计 Token、坐标日期、hover 明细和日期筛选。
+- AI 日历、任务复盘、用量明细和系统设置全部继承同一套组件、间距和排版规则。
+- 移动端改为紧凑品牌栏、横向工作区导航和单列数据流，不产生页面级横向滚动。
 
-### Data and Privacy
+### 功能调整
 
-- 公开静态版不会自动读取访问者电脑。
-- 浏览器导入模式使用 File API 本地解析，不上传文件。
-- 脱敏快照默认隐藏完整路径、完整 session id、原始对话内容和 `detailText`。
-- 本地 Node 模式默认只监听 `127.0.0.1`。
-- `PUBLIC_ACCESS=true` 时必须设置 `DASHBOARD_PASSWORD` 或 `ACCESS_TOKEN`。
+- 删除工作回放页面和所有入口。任务、项目和日期分析继续由任务复盘与 AI 日历承担。
+- 初次加载和后台自动刷新不再弹出完成提示；手动同步仍提供明确反馈。
+- Token 解析、去重、来源归因、导入导出、快照和统计口径没有改变。
 
-### Deployment
+### 部署与开源
 
-Netlify settings:
+- 新增 OpenAI Sites 项目配置和 Cloudflare Worker 兼容入口。
+- `npm run build` 同时生成 OpenAI Sites、Netlify 和 GitHub Pages 可用的公开安全产物。
+- Sites 发布严格使用已经推送到 Git 的同一 commit，再保存版本并部署到生产。
+- README、CHANGELOG、设置页版本、快照元数据、版本徽章和发布说明统一更新为 0.6.0。
 
-```text
-Build command: npm run build
-Publish directory: dist
-```
+### 验证
 
-The static build only publishes public-safe files:
+- 自动测试覆盖本地日期、每日柱状图、一年累计、使用趋势标签、刷新容错、服务端缓存、0.6.0 页面骨架、工作回放删除和 Sites Worker 构建契约。
+- UI 验收覆盖 1920、1366 和 390 宽度下的运行总览、AI 日历、任务复盘、用量明细和系统设置。
 
-- `index.html`
-- `sample-data/`
-- `LICENSE`
-- `_headers`
+### 升级说明
 
-It does not publish local runtime data, real sessions, imports, `.env`, or `config.json`.
-
-### Recommended GitHub Topics
-
-```text
-codex
-token-dashboard
-token-usage
-openai
-ai-tools
-usage-analytics
-local-first
-privacy-first
-netlify
-javascript
-```
-
-### Upgrade Notes
-
-- If you already use local mode, no migration is required.
-- Existing `data/usage-index.json` remains local and ignored by git.
-- If you deploy to Netlify, run `npm run build` and publish `dist/`.
-- If you share screenshots or examples, use `sample-data/` or a脱敏快照，不要使用真实 sessions。
+- 本地 `data/usage-index.json` 和浏览器缓存无需迁移。
+- 使用本地模式时继续运行 `npm start` 或双击 `start-dashboard.bat`。
+- 静态托管继续使用 `npm run build`，发布目录仍为 `dist/`。
+- 旧书签中的 `replay.html` 不再可用。
