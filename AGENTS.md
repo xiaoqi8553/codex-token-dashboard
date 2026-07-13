@@ -60,6 +60,7 @@
 - 2026-07-13: UI audit checked page-level horizontal scrolling but missed internal clipping and uneven KPI baselines. Critical components now need descendant overflow checks, baseline checks, and minimum chart-label sizes in addition to page-level checks.
 - 2026-07-13: Passing automated screenshots was treated as sufficient even when the total card and ratio chart still looked unbalanced. Manually inspect Overview, Task Review, and dark Overview screenshots for hierarchy, symmetry, whitespace, and component fit before release.
 - 2026-07-13: Dark mode reused `--ink` as an active-control background while keeping hardcoded white text, producing white-on-white navigation and range buttons. Active controls need explicit theme-aware foreground/background tokens and a 4.5:1 contrast check.
+- 2026-07-13: 0.7.0 still centered the hero KPI while every neighboring KPI was left-aligned, and retained first/last bar-label edge exceptions. Emphasis must not introduce a separate alignment model; measure actual text insets and label-to-bar center coordinates instead of checking only element boxes.
 
 ## Before Finishing
 

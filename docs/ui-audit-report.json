@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-13T06:33:32.626Z",
+  "generatedAt": "2026-07-13T07:35:11.262Z",
   "baseUrl": "http://127.0.0.1:8787",
   "screenshotsDir": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current",
   "pages": [
@@ -41,7 +41,12 @@
         ],
         "cards": 17,
         "h1Count": 1,
-        "activeNav": "01运行总览"
+        "activeNav": "01运行总览",
+        "kpiBaselineDrift": 0,
+        "kpiTextInsetDrift": 0,
+        "regularBarMinFont": 13,
+        "trendValueCenterDrift": 0.0078125,
+        "trendValueOverflowCount": 0
       }
     },
     {
@@ -70,7 +75,12 @@
         ],
         "cards": 7,
         "h1Count": 1,
-        "activeNav": "02AI 日历"
+        "activeNav": "02AI 日历",
+        "kpiBaselineDrift": 0,
+        "kpiTextInsetDrift": 0,
+        "regularBarMinFont": 0,
+        "trendValueCenterDrift": 0,
+        "trendValueOverflowCount": 0
       }
     },
     {
@@ -99,7 +109,12 @@
         ],
         "cards": 15,
         "h1Count": 1,
-        "activeNav": "03任务复盘"
+        "activeNav": "03任务复盘",
+        "kpiBaselineDrift": 0,
+        "kpiTextInsetDrift": 0,
+        "regularBarMinFont": 0,
+        "trendValueCenterDrift": 0,
+        "trendValueOverflowCount": 0
       }
     },
     {
@@ -121,7 +136,12 @@
         "charts": [],
         "cards": 2,
         "h1Count": 1,
-        "activeNav": "04用量明细"
+        "activeNav": "04用量明细",
+        "kpiBaselineDrift": 0,
+        "kpiTextInsetDrift": 0,
+        "regularBarMinFont": 0,
+        "trendValueCenterDrift": 0,
+        "trendValueOverflowCount": 0
       }
     },
     {
@@ -143,7 +163,12 @@
         "charts": [],
         "cards": 7,
         "h1Count": 1,
-        "activeNav": "05系统设置"
+        "activeNav": "05系统设置",
+        "kpiBaselineDrift": 0,
+        "kpiTextInsetDrift": 0,
+        "regularBarMinFont": 0,
+        "trendValueCenterDrift": 0,
+        "trendValueOverflowCount": 0
       }
     },
     {
@@ -184,7 +209,12 @@
         ],
         "cards": 17,
         "h1Count": 1,
-        "activeNav": "01运行总览"
+        "activeNav": "01运行总览",
+        "kpiBaselineDrift": 0,
+        "kpiTextInsetDrift": 0,
+        "regularBarMinFont": 13,
+        "trendValueCenterDrift": 0.0078125,
+        "trendValueOverflowCount": 0
       }
     },
     {
@@ -213,7 +243,12 @@
         ],
         "cards": 7,
         "h1Count": 1,
-        "activeNav": "02AI 日历"
+        "activeNav": "02AI 日历",
+        "kpiBaselineDrift": 0,
+        "kpiTextInsetDrift": 0,
+        "regularBarMinFont": 0,
+        "trendValueCenterDrift": 0,
+        "trendValueOverflowCount": 0
       }
     },
     {
@@ -242,7 +277,12 @@
         ],
         "cards": 15,
         "h1Count": 1,
-        "activeNav": "03任务复盘"
+        "activeNav": "03任务复盘",
+        "kpiBaselineDrift": 0,
+        "kpiTextInsetDrift": 0,
+        "regularBarMinFont": 0,
+        "trendValueCenterDrift": 0,
+        "trendValueOverflowCount": 0
       }
     },
     {
@@ -264,7 +304,12 @@
         "charts": [],
         "cards": 2,
         "h1Count": 1,
-        "activeNav": "04用量明细"
+        "activeNav": "04用量明细",
+        "kpiBaselineDrift": 0,
+        "kpiTextInsetDrift": 0,
+        "regularBarMinFont": 0,
+        "trendValueCenterDrift": 0,
+        "trendValueOverflowCount": 0
       }
     },
     {
@@ -286,7 +331,12 @@
         "charts": [],
         "cards": 7,
         "h1Count": 1,
-        "activeNav": "05系统设置"
+        "activeNav": "05系统设置",
+        "kpiBaselineDrift": 0,
+        "kpiTextInsetDrift": 0,
+        "regularBarMinFont": 0,
+        "trendValueCenterDrift": 0,
+        "trendValueOverflowCount": 0
       }
     },
     {
@@ -327,7 +377,12 @@
         ],
         "cards": 17,
         "h1Count": 1,
-        "activeNav": "01运行总览"
+        "activeNav": "01运行总览",
+        "kpiBaselineDrift": 0,
+        "kpiTextInsetDrift": 0,
+        "regularBarMinFont": 13,
+        "trendValueCenterDrift": 0.0078125,
+        "trendValueOverflowCount": 0
       }
     },
     {
@@ -356,7 +411,12 @@
         ],
         "cards": 7,
         "h1Count": 1,
-        "activeNav": "02AI 日历"
+        "activeNav": "02AI 日历",
+        "kpiBaselineDrift": 0,
+        "kpiTextInsetDrift": 0,
+        "regularBarMinFont": 0,
+        "trendValueCenterDrift": 0,
+        "trendValueOverflowCount": 0
       }
     },
     {
@@ -385,7 +445,12 @@
         ],
         "cards": 15,
         "h1Count": 1,
-        "activeNav": "03任务复盘"
+        "activeNav": "03任务复盘",
+        "kpiBaselineDrift": 0,
+        "kpiTextInsetDrift": 0,
+        "regularBarMinFont": 0,
+        "trendValueCenterDrift": 0,
+        "trendValueOverflowCount": 0
       }
     },
     {
@@ -407,7 +472,12 @@
         "charts": [],
         "cards": 2,
         "h1Count": 1,
-        "activeNav": "04用量明细"
+        "activeNav": "04用量明细",
+        "kpiBaselineDrift": 0,
+        "kpiTextInsetDrift": 0,
+        "regularBarMinFont": 0,
+        "trendValueCenterDrift": 0,
+        "trendValueOverflowCount": 0
       }
     },
     {
@@ -429,7 +499,12 @@
         "charts": [],
         "cards": 7,
         "h1Count": 1,
-        "activeNav": "05系统设置"
+        "activeNav": "05系统设置",
+        "kpiBaselineDrift": 0,
+        "kpiTextInsetDrift": 0,
+        "regularBarMinFont": 0,
+        "trendValueCenterDrift": 0,
+        "trendValueOverflowCount": 0
       }
     }
   ],

@@ -99,7 +99,7 @@ test("large browser imports persist in IndexedDB and restore on startup", () => 
   assert.match(indexSource, /await cacheStaticPayload\(payload\)/);
 });
 
-test("0.7 KPI typography is container-responsive and keeps strong hero contrast", () => {
+test("0.7 KPI typography is container-responsive and uses one left alignment", () => {
   const heroBlocks = indexSource.match(/\.metric\.hero\s*\{[^}]+\}/g) || [];
   const heroCss = heroBlocks.at(-1) || "";
   const heroValueCss = [...indexSource.matchAll(/\.metric\.hero \.metric-value\s*\{[^}]+\}/g)].at(-1)?.[0] || "";
@@ -107,12 +107,16 @@ test("0.7 KPI typography is container-responsive and keeps strong hero contrast"
   const trendTotalCss = [...indexSource.matchAll(/\.trend-total-value\s*\{[^}]+\}/g)].at(-1)?.[0] || "";
 
   assert.match(heroCss, /linear-gradient/);
+  assert.doesNotMatch(heroCss, /28px 28px/);
   assert.doesNotMatch(heroCss, /background:\s*var\(--ink\)/);
   assert.match(heroValueCss, /clamp\(42px,\s*13cqi,\s*58px\)/);
   assert.match(metricValueCss, /clamp\(32px,\s*9\.5cqi,\s*42px\)/);
   assert.match(trendTotalCss, /clamp\(34px,\s*20cqi,\s*46px\)/);
   assert.match(indexSource, /\.metric\s*\{[^}]*container-type:\s*inline-size/s);
-  assert.match(indexSource, /\.metric\.hero \.metric-body\s*\{[^}]*text-align:\s*center/s);
+  assert.match(indexSource, /--hero-bg-a:\s*#f5f9ff/);
+  assert.match(indexSource, /--hero-bg-b:\s*#e4efff/);
+  assert.match(indexSource, /\.metric\.hero \.metric-body\s*\{[^}]*justify-items:\s*start[^}]*text-align:\s*left/s);
+  assert.match(indexSource, /\.metric\.hero \.metric-foot\s*\{\s*justify-content:\s*flex-start/);
 });
 
 test("sessions import fits dates only when the current preset hides every record", () => {
@@ -164,8 +168,9 @@ test("daily Token trend date labels fit within the chart card", () => {
   assert.match(trendSource, /dataset\.density/);
   assert.match(trendSource, /day-label-month/);
   assert.match(trendSource, /day-label-day/);
-  assert.match(indexSource, /\.day:first-child\s+\.bar-value/);
-  assert.match(indexSource, /\.day:last-child\s+\.bar-value/);
+  assert.doesNotMatch(indexSource, /\.day:first-child\s+\.bar-value/);
+  assert.doesNotMatch(indexSource, /\.day:last-child\s+\.bar-value/);
+  assert.match(indexSource, /\.trend\[data-density="regular"\]\s*\{\s*padding-inline:\s*32px/);
   assert.doesNotMatch(dayLabelCss, /writing-mode:\s*vertical-rl/);
   assert.doesNotMatch(dayLabelCss, /text-overflow:\s*ellipsis/);
   assert.doesNotMatch(dayLabelCss, /overflow:\s*hidden/);
@@ -203,7 +208,10 @@ test("ratio chart uses an accessible SVG ring and structured legend", () => {
 test("UI audit blocks key number overflow, KPI drift, and tiny daily labels", () => {
   assert.match(auditSource, /key-content-overflow/);
   assert.match(auditSource, /kpi-value-misaligned/);
+  assert.match(auditSource, /kpi-text-misaligned/);
   assert.match(auditSource, /trend-label-small/);
+  assert.match(auditSource, /trend-value-misaligned/);
+  assert.match(auditSource, /trend-value-overflow/);
   assert.match(auditSource, /\.trend-total-value/);
   assert.match(auditSource, /scrollWidth > item\.clientWidth/);
   assert.doesNotMatch(auditSource, /新增项目维度 Token 统计/);
@@ -224,11 +232,11 @@ test("usage trend has no persistent numeric overlays or summaries", () => {
   assert.doesNotMatch(cacheSource, /峰值 active|缓存 \$\{formatToken|命中率 \$\{avgHit\}% \/ active/);
 });
 
-test("0.7.0 uses the engineering workspace shell and removes Work Replay", () => {
-  assert.equal(packageJson.version, "0.7.0");
+test("0.7.1 uses the engineering workspace shell and removes Work Replay", () => {
+  assert.equal(packageJson.version, "0.7.1");
   assert.match(indexSource, /class="side-rail shell"/);
   assert.match(indexSource, /id="viewTitle"/);
-  assert.match(indexSource, /v0\.7\.0/);
+  assert.match(indexSource, /v0\.7\.1/);
   assert.doesNotMatch(indexSource, /replayBtn|replay\.html|工作回放/);
   assert.doesNotMatch(buildSource, /replay\.html/);
   assert.equal(fs.existsSync(path.join(root, "replay.html")), false);

@@ -183,7 +183,12 @@ function compactMetrics(metrics = {}) {
     })),
     cards: metrics.cards?.length || 0,
     h1Count: metrics.h1?.length || 0,
-    activeNav: metrics.activeNav || ""
+    activeNav: metrics.activeNav || "",
+    kpiBaselineDrift: metrics.kpiBaselineDrift || 0,
+    kpiTextInsetDrift: metrics.kpiTextInsetDrift || 0,
+    regularBarMinFont: metrics.regularBarMinFont || 0,
+    trendValueCenterDrift: metrics.trendValueCenterDrift || 0,
+    trendValueOverflowCount: metrics.trendValueOutOfBounds?.length || 0
   };
 }
 
@@ -272,8 +277,30 @@ async function collectAudit(page, pageInfo, viewport, screenshot) {
       return rows;
     }, {});
     const kpiBaselineDrift = Math.max(0, ...Object.values(metricRows).filter(row => row.length > 1).map(row => Math.max(...row) - Math.min(...row)));
+    const metricTextInsets = Array.from(document.querySelectorAll(".metric")).filter(visible).map(card => {
+      const value = card.querySelector(".metric-value");
+      const textNode = value?.firstChild;
+      if (!visible(value) || !textNode) return null;
+      const range = document.createRange();
+      range.selectNodeContents(value);
+      return range.getBoundingClientRect().left - card.getBoundingClientRect().left;
+    }).filter(value => Number.isFinite(value));
+    const kpiTextInsetDrift = metricTextInsets.length ? Math.max(...metricTextInsets) - Math.min(...metricTextInsets) : 0;
     const regularBarFonts = Array.from(document.querySelectorAll('.trend[data-density="regular"] .bar-value')).filter(visible).map(element => parseFloat(getComputedStyle(element).fontSize) || 0);
     const regularBarMinFont = regularBarFonts.length ? Math.min(...regularBarFonts) : 0;
+    const trendBounds = document.querySelector("#trendChart")?.getBoundingClientRect();
+    const trendValues = Array.from(document.querySelectorAll("#trendChart .day .bar-value")).filter(visible).map(label => {
+      const stack = label.closest(".day")?.querySelector(".stack");
+      const labelBounds = label.getBoundingClientRect();
+      const stackBounds = stack?.getBoundingClientRect();
+      return {
+        text: text(label),
+        centerDrift: stackBounds ? Math.abs((labelBounds.left + labelBounds.width / 2) - (stackBounds.left + stackBounds.width / 2)) : 0,
+        outsideChart: Boolean(trendBounds && (labelBounds.left < trendBounds.left - 1 || labelBounds.right > trendBounds.right + 1))
+      };
+    });
+    const trendValueCenterDrift = Math.max(0, ...trendValues.map(value => value.centerDrift));
+    const trendValueOutOfBounds = trendValues.filter(value => value.outsideChart);
     const cards = Array.from(document.querySelectorAll(".metric,.stat-card,.today-card,.story-card,.calendar-stat,.task-type-card,.settings-card,.panel,.current-card,.mini-stat")).filter(visible).map(rect);
     const h1 = Array.from(document.querySelectorAll("h1")).filter(visible).map(text);
     const h2 = Array.from(document.querySelectorAll("h2")).filter(visible).map(text);
@@ -292,7 +319,10 @@ async function collectAudit(page, pageInfo, viewport, screenshot) {
       keyNumbers,
       overflowTargets,
       kpiBaselineDrift,
+      kpiTextInsetDrift,
       regularBarMinFont,
+      trendValueCenterDrift,
+      trendValueOutOfBounds,
       cards,
       h1,
       h2,
@@ -329,7 +359,10 @@ async function collectAudit(page, pageInfo, viewport, screenshot) {
   if (tinyNumber) add("failure", "key-number-small", "关键数字字号小于 22px", tinyNumber);
   if (data.overflowTargets.length) add("failure", "key-content-overflow", "关键卡片内容超出可用边界或被截断", { targets: data.overflowTargets });
   if (data.kpiBaselineDrift > 4) add("failure", "kpi-value-misaligned", "同一行 KPI 数字基线未对齐", { drift: data.kpiBaselineDrift });
+  if (data.kpiTextInsetDrift > 2) add("failure", "kpi-text-misaligned", "KPI 主数字未使用统一左边距", { drift: data.kpiTextInsetDrift });
   if (pageInfo.key === "overview" && data.regularBarMinFont && data.regularBarMinFont < 12) add("failure", "trend-label-small", "低密度每日趋势数值小于 12px", { fontSize: data.regularBarMinFont });
+  if (pageInfo.key === "overview" && data.trendValueCenterDrift > 2) add("failure", "trend-value-misaligned", "每日趋势数值未与柱体中心对齐", { drift: data.trendValueCenterDrift });
+  if (pageInfo.key === "overview" && data.trendValueOutOfBounds.length) add("failure", "trend-value-overflow", "每日趋势数值超出图表边界", { values: data.trendValueOutOfBounds });
   if (data.cards.length > 24) add("failure", "too-many-cards", "页面卡片数量超过 24 个", { count: data.cards.length });
   else if (data.cards.length > 18) add("warning", "many-cards", "页面卡片数量超过 18 个", { count: data.cards.length });
   if (data.h1.length > 1) add("warning", "multiple-h1", "页面出现多个 h1 主标题", { count: data.h1.length, h1: data.h1 });
@@ -356,7 +389,7 @@ function severityBuckets(audit) {
   for (const page of audit.pages) {
     for (const issue of page.failures || []) {
       const line = `${page.name} ${page.viewport}: ${issue.message}`;
-      if (["horizontal-scroll", "chart-empty", "chart-short", "key-number-small", "key-content-overflow", "kpi-value-misaligned", "trend-label-small", "mobile-nav-missing"].includes(issue.code)) p0.push(line);
+      if (["horizontal-scroll", "chart-empty", "chart-short", "key-number-small", "key-content-overflow", "kpi-value-misaligned", "kpi-text-misaligned", "trend-label-small", "trend-value-misaligned", "trend-value-overflow", "mobile-nav-missing"].includes(issue.code)) p0.push(line);
       else p1.push(line);
     }
     for (const issue of page.warnings || []) {
