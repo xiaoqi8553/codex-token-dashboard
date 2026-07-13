@@ -81,6 +81,37 @@ test("sessions import streams large files and ignores irrelevant rollout records
   assert.match(indexSource, /onProgress:\s*reportSessionImportProgress/);
 });
 
+test("large browser imports persist in IndexedDB and restore on startup", () => {
+  const cacheSource = extractFunction("cacheStaticPayload");
+  const loadSource = extractFunction("loadCachedStaticPayload");
+  const clearSource = extractFunction("clearCachedStaticPayload");
+  const initializeSource = extractFunction("initializeDashboard");
+
+  assert.match(indexSource, /staticPayloadKey:\s*"staticPayload"/);
+  assert.match(cacheSource, /await saveStaticPayloadToDatabase\(cached\)/);
+  assert.match(loadSource, /get\(handleDb\.staticPayloadKey\)/);
+  assert.match(loadSource, /codexTokenStaticPayload/);
+  assert.match(clearSource, /delete\(handleDb\.staticPayloadKey\)/);
+  assert.match(initializeSource, /await restoreSavedSessionsDirectory/);
+  assert.ok(initializeSource.indexOf("await restoreSavedSessionsDirectory") < initializeSource.indexOf('applyRange("7d")'));
+  assert.match(indexSource, /await cacheStaticPayload\(payload\)/);
+});
+
+test("dark hero metric keeps strong contrast and emphasizes core numbers", () => {
+  const heroBlocks = indexSource.match(/\.metric\.hero\s*\{[^}]+\}/g) || [];
+  const heroCss = heroBlocks.at(-1) || "";
+  const heroValueCss = indexSource.match(/\.metric\.hero \.metric-value\s*\{[^}]+\}/)?.[0] || "";
+  const metricValueCss = [...indexSource.matchAll(/\.metric:not\(\.hero\) \.metric-value\s*\{[^}]+\}/g)].at(-1)?.[0] || "";
+  const trendTotalCss = [...indexSource.matchAll(/\.trend-total-value\s*\{[^}]+\}/g)].at(-1)?.[0] || "";
+
+  assert.match(heroCss, /var\(--hero-bg-a\)/);
+  assert.match(heroCss, /var\(--hero-bg-b\)/);
+  assert.doesNotMatch(heroCss, /background:\s*var\(--ink\)/);
+  assert.match(heroValueCss, /clamp\(48px,\s*3\.5vw,\s*64px\)/);
+  assert.match(metricValueCss, /clamp\(32px,\s*2\.05vw,\s*42px\)/);
+  assert.match(trendTotalCss, /clamp\(38px,\s*2\.8vw,\s*52px\)/);
+});
+
 test("sessions import fits dates only when the current preset hides every record", () => {
   const makeContext = () => ({
     state: { range: "7d" },
@@ -164,11 +195,11 @@ test("usage trend has no persistent numeric overlays or summaries", () => {
   assert.doesNotMatch(cacheSource, /峰值 active|缓存 \$\{formatToken|命中率 \$\{avgHit\}% \/ active/);
 });
 
-test("0.6.1 uses the engineering workspace shell and removes Work Replay", () => {
-  assert.equal(packageJson.version, "0.6.1");
+test("0.6.2 uses the engineering workspace shell and removes Work Replay", () => {
+  assert.equal(packageJson.version, "0.6.2");
   assert.match(indexSource, /class="side-rail shell"/);
   assert.match(indexSource, /id="viewTitle"/);
-  assert.match(indexSource, /v0\.6\.1/);
+  assert.match(indexSource, /v0\.6\.2/);
   assert.doesNotMatch(indexSource, /replayBtn|replay\.html|工作回放/);
   assert.doesNotMatch(buildSource, /replay\.html/);
   assert.equal(fs.existsSync(path.join(root, "replay.html")), false);

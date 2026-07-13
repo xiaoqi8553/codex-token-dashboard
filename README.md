@@ -7,7 +7,7 @@
 ![Codex Token Dashboard cover](screenshots/project-cover.svg)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-0f766e.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.6.1-17202e.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.6.2-17202e.svg)](CHANGELOG.md)
 [![OpenAI Sites](https://img.shields.io/badge/deploy-OpenAI%20Sites-275dcc.svg)](.openai/hosting.json)
 [![Netlify Demo](https://img.shields.io/badge/demo-codetoken.netlify.app-2f6fed.svg)](https://codetoken.netlify.app/)
 [![GitHub Pages](https://img.shields.io/badge/pages-github.io-111827.svg)](https://xiaoqi8553.github.io/codex-token-dashboard/)
@@ -20,7 +20,7 @@
 
 0.6.0 同时接入 OpenAI Sites。Sites 生产地址会在首次生产发布完成后写入本节，站点版本始终对应仓库中已经推送的 commit。
 
-公开演示站默认加载模拟数据，不会读取访问者电脑。用户可以通过顶部“导入数据”菜单选择自己的 `usage-index.json`、脱敏快照、中转站 CSV/JSON，也可以直接选择整个 `.codex/sessions` 文件夹。所有解析都发生在浏览器本地。
+公开演示站默认加载模拟数据，不会读取访问者电脑。用户可以通过顶部“导入数据”菜单选择自己的 `usage-index.json`、脱敏快照、中转站 CSV/JSON，也可以直接选择整个 `.codex/sessions` 文件夹。所有解析都发生在浏览器本地，解析结果会保存在当前浏览器的 IndexedDB 中，重新打开同一网址时自动恢复。
 
 ## 界面预览
 
@@ -104,7 +104,7 @@ npm run visual:test  # 生成截图并自动检查明显视觉问题
 
 文件通过浏览器 File API 在本地解析，不会自动上传。
 
-在 Chrome / Edge 等支持 File System Access API 的浏览器里，打开 Netlify 或 GitHub Pages 公开站后，点击顶部“导入数据” -> “选择 sessions 文件夹”，选择你的 `.codex/sessions`。页面会把文件夹授权句柄保存在浏览器 IndexedDB 中。下次打开同一个网址时会尝试恢复该文件夹；如果浏览器权限仍有效，点击“刷新”即可重新扫描。浏览器仍可能要求再次授权，这是浏览器安全策略。
+在 Chrome / Edge 等支持 File System Access API 的浏览器里，打开托管站点后，点击顶部“导入数据” -> “选择 sessions 文件夹”，选择你的 `.codex/sessions`。页面会把完整解析结果和文件夹授权句柄保存在浏览器 IndexedDB 中。下次打开同一个网址时会直接恢复上次数据；如果文件夹权限仍有效，点击“刷新”还可以重新扫描最新日志。浏览器仍可能要求再次授予文件夹权限，但这不会影响已缓存数据的显示。
 
 ## 页面模块
 
@@ -409,7 +409,7 @@ screenshots/dashboard-preview.svg
 
 ### 公开网址能记住我选择过的 sessions 文件夹吗？
 
-在 Chrome / Edge 中可以尽量记住。第一次选择文件夹后，页面会把文件夹句柄保存到浏览器 IndexedDB。下次打开同一个网址时会尝试恢复，点击“刷新”可以重新读取。这个能力依赖浏览器支持和用户授权；如果浏览器拒绝权限，仍需要重新选择文件夹。
+可以。第一次选择文件夹并解析完成后，页面会把解析结果保存在浏览器 IndexedDB 中，下次打开同一个网址会直接恢复，不必再次导入。Chrome / Edge 还会保存文件夹句柄；权限仍有效时可点击“刷新”读取最新日志。如果浏览器拒绝文件夹权限，已缓存的数据仍可查看，只是更新时需要重新授权。
 
 ### 官方 Plus Token 一定精确吗？
 

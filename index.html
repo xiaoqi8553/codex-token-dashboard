@@ -2533,7 +2533,7 @@
     }
     .metric,
     .today-card {
-      min-height: 136px;
+      min-height: 148px;
       padding: 15px;
       border-radius: var(--radius);
       overflow: hidden;
@@ -2555,9 +2555,12 @@
     .metric:hover,
     .story-card:hover { transform: none; border-color: var(--line-strong); box-shadow: var(--shadow-soft); }
     .metric.hero {
-      border-color: var(--ink);
-      background: var(--ink);
-      color: #fff;
+      border-color: color-mix(in srgb, var(--official) 58%, #111827);
+      background:
+        radial-gradient(circle at 88% 12%, color-mix(in srgb, var(--official) 34%, transparent), transparent 34%),
+        linear-gradient(145deg, var(--hero-bg-a), var(--hero-bg-b));
+      color: var(--hero-ink);
+      box-shadow: 0 14px 34px color-mix(in srgb, var(--official) 18%, transparent);
     }
     .metric-value,
     .today-clock strong,
@@ -2568,9 +2571,15 @@
       font-family: "Bahnschrift", "DIN Alternate", "IBM Plex Sans", sans-serif;
       font-variant-numeric: tabular-nums;
     }
-    .metric-value { font-size: clamp(28px, 2vw, 38px); letter-spacing: -.035em; }
-    .metric:not(.hero) .metric-value { font-size: clamp(27px, 1.7vw, 34px); }
-    .metric-title { font-size: 11px; letter-spacing: .02em; }
+    .metric-value { font-size: clamp(34px, 2.35vw, 46px); letter-spacing: -.04em; }
+    .metric:not(.hero) .metric-value { font-size: clamp(32px, 2.05vw, 42px); }
+    .metric.hero .metric-value {
+      font-size: clamp(48px, 3.5vw, 64px);
+      line-height: .88;
+      letter-spacing: -.055em;
+      text-shadow: 0 2px 20px rgba(0, 0, 0, .24);
+    }
+    .metric-title { font-size: 12px; letter-spacing: .02em; }
     .metric-update { display: none; }
     .metric-foot { justify-content: flex-start; }
     .icon {
@@ -2587,6 +2596,7 @@
     .today-clock { align-items: flex-end; }
     .today-clock strong { font-size: clamp(30px, 2.3vw, 40px); letter-spacing: -.04em; }
     .mini-stat { border-radius: 7px; background: var(--panel-2); }
+    .mini-stat strong { font-size: 20px; }
     .badge { border-radius: 6px; padding: 3px 6px; font-size: 10px; }
 
     .charts {
@@ -2636,7 +2646,11 @@
       letter-spacing: .08em;
       text-transform: uppercase;
     }
-    .trend-total-value { color: var(--ink); letter-spacing: -.035em; }
+    .trend-total-value {
+      color: var(--ink);
+      font-size: clamp(38px, 2.8vw, 52px);
+      letter-spacing: -.045em;
+    }
     .ratio-wrap { min-height: 320px; }
     .donut-row { grid-template-columns: 160px minmax(0, 1fr); gap: 20px; }
     .donut { width: 160px; height: 160px; box-shadow: inset 0 0 0 1px var(--line); }
@@ -2870,7 +2884,7 @@
         </div>
         <div class="rail-version">
           <span>LOCAL-FIRST</span>
-          <strong>v0.6.1</strong>
+          <strong>v0.6.2</strong>
         </div>
       </div>
     </aside>
@@ -3235,7 +3249,8 @@
     const handleDb = {
       name: "codexTokenDashboardHandles",
       store: "handles",
-      sessionsKey: "sessionsDirectory"
+      sessionsKey: "sessionsDirectory",
+      staticPayloadKey: "staticPayload"
     };
     const staticParserVersion = 10;
     const browserSourceAttributionMode = localStorage.getItem("codexTokenSourceAttributionMode") || "custom-fast";
@@ -4457,7 +4472,7 @@
       state.staticPayload = payload;
       state.staticSourceType = "sessions-folder";
       if (options.fitRange) fitDateRangeToRecords(payload.records, { preservePreset: true });
-      cacheStaticPayload(payload);
+      await cacheStaticPayload(payload);
       renderStaticUsage(options.silent ? "" : `${message}${formatInt(payload.records.length)} 条记录。`);
       return true;
     }
@@ -4629,28 +4644,95 @@
       return records;
     }
 
-    function cacheStaticPayload(payload) {
+    function staticPayloadCacheValue(payload) {
+      return {
+        ...payload,
+        parserVersion: staticParserVersion,
+        records: payload.records.map(cacheRecord)
+      };
+    }
+
+    async function saveStaticPayloadToDatabase(cached) {
+      const db = await openHandleDatabase();
+      if (!db) return false;
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(handleDb.store, "readwrite");
+        tx.objectStore(handleDb.store).put(cached, handleDb.staticPayloadKey);
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => reject(tx.error);
+      });
+    }
+
+    async function cacheStaticPayload(payload) {
+      const cached = staticPayloadCacheValue(payload);
       try {
-        localStorage.setItem("codexTokenStaticPayload", JSON.stringify({
-          ...payload,
-          parserVersion: staticParserVersion,
-          records: payload.records.map(cacheRecord)
-        }));
+        if (await saveStaticPayloadToDatabase(cached)) {
+          localStorage.removeItem("codexTokenStaticPayload");
+          return true;
+        }
       } catch {
-        toast("浏览器缓存空间不足，本次数据未持久保存");
+        // Fall back to localStorage for browsers without usable IndexedDB.
+      }
+      try {
+        localStorage.setItem("codexTokenStaticPayload", JSON.stringify(cached));
+        return true;
+      } catch {
+        toast("浏览器持久化空间不足，本次数据仅在当前页面有效");
+        return false;
       }
     }
 
-    function loadCachedStaticPayload() {
+    function normalizeCachedStaticPayload(cached) {
+      if (!cached) return null;
+      cached.parserVersion = Number(cached.parserVersion || 0);
+      cached.parserStale = cached.parserVersion < staticParserVersion;
+      return cached;
+    }
+
+    async function loadCachedStaticPayload() {
       try {
-        const cached = localStorage.getItem("codexTokenStaticPayload");
-        if (!cached) return null;
-        const parsed = JSON.parse(cached);
-        parsed.parserVersion = Number(parsed.parserVersion || 0);
-        parsed.parserStale = parsed.parserVersion < staticParserVersion;
+        const db = await openHandleDatabase();
+        if (db) {
+          const cached = await new Promise((resolve, reject) => {
+            const request = db.transaction(handleDb.store, "readonly")
+              .objectStore(handleDb.store)
+              .get(handleDb.staticPayloadKey);
+            request.onsuccess = () => resolve(request.result || null);
+            request.onerror = () => reject(request.error);
+          });
+          if (cached) return normalizeCachedStaticPayload(cached);
+        }
+      } catch {
+        // Continue with the legacy localStorage cache.
+      }
+      try {
+        const legacy = localStorage.getItem("codexTokenStaticPayload");
+        if (!legacy) return null;
+        const parsed = normalizeCachedStaticPayload(JSON.parse(legacy));
+        saveStaticPayloadToDatabase(parsed)
+          .then(saved => {
+            if (saved) localStorage.removeItem("codexTokenStaticPayload");
+          })
+          .catch(() => {});
         return parsed;
       } catch {
         return null;
+      }
+    }
+
+    async function clearCachedStaticPayload() {
+      localStorage.removeItem("codexTokenStaticPayload");
+      try {
+        const db = await openHandleDatabase();
+        if (!db) return;
+        await new Promise((resolve, reject) => {
+          const tx = db.transaction(handleDb.store, "readwrite");
+          tx.objectStore(handleDb.store).delete(handleDb.staticPayloadKey);
+          tx.oncomplete = () => resolve();
+          tx.onerror = () => reject(tx.error);
+        });
+      } catch {
+        // Cache clearing is best-effort; stale data will still be ignored in memory.
       }
     }
 
@@ -4679,14 +4761,14 @@
       state.staticPayload = payload;
       state.staticSourceType = "demo";
       if (!els.fromDate.value && !els.toDate.value) fitDateRangeToRecords(payload.records);
-      cacheStaticPayload(payload);
+      await cacheStaticPayload(payload);
       renderStaticUsage(message);
     }
 
     async function enterStaticMode(reason = "") {
       state.dataMode = "static";
       els.staticPanel.classList.add("show");
-      let cached = loadCachedStaticPayload();
+      let cached = await loadCachedStaticPayload();
       if (cached?.records?.length && cached.parserStale) {
         const staleSourceType = cached.sourceType || "import";
         if (staleSourceType === "sessions-folder") {
@@ -4699,7 +4781,7 @@
             }
           }
         }
-        localStorage.removeItem("codexTokenStaticPayload");
+        await clearCachedStaticPayload();
         cached = null;
         setStatus("浏览器缓存来自旧解析器，已清除旧数据。请重新导入 sessions 文件夹以修正中转站归类。", "error");
       }
@@ -5835,7 +5917,7 @@
                 <h2>设置 / 关于</h2>
                 <p class="muted">检查当前运行方式、隐私边界、版本和公开部署状态。</p>
               </div>
-              <span class="badge">版本 0.6.1</span>
+              <span class="badge">版本 0.6.2</span>
             </div>
             <div class="settings-grid">
               <div class="settings-card">
@@ -6227,7 +6309,7 @@
       const summary = summarize(safeRecords.map(record => ({ ...record, activeTokens: activeTokens(record), uncachedInputTokens: uncachedInputTokens(record), hitRate: cacheHitRateOf(record) })));
       return {
         snapshotVersion: 1,
-        appVersion: "0.6.1",
+        appVersion: "0.6.2",
         generatedAt: new Date().toISOString(),
         privacy: {
           anonymized: true,
@@ -6421,9 +6503,9 @@
     document.querySelector("#welcomeSampleBtn").addEventListener("click", () => document.querySelector("#sampleBtn").click());
     document.querySelector("#welcomeImportBtn").addEventListener("click", chooseImportFile);
     document.querySelector("#welcomeSessionsBtn").addEventListener("click", chooseImportSessionsFolder);
-    document.querySelector("#clearBrowserDataBtn").addEventListener("click", () => {
-      localStorage.removeItem("codexTokenStaticPayload");
-      clearSessionsDirectoryHandle();
+    document.querySelector("#clearBrowserDataBtn").addEventListener("click", async () => {
+      await clearCachedStaticPayload();
+      await clearSessionsDirectoryHandle();
       state.sessionsDirectoryHandle = null;
       state.sessionsDirectoryName = "";
       state.staticPayload = makeStaticPayload([], { sourceLabel: "浏览器本地导入" });
@@ -6812,7 +6894,7 @@
         state.staticPayload = payload;
         state.staticSourceType = payload.sourceType || "import";
         fitDateRangeToRecords(payload.records, { preservePreset: true });
-        cacheStaticPayload(payload);
+        await cacheStaticPayload(payload);
         renderStaticUsage(`已在浏览器本地导入：${file.name}`);
         els.importFile.value = "";
       } catch (error) {
@@ -6831,7 +6913,7 @@
         state.staticPayload = payload;
         state.staticSourceType = payload.sourceType || "sessions-files";
         fitDateRangeToRecords(payload.records, { preservePreset: true });
-        cacheStaticPayload(payload);
+        await cacheStaticPayload(payload);
         renderStaticUsage(`sessions 文件夹解析完成：${formatInt(payload.records.length)} 条记录。当前浏览器不支持持续读取，后续更新需要重新选择文件夹。`);
         els.sessionsFolderInput.value = "";
       } catch (error) {
@@ -6843,8 +6925,11 @@
     window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", updateThemeState);
     renderTaskOptions();
     setTheme(localStorage.getItem("codexTokenTheme") || "system");
-    restoreSavedSessionsDirectory({ silent: true });
-    applyRange("7d");
+    async function initializeDashboard() {
+      await restoreSavedSessionsDirectory({ silent: true });
+      applyRange("7d");
+    }
+    initializeDashboard();
     const serverAutoRefreshMs = 5000;
     function refreshServerInBackground(options = {}) {
       if (state.dataMode === "server" && !state.loading) {

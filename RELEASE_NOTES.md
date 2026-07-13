@@ -1,5 +1,11 @@
 # Release Notes
 
+## v0.6.2 - Persistent Browser Data + KPI Readability
+
+0.6.2 修复深色模式总 Token 主卡对比度，并重新拉开数字层级：总 Token 使用更醒目的高对比主卡和最大字号，其余核心 Token 指标与趋势累计数字同步放大。
+
+浏览器导入数据现在持久保存在 IndexedDB。即使完整 sessions 数据超过 `localStorage` 容量，重新打开或刷新网页也会自动恢复上次解析结果，无需重复导入；旧缓存仍会自动迁移，清除缓存操作也会同步清理新的持久化数据。
+
 ## v0.6.1 - Browser Sessions Import Fix
 
 0.6.1 修复公开静态模式下导入 `.codex/sessions` 大目录时页面长时间没有数据的问题。浏览器现在流式读取 JSONL，只处理 Token、会话元数据和任务标题相关记录，并在解析过程中持续显示进度、保持界面响应。
