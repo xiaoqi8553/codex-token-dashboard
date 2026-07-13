@@ -8,13 +8,13 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-0f766e.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/version-0.7.1-17202e.svg)](CHANGELOG.md)
-[![OpenAI Sites](https://img.shields.io/badge/deploy-OpenAI%20Sites-275dcc.svg)](https://codex-token-dashboard.perky-crane-8215.chatgpt.site)
+[![OpenAI Sites](https://img.shields.io/badge/deploy-OpenAI%20Sites-275dcc.svg)](https://codex-token-dashboard.hazel-saepemx.chatgpt.site)
 [![Netlify Demo](https://img.shields.io/badge/demo-codetoken.netlify.app-2f6fed.svg)](https://codetoken.netlify.app/)
 [![GitHub Pages](https://img.shields.io/badge/pages-github.io-111827.svg)](https://xiaoqi8553.github.io/codex-token-dashboard/)
 
 ## 在线演示
 
-- OpenAI Sites: https://codex-token-dashboard.perky-crane-8215.chatgpt.site
+- OpenAI Sites: https://codex-token-dashboard.hazel-saepemx.chatgpt.site
 - Netlify Demo: https://codetoken.netlify.app/
 - GitHub Pages Demo: https://xiaoqi8553.github.io/codex-token-dashboard/
 - GitHub: https://github.com/xiaoqi8553/codex-token-dashboard
