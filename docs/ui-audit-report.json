@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-13T02:01:16.537Z",
+  "generatedAt": "2026-07-13T06:33:32.626Z",
   "baseUrl": "http://127.0.0.1:8787",
   "screenshotsDir": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current",
   "pages": [
@@ -28,7 +28,7 @@
           },
           {
             "selector": "#ratioChart",
-            "height": 320,
+            "height": 408,
             "hasGraphic": true,
             "hasEmpty": false
           },
@@ -314,7 +314,7 @@
           },
           {
             "selector": "#ratioChart",
-            "height": 299,
+            "height": 394,
             "hasGraphic": true,
             "hasEmpty": false
           },
@@ -378,7 +378,7 @@
         "charts": [
           {
             "selector": ".task-layout",
-            "height": 1340.71875,
+            "height": 1355.5625,
             "hasGraphic": true,
             "hasEmpty": true
           }

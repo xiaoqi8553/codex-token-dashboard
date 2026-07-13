@@ -241,6 +241,39 @@ async function collectAudit(page, pageInfo, viewport, screenshot) {
       text: text(element),
       fontSize: parseFloat(getComputedStyle(element).fontSize) || 0
     }));
+    const overflowTargets = [
+      ...Array.from(document.querySelectorAll(".metric-value")),
+      ...Array.from(document.querySelectorAll(".trend-total-value")),
+      ...Array.from(document.querySelectorAll(".trend-total-row strong")),
+      ...Array.from(document.querySelectorAll(".ratio-legend-row"))
+    ].filter(visible).map(element => {
+      const bounds = element.getBoundingClientRect();
+      const owner = element.closest(".metric,.trend-total-card,.ratio-panel");
+      const ownerBounds = owner?.getBoundingClientRect();
+      const outsideOwner = ownerBounds && (
+        bounds.left < ownerBounds.left - 1 ||
+        bounds.right > ownerBounds.right + 1 ||
+        bounds.top < ownerBounds.top - 1 ||
+        bounds.bottom > ownerBounds.bottom + 1
+      );
+      return {
+        selector: element.className || element.tagName.toLowerCase(),
+        text: text(element).slice(0, 80),
+        scrollWidth: element.scrollWidth,
+        clientWidth: element.clientWidth,
+        outsideOwner: Boolean(outsideOwner)
+      };
+    }).filter(item => item.outsideOwner || item.scrollWidth > item.clientWidth + 1);
+    const metricRows = Array.from(document.querySelectorAll(".metric:not(.hero)")).filter(visible).reduce((rows, card) => {
+      const value = card.querySelector(".metric-value");
+      if (!visible(value)) return rows;
+      const cardTop = Math.round(card.getBoundingClientRect().top / 8) * 8;
+      (rows[cardTop] ||= []).push(value.getBoundingClientRect().top);
+      return rows;
+    }, {});
+    const kpiBaselineDrift = Math.max(0, ...Object.values(metricRows).filter(row => row.length > 1).map(row => Math.max(...row) - Math.min(...row)));
+    const regularBarFonts = Array.from(document.querySelectorAll('.trend[data-density="regular"] .bar-value')).filter(visible).map(element => parseFloat(getComputedStyle(element).fontSize) || 0);
+    const regularBarMinFont = regularBarFonts.length ? Math.min(...regularBarFonts) : 0;
     const cards = Array.from(document.querySelectorAll(".metric,.stat-card,.today-card,.story-card,.calendar-stat,.task-type-card,.settings-card,.panel,.current-card,.mini-stat")).filter(visible).map(rect);
     const h1 = Array.from(document.querySelectorAll("h1")).filter(visible).map(text);
     const h2 = Array.from(document.querySelectorAll("h2")).filter(visible).map(text);
@@ -257,6 +290,9 @@ async function collectAudit(page, pageInfo, viewport, screenshot) {
       smallTextCount,
       totalTextCount: textNodes.length,
       keyNumbers,
+      overflowTargets,
+      kpiBaselineDrift,
+      regularBarMinFont,
       cards,
       h1,
       h2,
@@ -291,6 +327,9 @@ async function collectAudit(page, pageInfo, viewport, screenshot) {
   if (smallRatio > 0.22) add("warning", "small-font", "大量文字小于 12px", { smallTextCount: data.smallTextCount, totalTextCount: data.totalTextCount });
   const tinyNumber = data.keyNumbers.find(item => item.fontSize && item.fontSize < 22);
   if (tinyNumber) add("failure", "key-number-small", "关键数字字号小于 22px", tinyNumber);
+  if (data.overflowTargets.length) add("failure", "key-content-overflow", "关键卡片内容超出可用边界或被截断", { targets: data.overflowTargets });
+  if (data.kpiBaselineDrift > 4) add("failure", "kpi-value-misaligned", "同一行 KPI 数字基线未对齐", { drift: data.kpiBaselineDrift });
+  if (pageInfo.key === "overview" && data.regularBarMinFont && data.regularBarMinFont < 12) add("failure", "trend-label-small", "低密度每日趋势数值小于 12px", { fontSize: data.regularBarMinFont });
   if (data.cards.length > 24) add("failure", "too-many-cards", "页面卡片数量超过 24 个", { count: data.cards.length });
   else if (data.cards.length > 18) add("warning", "many-cards", "页面卡片数量超过 18 个", { count: data.cards.length });
   if (data.h1.length > 1) add("warning", "multiple-h1", "页面出现多个 h1 主标题", { count: data.h1.length, h1: data.h1 });
@@ -317,7 +356,7 @@ function severityBuckets(audit) {
   for (const page of audit.pages) {
     for (const issue of page.failures || []) {
       const line = `${page.name} ${page.viewport}: ${issue.message}`;
-      if (["horizontal-scroll", "chart-empty", "chart-short", "key-number-small", "mobile-nav-missing"].includes(issue.code)) p0.push(line);
+      if (["horizontal-scroll", "chart-empty", "chart-short", "key-number-small", "key-content-overflow", "kpi-value-misaligned", "trend-label-small", "mobile-nav-missing"].includes(issue.code)) p0.push(line);
       else p1.push(line);
     }
     for (const issue of page.warnings || []) {
@@ -408,9 +447,9 @@ function nextSuggestions({ p0, p1, p2 }) {
   const result = [];
   if (p0.length) result.push("先处理 P0：横向溢出、空白图表和关键内容不可读。");
   if (p1.length) result.push("再处理 P1：Header 高度、筛选栏宽度、字号和信息层级。");
-  result.push("新增项目维度 Token 统计，用 sessions 路径或 relativePath 聚合每个具体项目的总用量。");
   if (p2.length) result.push("最后处理 P2：统一颜色、减少碎卡、控制背景网格和空白。");
-  return result.slice(0, 5);
+  if (!result.length) result.push("当前自动验收未发现问题；继续维持关键内容边界、深色对比度和人工截图复核门槛。");
+  return result.slice(0, 4);
 }
 
 async function main() {

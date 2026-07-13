@@ -1,147 +1,80 @@
-# UI Acceptance Guide
+# UI 设计与验收规范
 
-This project is a local-first AI usage ledger and Codex Token dashboard. It should feel like a useful data product, not a flashy wall screen or a temporary demo.
+Codex Token Dashboard 是面向普通用户和开发者的本地优先数据产品。界面首先要帮助用户快速回答“用了多少、花在哪里、哪些数据可信”，不能只追求装饰效果或单张截图好看。
 
-## Visual Positioning
+## 产品原则
 
-- Modern, clean, and professional.
-- High information density without crowding.
-- Moderate color and icon usage, with no excessive decoration.
-- Light mode should feel like a formal admin dashboard.
-- Dark mode should feel like a developer tool.
-- All text must be crisp, normally proportioned, and readable. Text must not look flattened, fuzzy, or too small.
-- Charts must not be empty, blurry, or compressed.
-- The filter bar must not collapse into a crowded strip.
-- Cards, charts, and tables need clear visual hierarchy.
-- The first screen should feel complete, not half-built.
+- **数字优先**：总 Token 是总览首屏的第一视觉层级，但任何字号都不能以越界、裁切或挤压说明文字为代价。
+- **大众可读**：主标签优先使用清晰中文，必要时用较小英文补充技术字段；不要求用户理解内部数据结构。
+- **渐进披露**：首屏保留关键用量、来源、趋势和构成；完整字段、估算说明和低频操作放入明细或设置。
+- **稳定胜过炫技**：色彩、阴影和动效服务于层级。浅色模式应像正式数据工具，深色模式应保持相同信息结构和对比度。
+- **本地优先**：公开站默认使用演示数据，浏览器导入和缓存不得改变隐私边界。
 
-## Failure Standards
+## 组件契约
 
-Any of these means the UI cannot be accepted:
+### KPI 卡片
 
-- The filter bar is squeezed together.
-- Chart text is flattened, fuzzy, or too small.
-- A chart region is blank and does not show an empty-state explanation.
-- Core metric numbers are too small to establish priority.
-- The page has horizontal scrolling.
-- Mobile content overflows the viewport.
-- Dark mode text is hard to read.
-- Light mode hierarchy is too weak.
-- Buttons, badges, and cards use inconsistent styles.
-- UI changes were shipped without screenshots and visual checks.
+- 使用 `顶部标签 / 中部数值 / 底部状态` 三段式网格，不使用内容长度驱动的 `space-between` 假对齐。
+- 数字字号必须基于组件容器宽度（例如 `cqi`），同时设置合理的最小值和最大值。
+- 数字、说明和状态必须完整落在卡片内容边界内，不允许省略号代替适配。
+- 同排普通 KPI 的数字顶部差不得超过 4px；卡片高度和底部状态基线保持一致。
+- 总 Token 可使用强调色，但浅色、深色主题都必须达到清晰可辨的前景/背景对比。
+- 深色模式的侧栏、时间范围和主题选中态必须使用独立前景/背景变量，文字对比度至少为 4.5:1。
 
-## Overview Page
+### 趋势图
 
-- The title is clear and prominent.
-- The Today Status card feels consistent with the rest of the dashboard and does not look like a foreign widget.
-- Core Token metric numbers are large enough to read at a glance.
-- Card icons use a consistent style.
-- Chart areas have enough height.
-- The daily trend chart is not cramped.
-- Cache hit rate trend text is not flattened or compressed.
-- Data story card copy is natural and useful.
-- The page has no large meaningless blank regions.
+- 每日 Token 趋势保持柱状图，并保留日期轴、hover 明细和点击筛选。
+- 7 天低密度范围的柱值字号不得小于 12px；更长范围可自动使用紧凑字号，但不得相互覆盖。
+- 趋势累计卡必须按自身宽度缩放主数字，输入、输出、active 使用等高、右对齐的数值行。
+- 1366 宽度下不能为了保留双栏而压缩图表；需要时将趋势和占比面板纵向排列。
 
-## AI Usage Calendar Page
+### Token 构成
 
-- Heatmap cells are aligned and evenly spaced.
-- Color levels are clear but not harsh.
-- Hover tooltip is readable.
-- Statistic cards are not crowded.
-- Clicking a date opens the detail table filtered to that day.
-- Empty states explain what is missing and offer an action.
+- 使用 SVG 图形以获得稳定的缩放、清晰边缘和可访问标题。
+- 图形颜色必须和图例一一对应，图例同时展示名称、Token 数值和比例。
+- 小比例分段可以设置最小可见角度，但图例必须展示真实比例，不能改变统计口径。
+- 中心区域只突出一个核心结论，避免重复堆放数值。
 
-## Task Review Page
+## 自动发布门槛
 
-- Task type cards are clear and easy to scan.
-- Chart-like bars and the table have a balanced layout.
-- The "rule-based, reference only" hint is visible but not alarming.
-- Task classification badges are visually consistent.
-- The page must not look like a pile of temporary tables.
+以下任一问题都视为 P0，不能发布：
 
-## Detail Table Page
+- 页面在 1920、1366 或 390 宽度出现横向滚动。
+- `.metric-value`、`.trend-total-value` 或比例图例超出所属卡片，或 `scrollWidth` 大于可用宽度。
+- 同排 KPI 数字位置偏差超过 4px。
+- 7 天每日趋势柱值小于 12px。
+- 图表为空且没有解释原因和可执行动作。
+- 关键数字小于 22px，或深色模式中无法清晰辨认。
+- 浏览器控制台出现页面错误。
 
-- The filter bar must not be squeezed.
-- Date inputs, source/model selects, and search input have reasonable widths.
-- Table headers are clear.
-- Token numbers are right-aligned.
-- Session IDs are truncated but copyable.
-- Pagination and multi-select controls are not crowded.
-- The table remains usable at 1920px, 1366px, and mobile widths.
+## 验收流程
 
-## Settings / About Page
-
-- Privacy explanations are clear.
-- Local mode, browser import mode, and public demo mode are easy to distinguish.
-- Text is grouped into cards instead of one dense block.
-
-## Screenshot Workflow
-
-Run before and after meaningful UI changes:
+UI 改动后必须顺序执行，不能并行：
 
 ```bash
-npm run visual:shot
+npm run ui:shot
+npm run ui:audit
+npm run ui:report
 npm run visual:test
 ```
 
-Screenshots are saved to `docs/screenshots/current/`. This folder is ignored by Git because screenshots can contain local usage data.
-
-Required viewport set:
+自动截图覆盖：
 
 - `1920x1080`
 - `1366x768`
 - `390x844`
+- 总览、AI 日历、任务复盘、用量明细、系统设置
 
-Required pages:
+人工至少检查：
 
-- `overview`
-- `calendar`
-- `review`
-- `details`
-- `settings`
+1. 浅色总览：数字是否完整、主次是否明确、卡片和图表是否平衡。
+2. 深色总览：总 Token、图例、坐标和 tooltip 是否清晰。
+3. 任务复盘：左右面板密度、高度和表格可读性是否一致。
+4. 1366 宽度：页面无横向滚动，趋势和构成不被强行压缩。
+5. 移动端：导航可用、卡片单列、图形和图例不越界。
 
-## Visual Report Template
+截图保存在 `docs/screenshots/current/`。该目录不提交 Git，避免本地真实用量进入仓库。
 
-```text
-视觉验收报告：
+## 数据边界
 
-1. 总览页
-- 布局：
-- 字体：
-- 图表：
-- 空状态：
-- 问题：
-
-2. AI 使用日历页
-- 布局：
-- 色阶：
-- tooltip：
-- 响应式：
-- 问题：
-
-3. 任务复盘页
-- 信息层级：
-- badge：
-- 图表：
-- 表格：
-- 问题：
-
-4. 明细表页
-- 筛选栏：
-- 表格：
-- 分页：
-- 移动端：
-- 问题：
-
-5. 设置页
-- 文案：
-- 卡片：
-- 信息层级：
-- 问题：
-
-最终评分：
-- 视觉完成度：0-10
-- 信息清晰度：0-10
-- 响应式适配：0-10
-- 是否达到正式开源项目展示水平：是 / 否
-```
+纯 UI 迭代不得修改 Token 解析、去重、来源归因、导入、导出或快照逻辑。若需求确实涉及数据行为，必须单独说明统计口径、迁移影响和回归用例。

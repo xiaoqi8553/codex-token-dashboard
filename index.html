@@ -29,6 +29,8 @@
       --hero-muted: #cbd6e5;
       --hero-bg-a: #17202e;
       --hero-bg-b: #17202e;
+      --control-active-bg: #17202e;
+      --control-active-ink: #ffffff;
       --good: #087f5b;
       --warn: #b7791f;
       --bad: #c24152;
@@ -62,6 +64,8 @@
         --hero-muted: #d9e6f2;
         --hero-bg-a: #172033;
         --hero-bg-b: #274b78;
+        --control-active-bg: #79a1ff;
+        --control-active-ink: #0b1522;
         --shadow: 0 18px 52px rgba(0,0,0,.28);
         --shadow-soft: 0 10px 28px rgba(0,0,0,.22);
       }
@@ -90,6 +94,8 @@
       --hero-muted: #d9e6f2;
       --hero-bg-a: #172033;
       --hero-bg-b: #274b78;
+      --control-active-bg: #79a1ff;
+      --control-active-ink: #0b1522;
       --shadow: 0 18px 52px rgba(0,0,0,.28);
       --shadow-soft: 0 10px 28px rgba(0,0,0,.22);
     }
@@ -2196,7 +2202,7 @@
       .view-tabs.page-nav button { flex: 1 1 100%; justify-content: center; }
     }
   </style>
-  <style id="v060-design">
+  <style id="v070-design">
     html { scrollbar-gutter: stable; }
 
     .app {
@@ -2332,10 +2338,10 @@
     }
 
     .view-tabs.page-nav button.active {
-      color: #fff;
-      border-color: var(--ink);
-      background: var(--ink);
-      box-shadow: 0 7px 18px color-mix(in srgb, var(--ink) 16%, transparent);
+      color: var(--control-active-ink);
+      border-color: var(--control-active-bg);
+      background: var(--control-active-bg);
+      box-shadow: 0 7px 18px color-mix(in srgb, var(--control-active-bg) 18%, transparent);
     }
 
     .view-tabs.page-nav button span {
@@ -2353,8 +2359,8 @@
 
     .view-tabs.page-nav button.active span {
       border: 0;
-      background: rgba(255,255,255,.12);
-      color: #fff;
+      background: color-mix(in srgb, var(--control-active-ink) 12%, transparent);
+      color: var(--control-active-ink);
     }
 
     .rail-footer {
@@ -2509,7 +2515,7 @@
     .range-filter button { padding-inline: 9px; }
     .segmented { border-radius: 8px; background: var(--panel-2); }
     .segmented button { border-radius: 6px; }
-    .segmented button.active { background: var(--ink); color: #fff; }
+    .segmented button.active { background: var(--control-active-bg); color: var(--control-active-ink); }
     input,
     select,
     .date-field { border-radius: 8px; background: var(--panel); }
@@ -2533,11 +2539,17 @@
     }
     .metric,
     .today-card {
-      min-height: 148px;
-      padding: 15px;
+      min-height: 156px;
+      padding: 16px;
       border-radius: var(--radius);
       overflow: hidden;
       position: relative;
+    }
+    .metric {
+      grid-template-rows: auto minmax(62px, 1fr) auto;
+      align-content: stretch;
+      gap: 9px;
+      container-type: inline-size;
     }
     .metric::before,
     .today-card::before {
@@ -2555,12 +2567,14 @@
     .metric:hover,
     .story-card:hover { transform: none; border-color: var(--line-strong); box-shadow: var(--shadow-soft); }
     .metric.hero {
-      border-color: color-mix(in srgb, var(--official) 58%, #111827);
+      border-color: color-mix(in srgb, var(--official) 54%, #0b1d33);
       background:
-        radial-gradient(circle at 88% 12%, color-mix(in srgb, var(--official) 34%, transparent), transparent 34%),
-        linear-gradient(145deg, var(--hero-bg-a), var(--hero-bg-b));
+        linear-gradient(rgba(255, 255, 255, .035) 1px, transparent 1px) 0 0 / 28px 28px,
+        linear-gradient(90deg, rgba(255, 255, 255, .035) 1px, transparent 1px) 0 0 / 28px 28px,
+        linear-gradient(145deg, #173b6b, #10243d 72%);
+      background-color: #10243d;
       color: var(--hero-ink);
-      box-shadow: 0 14px 34px color-mix(in srgb, var(--official) 18%, transparent);
+      box-shadow: 0 12px 28px color-mix(in srgb, var(--official) 14%, transparent);
     }
     .metric-value,
     .today-clock strong,
@@ -2571,17 +2585,41 @@
       font-family: "Bahnschrift", "DIN Alternate", "IBM Plex Sans", sans-serif;
       font-variant-numeric: tabular-nums;
     }
-    .metric-value { font-size: clamp(34px, 2.35vw, 46px); letter-spacing: -.04em; }
-    .metric:not(.hero) .metric-value { font-size: clamp(32px, 2.05vw, 42px); }
+    .metric-body {
+      min-width: 0;
+      display: grid;
+      align-content: center;
+      gap: 5px;
+    }
+    .metric-value {
+      width: 100%;
+      max-width: 100%;
+      overflow: hidden;
+      font-size: clamp(32px, 10cqi, 44px);
+      line-height: .94;
+      letter-spacing: -.04em;
+    }
+    .metric:not(.hero) .metric-value { font-size: clamp(32px, 9.5cqi, 42px); }
     .metric.hero .metric-value {
-      font-size: clamp(48px, 3.5vw, 64px);
-      line-height: .88;
-      letter-spacing: -.055em;
+      font-size: clamp(42px, 13cqi, 58px);
+      line-height: .92;
+      letter-spacing: -.05em;
       text-shadow: 0 2px 20px rgba(0, 0, 0, .24);
     }
+    .metric.hero .metric-body {
+      justify-items: center;
+      text-align: center;
+    }
     .metric-title { font-size: 12px; letter-spacing: .02em; }
+    .metric-note { min-height: 17px; }
     .metric-update { display: none; }
-    .metric-foot { justify-content: flex-start; }
+    .metric-foot {
+      min-height: 22px;
+      justify-content: flex-start;
+      align-content: center;
+      flex-wrap: wrap;
+    }
+    .metric.hero .metric-foot { justify-content: center; }
     .icon {
       width: 27px;
       height: 27px;
@@ -2603,6 +2641,14 @@
       grid-template-columns: minmax(0, 1.55fr) minmax(330px, .65fr);
       gap: 12px;
     }
+    .trend-panel {
+      container-type: inline-size;
+      container-name: trend-panel;
+    }
+    .ratio-panel {
+      container-type: inline-size;
+      container-name: ratio-panel;
+    }
     .panel {
       padding: 17px;
       gap: 14px;
@@ -2611,6 +2657,10 @@
     .panel h2 { font-size: 17px; font-weight: 760; letter-spacing: -.018em; }
     .panel-head .muted { font-size: 11px; }
     .trend { height: 320px; }
+    .trend-layout {
+      grid-template-columns: minmax(0, 1fr) clamp(210px, 23cqi, 250px);
+      gap: 16px;
+    }
     .stack-outer { height: 270px; }
     .stack {
       border-radius: 6px 6px 2px 2px;
@@ -2619,13 +2669,16 @@
     }
     .bar-value {
       border: 0;
-      border-radius: 4px;
-      padding: 2px 4px;
-      background: color-mix(in srgb, var(--panel) 94%, transparent);
-      box-shadow: none;
-      font-size: 10px;
+      border-radius: 5px;
+      padding: 3px 5px;
+      background: color-mix(in srgb, var(--panel) 96%, transparent);
+      box-shadow: 0 2px 7px rgba(15, 23, 42, .08);
+      font-size: 13px;
+      line-height: 1;
       font-family: "Bahnschrift", "DIN Alternate", sans-serif;
     }
+    .trend[data-density="compact"] .bar-value { font-size: 11px; padding-inline: 4px; }
+    .trend[data-density="dense"] .bar-value { font-size: 10px; padding-inline: 3px; }
     .day-label {
       width: min(34px, 100%);
       min-height: 27px;
@@ -2634,11 +2687,18 @@
       background: var(--panel);
     }
     .trend-total-card {
-      border-radius: 9px;
-      border-top: 3px solid var(--official);
-      background: var(--panel-2);
+      min-width: 0;
+      overflow: hidden;
+      border-radius: 10px;
+      border: 1px solid color-mix(in srgb, var(--official) 28%, var(--line));
+      border-top: 4px solid var(--official);
+      background:
+        radial-gradient(circle at 88% 7%, color-mix(in srgb, var(--official) 13%, transparent), transparent 30%),
+        var(--panel-2);
       box-shadow: none;
-      padding: 14px;
+      padding: 16px;
+      grid-template-rows: minmax(0, 1fr) auto;
+      container-type: inline-size;
     }
     .trend-total-kicker {
       font-family: "JetBrains Mono", "Cascadia Code", Consolas, monospace;
@@ -2648,15 +2708,142 @@
     }
     .trend-total-value {
       color: var(--ink);
-      font-size: clamp(38px, 2.8vw, 52px);
+      width: 100%;
+      max-width: 100%;
+      overflow: hidden;
+      font-size: clamp(34px, 20cqi, 46px);
+      line-height: 1;
       letter-spacing: -.045em;
     }
+    .trend-total-note { margin-top: 7px; }
+    .trend-total-list {
+      gap: 0;
+      border-top: 1px solid var(--line);
+    }
+    .trend-total-row {
+      min-height: 37px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid var(--line);
+      font-size: 12px;
+    }
+    .trend-total-row:last-child { border-bottom: 0; }
+    .trend-total-row strong {
+      min-width: 6ch;
+      color: var(--ink);
+      font-size: 15px;
+      text-align: right;
+    }
     .ratio-wrap { min-height: 320px; }
-    .donut-row { grid-template-columns: 160px minmax(0, 1fr); gap: 20px; }
-    .donut { width: 160px; height: 160px; box-shadow: inset 0 0 0 1px var(--line); }
-    .donut::after { inset: 37px; }
-    .track { height: 12px; border-radius: 5px; }
-    .fill { border-radius: 4px; }
+    .ratio-layout {
+      width: 100%;
+      display: grid;
+      grid-template-columns: minmax(150px, .82fr) minmax(190px, 1.18fr);
+      gap: 24px;
+      align-items: center;
+    }
+    .ratio-figure {
+      width: min(184px, 100%);
+      aspect-ratio: 1;
+      justify-self: center;
+      position: relative;
+      display: grid;
+      place-items: center;
+    }
+    .ratio-ring {
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+      filter: drop-shadow(0 8px 14px rgba(15, 23, 42, .08));
+    }
+    .ratio-ring-track,
+    .ratio-ring-segment {
+      fill: none;
+      stroke-width: 14;
+      transform: rotate(-90deg);
+      transform-origin: 80px 80px;
+    }
+    .ratio-ring-track { stroke: var(--panel-2); }
+    .ratio-ring-segment {
+      transition: opacity 150ms ease, stroke-width 150ms ease;
+    }
+    .ratio-ring-segment:hover { opacity: .82; stroke-width: 17; }
+    .ratio-ring-segment.cached { stroke: var(--cache); }
+    .ratio-ring-segment.uncached { stroke: var(--uncached); }
+    .ratio-ring-segment.output { stroke: var(--output); }
+    .ratio-center {
+      position: absolute;
+      inset: 33px;
+      border: 1px solid var(--line);
+      border-radius: 50%;
+      background: var(--panel);
+      box-shadow: 0 8px 18px rgba(15, 23, 42, .06);
+      display: grid;
+      place-content: center;
+      justify-items: center;
+      text-align: center;
+    }
+    .ratio-center span {
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 760;
+      letter-spacing: .08em;
+    }
+    .ratio-center strong {
+      margin-top: 3px;
+      font-family: "Bahnschrift", "DIN Alternate", sans-serif;
+      font-size: clamp(28px, 7cqi, 38px);
+      line-height: 1;
+      letter-spacing: -.04em;
+      font-variant-numeric: tabular-nums;
+    }
+    .ratio-center small { margin-top: 4px; color: var(--muted); font-size: 10px; }
+    .ratio-legend {
+      min-width: 0;
+      display: grid;
+      gap: 0;
+      border-block: 1px solid var(--line);
+    }
+    .ratio-legend-row {
+      min-width: 0;
+      min-height: 66px;
+      padding: 10px 0;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+      border-bottom: 1px solid var(--line);
+    }
+    .ratio-legend-row:last-child { border-bottom: 0; }
+    .ratio-label {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .ratio-swatch {
+      width: 9px;
+      height: 28px;
+      flex: 0 0 auto;
+      border-radius: 3px;
+    }
+    .ratio-swatch.cached { background: var(--cache); }
+    .ratio-swatch.uncached { background: var(--uncached); }
+    .ratio-swatch.output { background: var(--output); }
+    .ratio-label span,
+    .ratio-number { display: grid; gap: 2px; }
+    .ratio-label strong { font-size: 13px; }
+    .ratio-label small { color: var(--muted); font-size: 10px; }
+    .ratio-number { justify-items: end; text-align: right; }
+    .ratio-number strong {
+      font-family: "Bahnschrift", "DIN Alternate", sans-serif;
+      font-size: 17px;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+    .ratio-number span { color: var(--muted); font-size: 11px; }
 
     .usage-trend-card,
     #cacheTrendPanel .usage-trend-card {
@@ -2710,6 +2897,26 @@
     dialog { border-radius: 12px; }
     .toast { border-radius: 8px; font-size: 12px; box-shadow: var(--shadow); }
 
+    @media (max-width: 1480px) {
+      .charts { grid-template-columns: 1fr; }
+      .ratio-layout { width: min(760px, 100%); margin-inline: auto; }
+    }
+
+    @container trend-panel (max-width: 700px) {
+      .trend-layout { grid-template-columns: 1fr; }
+      .trend-total-card {
+        min-height: 176px;
+        grid-template-columns: minmax(0, 1fr) minmax(220px, .8fr);
+        grid-template-rows: 1fr;
+        align-items: center;
+      }
+    }
+
+    @container ratio-panel (max-width: 450px) {
+      .ratio-layout { grid-template-columns: 1fr; }
+      .ratio-legend { width: 100%; }
+    }
+
     @media (max-width: 1240px) {
       .app { grid-template-columns: 194px minmax(0, 1fr); }
       .brand-name { font-size: 15px; }
@@ -2717,9 +2924,7 @@
       .command-bar { width: 100%; }
       .header .data-actions { justify-content: flex-start; }
       .kpi-deck { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .charts { grid-template-columns: 1fr; }
       .ratio-wrap { min-height: 260px; }
-      .donut-row { grid-template-columns: 180px minmax(0, 1fr); }
     }
 
     @media (min-width: 901px) {
@@ -2839,9 +3044,13 @@
       .today-card { min-height: 128px; }
       .today-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
       .trend-layout { grid-template-columns: 1fr; }
-      .trend-total-card { min-height: 140px; }
-      .donut-row { grid-template-columns: 1fr; justify-items: center; }
-      .donut-row .bars { width: 100%; }
+      .trend-total-card {
+        min-height: 190px;
+        grid-template-columns: 1fr;
+        grid-template-rows: minmax(0, 1fr) auto;
+      }
+      .ratio-layout { grid-template-columns: 1fr; }
+      .ratio-figure { width: min(170px, 72vw); }
       .status-drawer { grid-template-columns: 1fr; }
       .export-menu { left: 0; right: auto; }
     }
@@ -2884,7 +3093,7 @@
         </div>
         <div class="rail-version">
           <span>LOCAL-FIRST</span>
-          <strong>v0.6.2</strong>
+          <strong>v0.7.0</strong>
         </div>
       </div>
     </aside>
@@ -3034,7 +3243,7 @@
       <section class="story-grid overview-only" id="storyCards"></section>
 
     <section class="charts overview-only" id="chartsSection">
-      <article class="panel">
+      <article class="panel trend-panel">
         <div class="panel-head">
           <div>
             <h2>每日 Token 趋势</h2>
@@ -3051,7 +3260,7 @@
         </div>
       </article>
 
-      <article class="panel">
+      <article class="panel ratio-panel">
         <div class="panel-head">
           <div>
             <h2>输入 / 输出 / 缓存占比</h2>
@@ -5093,7 +5302,7 @@
             <span class="metric-title">${escapeHtml(title)}</span>
             <span class="icon ${colorClass}">${icon}</span>
           </div>
-          <div>
+          <div class="metric-body">
             <div class="metric-value" title="${escapeHtml(displayValue || formatInt(value))}">${escapeHtml(mainValue)}</div>
             <div class="metric-note">${note || "当前筛选区间"}</div>
           </div>
@@ -5410,6 +5619,7 @@
       renderTrendTotal(expandedDays);
       days = bucketTrendDays(expandedDays);
       const max = Math.max(...days.map(day => day.totalTokens), 1);
+      els.trendChart.dataset.density = days.length > 14 ? "dense" : days.length > 8 ? "compact" : "regular";
       els.trendChart.style.setProperty("--days", days.length);
       els.trendChart.style.setProperty("--bar-gap", days.length > 21 ? "3px" : days.length > 14 ? "4px" : "8px");
       els.trendChart.innerHTML = days.map(day => {
@@ -5490,27 +5700,35 @@
         els.ratioHint.textContent = "无 token 构成数据";
         return;
       }
-      const [cachedDeg, uncachedDeg] = visualDegrees([cached, uncached, output]);
-      const cacheEnd = cachedDeg;
-      const inputEnd = cachedDeg + uncachedDeg;
+      const visualSegments = visualDegrees([cached, uncached, output]).map(value => value / 3.6);
       const rows = [
-        ["cached", "cached input", cached],
-        ["uncached", "uncached input", uncached],
-        ["output", "output", output]
+        ["cached", "缓存输入", "cached input", cached],
+        ["uncached", "未缓存输入", "uncached input", uncached],
+        ["output", "输出", "output", output]
       ];
       const hitRate = percent(cached, summary.inputTokens, 1);
       els.ratioHint.textContent = `缓存命中率 ${hitRate}%`;
+      let visualOffset = 0;
+      const ringSegments = rows.map(([type, label, secondary, value], index) => {
+        const length = Math.max(visualSegments[index] - .8, value ? .6 : 0);
+        const offset = visualOffset;
+        visualOffset += visualSegments[index];
+        return `<circle class="ratio-ring-segment ${type}" cx="80" cy="80" r="61" pathLength="100" stroke-dasharray="${length.toFixed(3)} ${(100 - length).toFixed(3)}" stroke-dashoffset="${(-offset).toFixed(3)}"><title>${escapeHtml(label)}：${formatInt(value)} tokens / ${percent(value, total, 1)}%</title></circle>`;
+      }).join("");
       els.ratioChart.innerHTML = `
-        <div class="donut-row">
-          <div class="donut" style="--cache-deg:${cacheEnd}deg;--input-deg:${inputEnd}deg" title="构成总量 ${formatInt(total)} tokens">
-            <div class="donut-center"><strong>${hitRate}%</strong><span>缓存命中率</span></div>
+        <div class="ratio-layout">
+          <div class="ratio-figure">
+            <svg class="ratio-ring" viewBox="0 0 160 160" role="img" aria-label="Token 构成：缓存输入 ${percent(cached, total, 1)}%，未缓存输入 ${percent(uncached, total, 1)}%，输出 ${percent(output, total, 1)}%">
+              <circle class="ratio-ring-track" cx="80" cy="80" r="61"></circle>
+              ${ringSegments}
+            </svg>
+            <div class="ratio-center"><span>缓存命中</span><strong>${hitRate}%</strong><small>输入复用率</small></div>
           </div>
-          <div class="bars">
-            ${rows.map(([type, label, value]) => `
-              <div class="bar-row">
-                <strong>${label}</strong>
-                <div class="track"><div class="fill ${type}" style="width:${Math.max(percent(value, total, 1), value ? 2 : 0)}%"></div></div>
-                <span class="num" title="${formatInt(value)}">${formatToken(value)} / ${percent(value, total, 1)}%</span>
+          <div class="ratio-legend">
+            ${rows.map(([type, label, secondary, value]) => `
+              <div class="ratio-legend-row">
+                <div class="ratio-label"><i class="ratio-swatch ${type}"></i><span><strong>${label}</strong><small>${secondary}</small></span></div>
+                <div class="ratio-number" title="${formatInt(value)} tokens"><strong>${formatToken(value)}</strong><span>${percent(value, total, 1)}%</span></div>
               </div>
             `).join("")}
           </div>
@@ -5917,7 +6135,7 @@
                 <h2>设置 / 关于</h2>
                 <p class="muted">检查当前运行方式、隐私边界、版本和公开部署状态。</p>
               </div>
-              <span class="badge">版本 0.6.2</span>
+              <span class="badge">版本 0.7.0</span>
             </div>
             <div class="settings-grid">
               <div class="settings-card">
@@ -6309,7 +6527,7 @@
       const summary = summarize(safeRecords.map(record => ({ ...record, activeTokens: activeTokens(record), uncachedInputTokens: uncachedInputTokens(record), hitRate: cacheHitRateOf(record) })));
       return {
         snapshotVersion: 1,
-        appVersion: "0.6.2",
+        appVersion: "0.7.0",
         generatedAt: new Date().toISOString(),
         privacy: {
           anonymized: true,

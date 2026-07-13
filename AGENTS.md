@@ -15,6 +15,9 @@
 - Task Review panels must align visually; tables should not require horizontal scrolling at 1366px.
 - Charts must have clear hover data, readable labels, and professional spacing.
 - Empty states must explain the reason and provide an action.
+- Core numbers must fit inside their own cards without clipping or ellipsis; size them from the component container, not only the viewport.
+- KPI values in the same visual row must share a stable content grid and align within 4px.
+- Seven-day daily-trend value labels must be at least 12px; denser ranges may step down only when labels would otherwise collide.
 
 ## Mistake Log
 
@@ -53,10 +56,14 @@
 - 2026-06-08: Treating any `right.codes` host as relay was too broad. `right.codes/codex/v1` can appear in the user's official validation days, so relay evidence must be path-sensitive and limited to billable RightCode API paths such as `www.right.codes/codex-pro/v1` / `www.right.codes/v1`.
 - 2026-06-08: Global nearest endpoint attribution caused cross-project contamination, for example applying `E:\小车\小车上位机设计` RightCode requests to `html-codex-token-codex-plus-token` usage records. Source time evidence must be scoped to the same `cwd` or supported by explicit Codex++ switch intervals.
 - 2026-06-09: Browser/static import became too slow when it defaulted to scanning `logs_2.sqlite`. Public browser mode should default to the fast custom-provider attribution path and keep slow endpoint evidence as an opt-in diagnostic mode.
+- 2026-07-13: 0.6.2 enlarged KPI and trend-summary numbers with viewport-based `clamp()` values but did not reserve component width, so the trend total escaped its card. Numeric typography must be container-responsive and verified against the rendered card boundary.
+- 2026-07-13: UI audit checked page-level horizontal scrolling but missed internal clipping and uneven KPI baselines. Critical components now need descendant overflow checks, baseline checks, and minimum chart-label sizes in addition to page-level checks.
+- 2026-07-13: Passing automated screenshots was treated as sufficient even when the total card and ratio chart still looked unbalanced. Manually inspect Overview, Task Review, and dark Overview screenshots for hierarchy, symmetry, whitespace, and component fit before release.
+- 2026-07-13: Dark mode reused `--ink` as an active-control background while keeping hardcoded white text, producing white-on-white navigation and range buttons. Active controls need explicit theme-aware foreground/background tokens and a 4.5:1 contrast check.
 
 ## Before Finishing
 
 - Run build.
 - Run `npm run ui:shot`, `npm run ui:audit`, and `npm run ui:report`.
-- Inspect at least Overview and Task Review screenshots manually.
+- Inspect Overview, Task Review, and dark Overview screenshots manually.
 - Update `CHANGELOG.md` and version metadata when the visible product changes.

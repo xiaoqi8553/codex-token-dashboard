@@ -200,13 +200,41 @@ async function testDarkMode(page) {
   await clickView(page, "overview");
   await page.locator('[data-theme-choice="dark"]').click();
   await page.waitForTimeout(250);
-  return page.evaluate(() => {
+  const screenshot = path.join(screenshotsDir, "overview-dark-1366.png");
+  await page.screenshot({ path: screenshot, fullPage: true });
+  const result = await page.evaluate(() => {
+    const rgb = value => (value.match(/[\d.]+/g) || []).slice(0, 3).map(Number);
+    const luminance = value => {
+      const [red = 0, green = 0, blue = 0] = rgb(value).map(channel => {
+        const normalized = channel / 255;
+        return normalized <= .04045 ? normalized / 12.92 : ((normalized + .055) / 1.055) ** 2.4;
+      });
+      return .2126 * red + .7152 * green + .0722 * blue;
+    };
     const value = document.querySelector(".metric.hero .metric-value");
+    const card = value?.closest(".metric.hero");
+    const activeNav = document.querySelector("#viewTabs button.active");
+    const activeRange = document.querySelector(".range-filter button.active");
     const bodyBg = getComputedStyle(document.body).backgroundColor;
     const color = value ? getComputedStyle(value).color : "";
+    const cardBg = card ? getComputedStyle(card).backgroundColor : "";
     const text = value?.textContent.trim() || "";
-    return { ok: Boolean(value && text && color && bodyBg), color, bodyBg, text };
+    const light = luminance(color);
+    const dark = luminance(cardBg);
+    const contrast = (Math.max(light, dark) + .05) / (Math.min(light, dark) + .05);
+    const controlContrast = element => {
+      if (!element) return 0;
+      const style = getComputedStyle(element);
+      const foreground = luminance(style.color);
+      const background = luminance(style.backgroundColor);
+      return (Math.max(foreground, background) + .05) / (Math.min(foreground, background) + .05);
+    };
+    const navContrast = controlContrast(activeNav);
+    const rangeContrast = controlContrast(activeRange);
+    const fits = Boolean(value && value.scrollWidth <= value.clientWidth + 1);
+    return { ok: Boolean(value && text && color && bodyBg && contrast >= 4.5 && navContrast >= 4.5 && rangeContrast >= 4.5 && fits), color, cardBg, bodyBg, text, contrast, navContrast, rangeContrast, fits };
   });
+  return { ...result, screenshot };
 }
 
 async function main() {
