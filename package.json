@@ -1,6 +1,6 @@
 {
   "name": "codex-token-dashboard",
-  "version": "0.7.1",
+  "version": "0.7.2",
   "private": false,
   "description": "Local Codex token usage dashboard with official Plus and relay import support.",
   "scripts": {

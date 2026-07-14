@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-13T07:35:11.262Z",
+  "generatedAt": "2026-07-14T02:12:02.296Z",
   "baseUrl": "http://127.0.0.1:8787",
   "screenshotsDir": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current",
   "pages": [
@@ -45,7 +45,7 @@
         "kpiBaselineDrift": 0,
         "kpiTextInsetDrift": 0,
         "regularBarMinFont": 13,
-        "trendValueCenterDrift": 0.0078125,
+        "trendValueCenterDrift": 0.015625,
         "trendValueOverflowCount": 0
       }
     },
@@ -107,7 +107,7 @@
             "hasEmpty": true
           }
         ],
-        "cards": 15,
+        "cards": 13,
         "h1Count": 1,
         "activeNav": "03任务复盘",
         "kpiBaselineDrift": 0,
@@ -213,7 +213,7 @@
         "kpiBaselineDrift": 0,
         "kpiTextInsetDrift": 0,
         "regularBarMinFont": 13,
-        "trendValueCenterDrift": 0.0078125,
+        "trendValueCenterDrift": 0.015625,
         "trendValueOverflowCount": 0
       }
     },
@@ -275,7 +275,7 @@
             "hasEmpty": true
           }
         ],
-        "cards": 15,
+        "cards": 13,
         "h1Count": 1,
         "activeNav": "03任务复盘",
         "kpiBaselineDrift": 0,
@@ -438,12 +438,12 @@
         "charts": [
           {
             "selector": ".task-layout",
-            "height": 1355.5625,
+            "height": 1190.1875,
             "hasGraphic": true,
             "hasEmpty": true
           }
         ],
-        "cards": 15,
+        "cards": 13,
         "h1Count": 1,
         "activeNav": "03任务复盘",
         "kpiBaselineDrift": 0,

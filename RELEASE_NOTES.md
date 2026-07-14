@@ -1,5 +1,9 @@
 # Release Notes
 
+## v0.7.2 - Daily Trend Visual Refinement
+
+0.7.2 重做每日 Token 趋势柱体的视觉层次：加入轻量网格、统一基线、渐变堆叠色、顶部高光、悬停抬升和更清晰的数值胶囊标签。数据口径、日期补齐、点击筛选和 hover tooltip 保持不变。
+
 ## v0.7.1 - Alignment Correction
 
 0.7.1 修正 0.7.0 仍然遗留的两个视觉特例：总 Token 不再单独居中或使用突兀的深色卡片，而是采用浅冰蓝背景并与全部 KPI 统一左对齐；每日 Token 趋势首尾柱值不再贴边，所有标签都以柱体中心为唯一定位基准。

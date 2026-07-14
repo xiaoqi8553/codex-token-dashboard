@@ -7,7 +7,7 @@
 ![Codex Token Dashboard cover](screenshots/project-cover.svg)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-0f766e.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.7.1-17202e.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.7.2-17202e.svg)](CHANGELOG.md)
 [![OpenAI Sites](https://img.shields.io/badge/deploy-OpenAI%20Sites-275dcc.svg)](https://codex-token-dashboard.hazel-saepemx.chatgpt.site)
 [![Netlify Demo](https://img.shields.io/badge/demo-codetoken.netlify.app-2f6fed.svg)](https://codetoken.netlify.app/)
 [![GitHub Pages](https://img.shields.io/badge/pages-github.io-111827.svg)](https://xiaoqi8553.github.io/codex-token-dashboard/)
@@ -60,6 +60,20 @@ http://127.0.0.1:8787
 
 ### npm 启动
 
+### Windows `.exe` 可行性评估
+
+可行，但当前项目不能简单把 `start-dashboard.bat` 改名为 `.exe`。它现在是“浏览器前端 + 本地 Node 服务”的结构，本地服务会读取 `~/.codex/sessions`、写入 `data/usage-index.json`，精确来源诊断模式还会调用 Python 读取 `logs_2.sqlite`。
+
+面向大众发布 Windows 应用时，推荐先采用 Electron：主进程启动现有本地服务，渲染进程打开 `127.0.0.1` 页面，使用 `electron-builder` 生成安装包。这样可以最大程度复用当前已经验证的导入、刷新和统计逻辑。正式打包前必须完成以下工程化改造：
+
+- 将索引、导入文件和日志迁移到 `%APPDATA%\\Codex Token Dashboard`，避免安装目录不可写。
+- 把 Node 服务生命周期交给桌面主进程管理，处理端口占用、退出清理、崩溃提示和升级迁移。
+- 将 Python/SQLite 精确诊断改为内置 Node SQLite 能力，或明确把它作为可选诊断组件，避免用户额外安装 Python。
+- 增加首次启动向导、sessions 目录选择、数据权限说明、导入进度、失败重试和卸载保留数据选项。
+- 对安装包做 Windows Defender、无管理员权限、离线启动、不同用户名路径和大目录导入测试，并为发布包签名。
+
+因此，0.7.2 可以作为稳定的 Web / 本地 Node 版本继续使用；`.exe` 是下一阶段的发布形态，技术上没有阻塞，但需要单独做桌面壳和本地运行时工程，不能只做前端压缩打包。
+
 ```bash
 npm start
 ```
@@ -109,7 +123,7 @@ npm run visual:test  # 生成截图并自动检查明显视觉问题
 
 ## 页面模块
 
-0.7.1 使用左侧工程工作区导航和容器响应式数据组件，按以下页面组织：
+0.7.2 使用左侧工程工作区导航和容器响应式数据组件，按以下页面组织：
 
 - **运行总览**：核心指标、今日状态、每日 Token 柱状趋势、Token 构成、使用趋势、来源和模型统计。
 - **AI 使用日历**：类似 GitHub contribution graph 的热力图，可切换总 Token、active tokens、输出 Token、缓存命中率、记录数。点击日期会自动筛选明细表到当天。

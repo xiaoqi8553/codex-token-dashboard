@@ -3060,6 +3060,133 @@
       *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
     }
   </style>
+  <style id="v072-trend-design">
+    .trend {
+      position: relative;
+      isolation: isolate;
+      padding-top: 12px;
+      padding-bottom: 4px;
+    }
+
+    .trend::before {
+      content: "";
+      position: absolute;
+      inset: 12px 0 40px;
+      z-index: -1;
+      border-top: 1px solid color-mix(in srgb, var(--line) 56%, transparent);
+      border-bottom: 1px solid color-mix(in srgb, var(--line-strong) 72%, transparent);
+      background: repeating-linear-gradient(
+        to bottom,
+        transparent 0,
+        transparent calc(25% - 1px),
+        color-mix(in srgb, var(--line) 48%, transparent) calc(25% - 1px),
+        color-mix(in srgb, var(--line) 48%, transparent) 25%
+      );
+      pointer-events: none;
+    }
+
+    .day {
+      position: relative;
+      transition: transform 150ms ease;
+    }
+
+    .day:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 3px;
+      border-radius: 8px;
+    }
+
+    .day:hover {
+      transform: translateY(-2px);
+    }
+
+    .stack-outer {
+      height: 270px;
+      align-items: flex-end;
+    }
+
+    .stack-outer::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      bottom: 0;
+      width: min(100%, 84px);
+      height: 3px;
+      transform: translateX(-50%);
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--line-strong) 68%, transparent);
+      pointer-events: none;
+    }
+
+    .stack {
+      position: relative;
+      width: min(100%, 84px);
+      margin-inline: auto;
+      border: 1px solid color-mix(in srgb, var(--official) 30%, var(--line-strong));
+      border-radius: 10px 10px 4px 4px;
+      background: color-mix(in srgb, var(--panel-2) 88%, var(--line));
+      box-shadow: 0 8px 16px color-mix(in srgb, var(--official) 12%, transparent);
+      transition: transform 150ms ease, box-shadow 150ms ease, filter 150ms ease;
+    }
+
+    .stack::before {
+      content: "";
+      position: absolute;
+      z-index: 2;
+      left: 4px;
+      right: 4px;
+      top: -1px;
+      height: 3px;
+      border-radius: 999px;
+      background: color-mix(in srgb, white 54%, var(--official));
+      opacity: .88;
+      pointer-events: none;
+    }
+
+    .day:hover .stack {
+      transform: scaleX(1.035);
+      border-color: var(--official);
+      box-shadow: 0 12px 22px color-mix(in srgb, var(--official) 22%, transparent);
+      filter: saturate(1.06);
+    }
+
+    .stack span {
+      min-height: 3px;
+      transition: filter 150ms ease;
+    }
+
+    .stack .official_plus { background: linear-gradient(105deg, color-mix(in srgb, var(--official) 76%, #102b67), var(--official) 54%, color-mix(in srgb, var(--official) 72%, white)); }
+    .stack .relay { background: linear-gradient(105deg, color-mix(in srgb, var(--relay) 76%, #064f47), var(--relay) 54%, color-mix(in srgb, var(--relay) 72%, white)); }
+    .stack .unknown { background: linear-gradient(105deg, color-mix(in srgb, var(--unknown) 76%, #34404c), var(--unknown) 54%, color-mix(in srgb, var(--unknown) 72%, white)); }
+    .stack .cached { background: linear-gradient(105deg, color-mix(in srgb, var(--cache) 76%, #75420c), var(--cache) 54%, color-mix(in srgb, var(--cache) 72%, white)); }
+    .stack .uncached { background: linear-gradient(105deg, color-mix(in srgb, var(--uncached) 76%, #102b67), var(--uncached) 54%, color-mix(in srgb, var(--uncached) 72%, white)); }
+    .stack .output { background: linear-gradient(105deg, color-mix(in srgb, var(--output) 76%, #702631), var(--output) 54%, color-mix(in srgb, var(--output) 72%, white)); }
+
+    .bar-value {
+      z-index: 3;
+      bottom: calc(var(--bar-height, 0%) + 8px);
+      padding: 4px 7px;
+      border: 1px solid color-mix(in srgb, var(--official) 24%, var(--line));
+      border-radius: 7px;
+      background: color-mix(in srgb, var(--panel) 94%, transparent);
+      box-shadow: 0 5px 12px color-mix(in srgb, var(--ink) 10%, transparent);
+      letter-spacing: -.015em;
+    }
+
+    .day-label {
+      position: relative;
+      z-index: 2;
+      border: 1px solid var(--line);
+      background: color-mix(in srgb, var(--panel) 94%, var(--panel-2));
+      box-shadow: 0 2px 5px color-mix(in srgb, var(--ink) 5%, transparent);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .day,
+      .stack,
+      .stack span { transition: none; }
+    }
+  </style>
 </head>
 <body>
   <main class="app">
@@ -3093,7 +3220,7 @@
         </div>
         <div class="rail-version">
           <span>LOCAL-FIRST</span>
-          <strong>v0.7.1</strong>
+          <strong>v0.7.2</strong>
         </div>
       </div>
     </aside>
@@ -6135,7 +6262,7 @@
                 <h2>设置 / 关于</h2>
                 <p class="muted">检查当前运行方式、隐私边界、版本和公开部署状态。</p>
               </div>
-              <span class="badge">版本 0.7.1</span>
+              <span class="badge">版本 0.7.2</span>
             </div>
             <div class="settings-grid">
               <div class="settings-card">
@@ -6527,7 +6654,7 @@
       const summary = summarize(safeRecords.map(record => ({ ...record, activeTokens: activeTokens(record), uncachedInputTokens: uncachedInputTokens(record), hitRate: cacheHitRateOf(record) })));
       return {
         snapshotVersion: 1,
-        appVersion: "0.7.1",
+        appVersion: "0.7.2",
         generatedAt: new Date().toISOString(),
         privacy: {
           anonymized: true,

@@ -156,6 +156,15 @@ test("daily Token trend remains a stacked bar chart", () => {
   assert.doesNotMatch(trendSource, /renderUsageCurveChart/);
 });
 
+test("daily Token trend uses a layered chart treatment", () => {
+  assert.match(indexSource, /<style id="v072-trend-design">/);
+  assert.match(indexSource, /\.trend::before\s*\{/);
+  assert.match(indexSource, /\.stack::before\s*\{/);
+  assert.match(indexSource, /linear-gradient\(105deg/);
+  assert.match(indexSource, /\.day:hover \.stack\s*\{/);
+  assert.match(indexSource, /.stack-outer::after\s*\{/);
+});
+
 test("daily Token trend date labels fit within the chart card", () => {
   const trendSource = extractFunction("renderTrend");
   const trendCss = indexSource.match(/\.trend\s*\{[^}]+\}/)?.[0] || "";
@@ -232,11 +241,11 @@ test("usage trend has no persistent numeric overlays or summaries", () => {
   assert.doesNotMatch(cacheSource, /峰值 active|缓存 \$\{formatToken|命中率 \$\{avgHit\}% \/ active/);
 });
 
-test("0.7.1 uses the engineering workspace shell and removes Work Replay", () => {
-  assert.equal(packageJson.version, "0.7.1");
+test("0.7.2 uses the engineering workspace shell and removes Work Replay", () => {
+  assert.equal(packageJson.version, "0.7.2");
   assert.match(indexSource, /class="side-rail shell"/);
   assert.match(indexSource, /id="viewTitle"/);
-  assert.match(indexSource, /v0\.7\.1/);
+  assert.match(indexSource, /v0\.7\.2/);
   assert.doesNotMatch(indexSource, /replayBtn|replay\.html|工作回放/);
   assert.doesNotMatch(buildSource, /replay\.html/);
   assert.equal(fs.existsSync(path.join(root, "replay.html")), false);
