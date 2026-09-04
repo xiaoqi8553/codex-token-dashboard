@@ -20,7 +20,7 @@ const pages = [
   { key: "tasks", name: "任务复盘", view: "tasks", screenshot: "tasks", url: baseUrl },
   { key: "details", name: "明细表", view: "details", screenshot: "details", url: baseUrl },
   { key: "settings", name: "设置 / 关于", view: "settings", screenshot: "settings", url: baseUrl },
-  { key: "settings-bridge", name: "GitHub Pages 账号桥接", view: "settings", screenshot: "settings-bridge", url: `${baseUrl}?accountBridge=1` }
+  { key: "settings-bridge", name: "GitHub Pages 账号桥接", view: "settings", screenshot: "settings-bridge", url: `${baseUrl}?accountBridge=1`, staticMode: true }
 ];
 
 const viewports = [
@@ -104,6 +104,13 @@ async function ensureServer() {
 }
 
 async function openPage(page, pageInfo) {
+  if (pageInfo.staticMode) {
+    await page.route("**/api/usage**", route => route.fulfill({
+      status: 200,
+      contentType: "text/plain; charset=utf-8",
+      body: "Static preview"
+    }));
+  }
   await page.goto(pageInfo.url || baseUrl, { waitUntil: "networkidle" });
   if (pageInfo.view !== "overview") {
     await page.locator(`[data-view="${pageInfo.view}"]`).click();

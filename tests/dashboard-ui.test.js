@@ -259,6 +259,8 @@ test("UI audit blocks key number overflow, KPI drift, and tiny daily labels", ()
   assert.match(visualSource, /rangeContrast >= 4\.5/);
   assert.match(auditSource, /nodeModules.*playwright/);
   assert.match(visualSource, /nodeModules.*playwright/);
+  assert.match(auditSource, /settings-bridge.*staticMode:\s*true/);
+  assert.match(auditSource, /pageInfo\.staticMode[\s\S]*api\/usage[\s\S]*Static preview/);
 });
 
 test("usage trend has no persistent numeric overlays or summaries", () => {

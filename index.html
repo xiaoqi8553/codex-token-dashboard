@@ -2213,6 +2213,7 @@
     .workspace {
       min-width: 0;
       display: grid;
+      grid-template-columns: minmax(0, 1fr);
       gap: 12px;
       animation: workspace-in 280ms ease-out both;
     }
@@ -3016,6 +3017,9 @@
       }
       .view-tabs.page-nav button span { width: 25px; height: 22px; }
       .workspace { padding: 10px; gap: 10px; }
+      .welcome.show,
+      .static-panel.show { grid-template-columns: minmax(0, 1fr); }
+      .welcome-actions { justify-content: flex-start; }
       .header { min-height: 0; padding: 14px; gap: 13px; }
       .status-drawer { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .header .data-actions { width: 100%; overflow-x: auto; padding-bottom: 2px; }
