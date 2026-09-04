@@ -63,6 +63,7 @@
 - 2026-07-13: 0.7.0 still centered the hero KPI while every neighboring KPI was left-aligned, and retained first/last bar-label edge exceptions. Emphasis must not introduce a separate alignment model; measure actual text insets and label-to-bar center coordinates instead of checking only element boxes.
 - 2026-09-04: The GitHub Pages-only account bridge was initially omitted from the UI audit matrix, so both its form and the static-mode welcome panels escaped mobile checks. Every host-, query-, or mode-specific UI state must be reproduced in `ui:shot` and `ui:audit` at all supported viewports before release.
 - 2026-09-04: Account bridge 0.8.2 verified the launcher and status endpoint but stubbed the snapshot runner, missing broken multi-line JSON parsing and overly narrow account-name validation. Bridge releases must exercise the real child process through HTTP, verify files on disk, test common email-style names, and confirm sanitized responses before release.
+- 2026-09-04: The snapshot path was changed from the user's existing `~/.codex/XQ_acc` structure based on a literal reading of an escaped path, and the UI exposed implementation details as required inputs. Inspect the existing filesystem before changing defaults, preserve established storage layouts, and measure user actions: account snapshots should require no manual name or pairing-code entry.
 
 ## Before Finishing
 

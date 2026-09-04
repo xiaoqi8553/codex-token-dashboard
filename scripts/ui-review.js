@@ -20,7 +20,7 @@ const pages = [
   { key: "tasks", name: "任务复盘", view: "tasks", screenshot: "tasks", url: baseUrl },
   { key: "details", name: "明细表", view: "details", screenshot: "details", url: baseUrl },
   { key: "settings", name: "设置 / 关于", view: "settings", screenshot: "settings", url: baseUrl },
-  { key: "settings-bridge", name: "GitHub Pages 账号桥接", view: "settings", screenshot: "settings-bridge", url: `${baseUrl}?accountBridge=1`, staticMode: true }
+  { key: "settings-bridge", name: "GitHub Pages 账号桥接", view: "settings", screenshot: "settings-bridge", url: `${baseUrl}?accountBridge=1#accountBridgeKey=ABCD-2345`, staticMode: true }
 ];
 
 const viewports = [
@@ -104,6 +104,7 @@ async function ensureServer() {
 }
 
 async function openPage(page, pageInfo) {
+  let bridgeRequestBody = null;
   if (pageInfo.staticMode) {
     await page.route("**/api/usage**", route => route.fulfill({
       status: 200,
@@ -111,10 +112,37 @@ async function openPage(page, pageInfo) {
       body: "Static preview"
     }));
   }
+  if (pageInfo.key === "settings-bridge") {
+    await page.route("http://127.0.0.1:43127/api/account/snapshot", async route => {
+      bridgeRequestBody = JSON.parse(route.request().postData() || "{}");
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json; charset=utf-8",
+        body: JSON.stringify({
+          ok: true,
+          accountName: "current.account@example.com",
+          updatedFiles: ["auth.json", "config.toml"],
+          ccswitch: { requested: true, status: "updated", providerName: "OpenAI Official" }
+        })
+      });
+    });
+  }
   await page.goto(pageInfo.url || baseUrl, { waitUntil: "networkidle" });
   if (pageInfo.view !== "overview") {
     await page.locator(`[data-view="${pageInfo.view}"]`).click();
     await page.waitForTimeout(450);
+  }
+  if (pageInfo.key === "settings-bridge") {
+    await page.locator('[data-action="sync-account-bridge"]').click();
+    await page.waitForFunction(() => document.querySelector("#accountSyncStatus")?.classList.contains("success"));
+    const state = await page.evaluate(() => ({
+      hash: window.location.hash,
+      manualFields: document.querySelectorAll("#accountSnapshotName, #accountBridgeKey").length,
+      status: document.querySelector("#accountSyncStatus")?.textContent || ""
+    }));
+    if (state.hash || state.manualFields || bridgeRequestBody?.accountName || !state.status.includes("current.account@example.com")) {
+      throw new Error(`GitHub Pages 一键账号快照验收失败：${JSON.stringify({ state, bridgeRequestBody })}`);
+    }
   }
 }
 

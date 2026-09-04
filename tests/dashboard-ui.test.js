@@ -13,8 +13,8 @@ const buildSource = fs.readFileSync(path.join(root, "scripts", "build-static.js"
 const auditSource = fs.readFileSync(path.join(root, "scripts", "ui-review.js"), "utf8");
 const visualSource = fs.readFileSync(path.join(root, "scripts", "visual-check.js"), "utf8");
 const serverSource = fs.readFileSync(path.join(root, "server.js"), "utf8");
-const { createBridge } = require(path.join(root, "scripts", "account-bridge.js"));
-const { safeAccountName } = require(path.join(root, "scripts", "account-snapshot-process.js"));
+const { buildBridgeSiteUrl, createBridge } = require(path.join(root, "scripts", "account-bridge.js"));
+const { deriveAccountName, safeAccountName } = require(path.join(root, "scripts", "account-snapshot-process.js"));
 const packageJson = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
 
 function bridgeRequest(port, options = {}) {
@@ -275,11 +275,11 @@ test("usage trend has no persistent numeric overlays or summaries", () => {
   assert.doesNotMatch(cacheSource, /峰值 active|缓存 \$\{formatToken|命中率 \$\{avgHit\}% \/ active/);
 });
 
-test("0.8.3 uses the engineering workspace shell and removes Work Replay", () => {
-  assert.equal(packageJson.version, "0.8.3");
+test("0.8.4 uses the engineering workspace shell and removes Work Replay", () => {
+  assert.equal(packageJson.version, "0.8.4");
   assert.match(indexSource, /class="side-rail shell"/);
   assert.match(indexSource, /id="viewTitle"/);
-  assert.match(indexSource, /v0\.8\.3/);
+  assert.match(indexSource, /v0\.8\.4/);
   assert.doesNotMatch(indexSource, /replayBtn|replay\.html|工作回放/);
   assert.doesNotMatch(buildSource, /replay\.html/);
   assert.equal(fs.existsSync(path.join(root, "replay.html")), false);
@@ -315,6 +315,12 @@ test("account snapshot names accept emails but reject unsafe Windows names", () 
   assert.throws(() => safeAccountName("../escape"));
   assert.throws(() => safeAccountName("CON"));
   assert.throws(() => safeAccountName("trailing."));
+});
+
+test("account snapshot derives the current email without user input", () => {
+  const payload = Buffer.from(JSON.stringify({ email: "current.account+codex@example.com" })).toString("base64url");
+  assert.equal(deriveAccountName({ tokens: { id_token: `header.${payload}.signature` } }), "current.account+codex@example.com");
+  assert.equal(deriveAccountName({ tokens: { account_id: "account-123" } }), "codex-account-123");
 });
 
 test("GitHub Pages account bridge requires origin and one-time pairing key", async t => {
@@ -386,8 +392,13 @@ test("GitHub Pages bridge runs the real snapshot process and writes the requeste
   t.after(() => fs.rmSync(tempRoot, { recursive: true, force: true }));
   const codexHome = path.join(tempRoot, ".codex");
   fs.mkdirSync(codexHome, { recursive: true });
+  const idTokenPayload = Buffer.from(JSON.stringify({ email: "user.name+codex@example.com" })).toString("base64url");
   fs.writeFileSync(path.join(codexHome, "auth.json"), JSON.stringify({
-    tokens: { account_id: "bridge-test", access_token: "BRIDGE_TEST_SECRET" }
+    tokens: {
+      account_id: "bridge-test",
+      access_token: "BRIDGE_TEST_SECRET",
+      id_token: `header.${idTokenPayload}.signature`
+    }
   }));
   fs.writeFileSync(path.join(codexHome, "config.toml"), "model = \"bridge-test-model\"\n");
 
@@ -407,17 +418,28 @@ test("GitHub Pages bridge runs the real snapshot process and writes the requeste
 
   const response = await bridgeRequest(bridge.server.address().port, {
     headers: { "x-codex-bridge-key": "ABCD-2345" },
-    body: { accountName: "user.name+codex@example.com" }
+    body: { syncCcSwitch: false }
   });
   assert.equal(response.status, 200, response.body);
   assert.equal(JSON.parse(response.body).ok, true);
 
-  const target = path.join(codexHome, "XQ", "_acc", "user.name+codex@example.com");
+  const target = path.join(codexHome, "XQ_acc", "user.name+codex@example.com");
   assert.equal(fs.existsSync(path.join(target, "auth.json")), true);
   assert.equal(fs.existsSync(path.join(target, "config.toml")), true);
   assert.equal(JSON.parse(fs.readFileSync(path.join(target, "auth.json"), "utf8")).tokens.account_id, "bridge-test");
   assert.doesNotMatch(fs.readFileSync(path.join(target, "metadata.json"), "utf8"), /BRIDGE_TEST_SECRET/);
   assert.doesNotMatch(response.body, /BRIDGE_TEST_SECRET|accountDir/);
+});
+
+test("one-click bridge passes its key in a transient fragment and removes manual fields", () => {
+  const bridgeUrl = buildBridgeSiteUrl("https://xiaoqi8553.github.io/codex-token-dashboard/?accountBridge=1", "ABCD2345");
+  assert.equal(bridgeUrl, "https://xiaoqi8553.github.io/codex-token-dashboard/?accountBridge=1#accountBridgeKey=ABCD-2345");
+  assert.match(indexSource, /startupHashParams\.get\("accountBridgeKey"\)/);
+  assert.match(indexSource, /history\.replaceState\(null, "",/);
+  assert.doesNotMatch(indexSource, /id="accountSnapshotName"|id="accountBridgeKey"/);
+  assert.match(indexSource, /data-action="sync-account-bridge">保存当前账号/);
+  assert.match(indexSource, /id="accountSyncCcSwitch" type="checkbox" checked/);
+  assert.doesNotMatch(extractFunction("syncAccountSnapshotViaBridge"), /localStorage|accountName:/);
 });
 
 test("Windows account bridge launcher is CRLF-safe and keeps diagnostics visible", () => {
@@ -430,6 +452,8 @@ test("Windows account bridge launcher is CRLF-safe and keeps diagnostics visible
   assert.match(launcherText, /powershell\.exe .*start-account-bridge\.ps1/i);
   assert.match(powershellLauncher, /Find-NodeExecutable/);
   assert.match(powershellLauncher, /codex-account-bridge-launch\.log/);
+  assert.doesNotMatch(powershellLauncher, /输入.*配对码/);
+  assert.match(powershellLauncher, /点击“保存当前账号”/);
   assert.match(powershellLauncher, /Read-Host/);
 });
 

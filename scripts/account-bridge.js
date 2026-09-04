@@ -51,7 +51,8 @@ function parseOrigins(value) {
 
 function runAccountSnapshot(payload, options = {}) {
   const scriptPath = path.join(__dirname, "sync-codex-account.js");
-  const args = [scriptPath, "--account-name", String(payload.accountName || ""), "--json"];
+  const args = [scriptPath, "--json"];
+  if (payload.accountName) args.push("--account-name", String(payload.accountName));
   if (payload.syncCcSwitch === true) args.push("--sync-ccswitch");
   if (options.codexHome) args.push("--codex-home", options.codexHome);
   if (options.accountRoot) args.push("--account-root", options.accountRoot);
@@ -220,6 +221,12 @@ function openSite(url) {
   child.unref();
 }
 
+function buildBridgeSiteUrl(siteUrl, pairingKey) {
+  const url = new URL(siteUrl);
+  url.hash = new URLSearchParams({ accountBridgeKey: displayPairingKey(pairingKey) }).toString();
+  return url.toString();
+}
+
 function main() {
   const args = parseArgs(process.argv.slice(2));
   const port = Number(args.port || process.env.CODEX_ACCOUNT_BRIDGE_PORT || DEFAULT_PORT);
@@ -237,17 +244,17 @@ function main() {
   bridge.server.listen(port, "127.0.0.1", () => {
     console.log("");
     console.log("Codex 账号快照本机助手已启动");
-    console.log(`配对码：${displayPairingKey(bridge.pairingKey)}`);
-    console.log("请在网页的 系统设置 -> Codex 账号快照 中输入配对码。");
+    console.log("网页已自动完成一次性配对，请点击“保存当前账号”。");
     console.log("成功更新一次后助手会自动关闭。按 Ctrl+C 可随时取消。");
     console.log("");
-    if (args.open) openSite(siteUrl);
+    if (args.open) openSite(buildBridgeSiteUrl(siteUrl, bridge.pairingKey));
   });
 }
 
 if (require.main === module) main();
 
 module.exports = {
+  buildBridgeSiteUrl,
   createBridge,
   createPairingKey,
   displayPairingKey,

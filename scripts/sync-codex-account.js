@@ -5,7 +5,7 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 const childProcess = require("child_process");
-const { safeAccountName } = require("./account-snapshot-process");
+const { deriveAccountName, safeAccountName } = require("./account-snapshot-process");
 
 function parseArgs(argv) {
   const args = {};
@@ -76,12 +76,13 @@ function main() {
   const json = Boolean(args.json);
   try {
     const codexHome = path.resolve(args["codex-home"] || process.env.CODEX_HOME || path.join(os.homedir(), ".codex"));
-    const accountRoot = path.resolve(args["account-root"] || process.env.CODEX_ACCOUNT_ARCHIVE_DIR || path.join(codexHome, "XQ", "_acc"));
-    const accountName = safeAccountName(args["account-name"] || args.name);
+    const accountRoot = path.resolve(args["account-root"] || process.env.CODEX_ACCOUNT_ARCHIVE_DIR || path.join(codexHome, "XQ_acc"));
     const authPath = path.join(codexHome, "auth.json");
     const configPath = path.join(codexHome, "config.toml");
     if (!fs.existsSync(authPath)) throw new Error(`当前 Codex auth.json 不存在：${authPath}`);
-    JSON.parse(fs.readFileSync(authPath, "utf8"));
+    const auth = JSON.parse(fs.readFileSync(authPath, "utf8"));
+    const requestedName = args["account-name"] || args.name;
+    const accountName = requestedName ? safeAccountName(requestedName) : deriveAccountName(auth);
 
     const targetDir = path.join(accountRoot, accountName);
     const backupDir = path.join(accountRoot, ".backups", `${Date.now()}-${accountName}`);

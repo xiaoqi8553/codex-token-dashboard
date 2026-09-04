@@ -3201,13 +3201,13 @@
 
     .account-sync-card > p { max-width: 78ch; }
     .account-sync-form {
-      display: grid;
-      grid-template-columns: minmax(180px, 280px) auto auto;
+      display: flex;
+      flex-wrap: wrap;
       gap: 10px;
-      align-items: end;
+      align-items: center;
     }
     .account-sync-form.bridge {
-      grid-template-columns: minmax(170px, 1fr) minmax(150px, .7fr) auto auto;
+      align-items: center;
     }
     .account-sync-field {
       display: grid;
@@ -3216,8 +3216,10 @@
       font-size: 12px;
       font-weight: 700;
     }
-    .account-sync-form input[type="text"] { width: 100%; }
-    .account-sync-form .btn { white-space: nowrap; }
+    .account-sync-form .btn {
+      min-width: 168px;
+      white-space: nowrap;
+    }
     .account-sync-guide {
       display: flex;
       flex-wrap: wrap;
@@ -3252,7 +3254,8 @@
     .account-sync-status.success { color: var(--good); }
     @media (max-width: 760px) {
       .account-sync-form,
-      .account-sync-form.bridge { grid-template-columns: 1fr; align-items: stretch; }
+      .account-sync-form.bridge { align-items: stretch; }
+      .account-sync-form .btn { width: 100%; }
       .account-sync-check { min-height: 32px; }
     }
   </style>
@@ -3289,7 +3292,7 @@
         </div>
         <div class="rail-version">
           <span>LOCAL-FIRST</span>
-          <strong>v0.8.3</strong>
+          <strong>v0.8.4</strong>
         </div>
       </div>
     </aside>
@@ -3496,7 +3499,13 @@
   <div class="chart-tooltip" id="chartTooltip"></div>
 
   <script>
-    const startupAccountBridge = new URLSearchParams(window.location.search).get("accountBridge") === "1";
+    const startupSearchParams = new URLSearchParams(window.location.search);
+    const startupHashParams = new URLSearchParams(window.location.hash.slice(1));
+    const startupAccountBridgeKey = startupHashParams.get("accountBridgeKey") || "";
+    const startupAccountBridge = startupSearchParams.get("accountBridge") === "1" || Boolean(startupAccountBridgeKey);
+    if (startupAccountBridgeKey) {
+      history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
+    }
     const state = {
       range: "7d",
       view: startupAccountBridge ? "settings" : "overview",
@@ -6334,7 +6343,7 @@
                 <h2>设置 / 关于</h2>
                 <p class="muted">检查当前运行方式、隐私边界、版本和公开部署状态。</p>
               </div>
-              <span class="badge">版本 0.8.3</span>
+              <span class="badge">版本 0.8.4</span>
             </div>
             <div class="settings-grid">
               <div class="settings-card">
@@ -6391,26 +6400,23 @@
               </div>
               <div class="settings-card account-sync-card">
                 <strong>Codex 账号快照</strong>
-                <p>手动切换账号并登录完成后，在这里保存当前 <code>auth.json</code> 和 <code>config.toml</code> 到本机 <code>~/.codex/XQ/_acc</code>，下次可作为账号备份使用。</p>
+                <p>切换账号并登录完成后，一键保存当前 <code>auth.json</code> 和 <code>config.toml</code> 到现有账号目录 <code>~/.codex/XQ_acc/&lt;当前邮箱&gt;</code>。</p>
                 ${accountSyncAvailable ? `
                   <div class="account-sync-form">
-                    <label class="account-sync-field">账号名称<input id="accountSnapshotName" type="text" maxlength="64" placeholder="例如：工作号 / 账号A" autocomplete="off"></label>
-                    <label class="account-sync-check"><input id="accountSyncCcSwitch" type="checkbox">同步 CC Switch 当前官方配置</label>
-                    <button class="btn compact" type="button" data-action="sync-account">点击更新</button>
+                    <button class="btn primary compact" type="button" data-action="sync-account">保存当前账号</button>
+                    <label class="account-sync-check"><input id="accountSyncCcSwitch" type="checkbox" checked>同时更新 CC Switch 官方配置</label>
                   </div>
-                  <div class="account-sync-status" id="accountSyncStatus">仅本机私有 Node 模式可用；不会在页面显示 Token 内容。</div>
+                  <div class="account-sync-status" id="accountSyncStatus">账号名称会从当前 Codex 登录信息自动识别，不需要手工填写。</div>
                 ` : accountBridgeAvailable ? `
                   <div class="account-sync-guide">
                     <strong>GitHub Pages 安全桥接</strong>
-                    <span>先在项目目录双击 <code>start-account-bridge.bat</code>，启动窗口会显示 Node 路径和一次性配对码；若启动失败，窗口会保留具体原因。浏览器询问本地网络访问时请选择允许。</span>
+                    <span>${startupAccountBridgeKey ? "本机助手已自动配对，可以直接保存当前账号。" : "请先双击 start-account-bridge.bat，启动器会打开并自动配对此页面。"} 浏览器询问本地网络访问时请选择允许。</span>
                   </div>
                   <div class="account-sync-form bridge">
-                    <label class="account-sync-field">账号名称<input id="accountSnapshotName" type="text" maxlength="64" placeholder="例如：工作号 / 账号A" autocomplete="off"></label>
-                    <label class="account-sync-field">一次性配对码<input id="accountBridgeKey" type="text" maxlength="9" placeholder="ABCD-2345" autocomplete="off" autocapitalize="characters" spellcheck="false"></label>
-                    <label class="account-sync-check"><input id="accountSyncCcSwitch" type="checkbox">同步 CC Switch 当前官方配置</label>
-                    <button class="btn compact" type="button" data-action="sync-account-bridge">连接本机并更新</button>
+                    <button class="btn primary compact" type="button" data-action="sync-account-bridge">保存当前账号</button>
+                    <label class="account-sync-check"><input id="accountSyncCcSwitch" type="checkbox" checked>同时更新 CC Switch 官方配置</label>
                   </div>
-                  <div class="account-sync-status" id="accountSyncStatus">配对码只保留在当前输入框；账号文件不会上传到 GitHub Pages。</div>
+                  <div class="account-sync-status" id="accountSyncStatus">邮箱和配对信息自动识别；账号文件不会上传到 GitHub Pages。</div>
                 ` : `<div class="account-sync-status">当前部署不能直接访问本机 auth.json。请使用本机私有 Node 模式，或在 GitHub Pages 版本中启动本机账号助手后配对。</div>`}
               </div>
             </div>
@@ -6750,7 +6756,7 @@
       const summary = summarize(safeRecords.map(record => ({ ...record, activeTokens: activeTokens(record), uncachedInputTokens: uncachedInputTokens(record), hitRate: cacheHitRateOf(record) })));
       return {
         snapshotVersion: 1,
-        appVersion: "0.8.3",
+        appVersion: "0.8.4",
         generatedAt: new Date().toISOString(),
         privacy: {
           anonymized: true,
@@ -7176,19 +7182,9 @@
     }
 
     async function syncAccountSnapshot() {
-      const nameInput = document.querySelector("#accountSnapshotName");
       const check = document.querySelector("#accountSyncCcSwitch");
       const status = document.querySelector("#accountSyncStatus");
       const button = document.querySelector('[data-action="sync-account"]');
-      const accountName = nameInput?.value.trim() || "";
-      if (!accountName) {
-        if (status) {
-          status.textContent = "请先填写账号名称。";
-          status.className = "account-sync-status error";
-        }
-        nameInput?.focus();
-        return;
-      }
       if (button) button.disabled = true;
       if (status) {
         status.textContent = "正在保存当前账号文件，请不要同时切换 Codex 配置。";
@@ -7198,7 +7194,7 @@
         const response = await apiFetch("/api/account/snapshot", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ accountName, syncCcSwitch: Boolean(check?.checked) })
+          body: JSON.stringify({ syncCcSwitch: Boolean(check?.checked) })
         });
         const result = await response.json();
         if (!response.ok || !result.ok) throw new Error(result.error || "账号快照更新失败");
@@ -7208,10 +7204,10 @@
             ? `，CC Switch 未同步：${result.ccswitch.message || "请检查 CC Switch 状态"}`
             : "";
         if (status) {
-          status.textContent = `已更新账号“${accountName}”的本地快照${cc}。`;
+          status.textContent = `已保存当前账号“${result.accountName}”${cc}。`;
           status.className = result.ccswitch?.status === "failed" ? "account-sync-status error" : "account-sync-status success";
         }
-        toast(`账号“${accountName}”已更新`);
+        toast(`账号“${result.accountName}”已保存`);
       } catch (error) {
         if (status) {
           status.textContent = error.message || "账号快照更新失败";
@@ -7223,19 +7219,14 @@
     }
 
     async function syncAccountSnapshotViaBridge() {
-      const nameInput = document.querySelector("#accountSnapshotName");
-      const keyInput = document.querySelector("#accountBridgeKey");
       const check = document.querySelector("#accountSyncCcSwitch");
       const status = document.querySelector("#accountSyncStatus");
       const button = document.querySelector('[data-action="sync-account-bridge"]');
-      const accountName = nameInput?.value.trim() || "";
-      const pairingKey = keyInput?.value.trim() || "";
-      if (!accountName || !pairingKey) {
+      if (!startupAccountBridgeKey) {
         if (status) {
-          status.textContent = !accountName ? "请先填写账号名称。" : "请输入本机助手窗口显示的一次性配对码。";
+          status.textContent = "请双击 start-account-bridge.bat，让启动器重新打开并自动配对此页面。";
           status.className = "account-sync-status error";
         }
-        (!accountName ? nameInput : keyInput)?.focus();
         return;
       }
       if (button) button.disabled = true;
@@ -7256,9 +7247,9 @@
           targetAddressSpace: "loopback",
           headers: {
             "content-type": "application/json",
-            "x-codex-bridge-key": pairingKey
+            "x-codex-bridge-key": startupAccountBridgeKey
           },
-          body: JSON.stringify({ accountName, syncCcSwitch: Boolean(check?.checked) }),
+          body: JSON.stringify({ syncCcSwitch: Boolean(check?.checked) }),
           signal: controller.signal
         });
         const result = await response.json().catch(() => ({}));
@@ -7268,12 +7259,11 @@
           : result.ccswitch?.requested
             ? `，CC Switch 未同步：${result.ccswitch.message || "请检查 CC Switch 状态"}`
             : "";
-        if (keyInput) keyInput.value = "";
         if (status) {
-          status.textContent = `已更新账号“${accountName}”的本地快照${cc}。本次助手连接已关闭。`;
+          status.textContent = `已保存当前账号“${result.accountName}”${cc}。本次助手连接已关闭。`;
           status.className = result.ccswitch?.status === "failed" ? "account-sync-status error" : "account-sync-status success";
         }
-        toast(`账号“${accountName}”已通过本机助手更新`);
+        toast(`账号“${result.accountName}”已保存`);
       } catch (error) {
         const connectionFailed = error?.name === "AbortError" || error instanceof TypeError;
         if (status) {

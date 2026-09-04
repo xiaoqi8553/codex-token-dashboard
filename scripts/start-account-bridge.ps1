@@ -50,7 +50,7 @@ try {
 
   $nodeExecutable = Find-NodeExecutable
   Write-Host "Node.js：$nodeExecutable" -ForegroundColor DarkGray
-  Write-Host "启动成功后请保留此窗口，并在网页中输入窗口显示的配对码。" -ForegroundColor Gray
+  Write-Host "网页打开后只需点击“保存当前账号”，请在保存完成前保留此窗口。" -ForegroundColor Gray
   Write-Host ""
 
   $arguments = @($bridgeScript, "--port", [string]$Port)

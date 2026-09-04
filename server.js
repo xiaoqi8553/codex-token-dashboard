@@ -316,7 +316,7 @@ function hasRightCodeConfig() {
   const configuredRoot = process.env.CODEX_ACCOUNT_ARCHIVE_DIR;
   const accountRoots = configuredRoot
     ? [path.resolve(configuredRoot)]
-    : [path.join(codexHome, "XQ", "_acc"), path.join(codexHome, "XQ_acc")];
+    : [path.join(codexHome, "XQ_acc"), path.join(codexHome, "XQ", "_acc")];
   return accountRoots.some(accountRoot => {
     let entries = [];
     try {
@@ -1378,9 +1378,9 @@ function isLoopbackHost(host) {
 }
 
 function runAccountSnapshot(payload) {
-  const accountName = safeAccountName(payload.accountName);
   const scriptPath = path.join(ROOT, "scripts", "sync-codex-account.js");
-  const args = [scriptPath, "--account-name", accountName, "--json"];
+  const args = [scriptPath, "--json"];
+  if (payload.accountName) args.push("--account-name", safeAccountName(payload.accountName));
   if (payload.syncCcSwitch === true) args.push("--sync-ccswitch");
   return new Promise((resolve, reject) => {
     const child = childProcess.spawn(process.execPath, args, { cwd: ROOT, windowsHide: true });
