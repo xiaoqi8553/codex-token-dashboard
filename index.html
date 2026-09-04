@@ -3289,7 +3289,7 @@
         </div>
         <div class="rail-version">
           <span>LOCAL-FIRST</span>
-          <strong>v0.8.1</strong>
+          <strong>v0.8.2</strong>
         </div>
       </div>
     </aside>
@@ -6334,7 +6334,7 @@
                 <h2>设置 / 关于</h2>
                 <p class="muted">检查当前运行方式、隐私边界、版本和公开部署状态。</p>
               </div>
-              <span class="badge">版本 0.8.1</span>
+              <span class="badge">版本 0.8.2</span>
             </div>
             <div class="settings-grid">
               <div class="settings-card">
@@ -6402,7 +6402,7 @@
                 ` : accountBridgeAvailable ? `
                   <div class="account-sync-guide">
                     <strong>GitHub Pages 安全桥接</strong>
-                    <span>先在项目目录双击 <code>start-account-bridge.bat</code>，再输入助手窗口显示的一次性配对码。浏览器询问本地网络访问时请选择允许。</span>
+                    <span>先在项目目录双击 <code>start-account-bridge.bat</code>，启动窗口会显示 Node 路径和一次性配对码；若启动失败，窗口会保留具体原因。浏览器询问本地网络访问时请选择允许。</span>
                   </div>
                   <div class="account-sync-form bridge">
                     <label class="account-sync-field">账号名称<input id="accountSnapshotName" type="text" maxlength="64" placeholder="例如：工作号 / 账号A" autocomplete="off"></label>
@@ -6750,7 +6750,7 @@
       const summary = summarize(safeRecords.map(record => ({ ...record, activeTokens: activeTokens(record), uncachedInputTokens: uncachedInputTokens(record), hitRate: cacheHitRateOf(record) })));
       return {
         snapshotVersion: 1,
-        appVersion: "0.8.1",
+        appVersion: "0.8.2",
         generatedAt: new Date().toISOString(),
         privacy: {
           anonymized: true,

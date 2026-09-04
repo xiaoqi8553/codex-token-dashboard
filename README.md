@@ -7,7 +7,7 @@
 ![Codex Token Dashboard cover](screenshots/project-cover.svg)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-0f766e.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.8.1-17202e.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.8.2-17202e.svg)](CHANGELOG.md)
 [![OpenAI Sites](https://img.shields.io/badge/deploy-OpenAI%20Sites-275dcc.svg)](https://codex-token-dashboard.hazel-saepemx.chatgpt.site)
 [![Netlify Demo](https://img.shields.io/badge/demo-codetoken.netlify.app-2f6fed.svg)](https://codetoken.netlify.app/)
 [![GitHub Pages](https://img.shields.io/badge/pages-github.io-111827.svg)](https://xiaoqi8553.github.io/codex-token-dashboard/)
@@ -159,7 +159,7 @@ sync-codex-account.bat 工作号 --sync-ccswitch
 
 “同步 CC Switch 当前官方配置”是显式勾选项。它只更新 CC Switch 数据库里的 Codex 官方配置，不会切换当前 provider；同步前会在 `~/.cc-switch/backups/` 留下数据库备份。若 CC Switch 正在写数据库，请先退出 CC Switch 再重试。账号快照不会上传到 Sites、GitHub 或 Token Dashboard。
 
-GitHub Pages 版也可以触发本机快照，但必须先在项目目录双击 `start-account-bridge.bat`。脚本只监听 `127.0.0.1:43127`，会打开 GitHub Pages 设置页并显示一次性配对码；在网页填写账号名称和配对码后点击“连接本机并更新”即可。成功执行一次后助手自动关闭，配对码不会写入浏览器存储，响应也不包含 auth/config、完整路径或 CC Switch 数据库路径。
+GitHub Pages 版也可以触发本机快照，但必须先在项目目录双击 `start-account-bridge.bat`。启动器会自动定位 Node.js，并在窗口中明确显示启动状态、Node 路径和一次性配对码；失败时窗口不会闪退，诊断会写入 `%TEMP%\codex-account-bridge-launch.log`。脚本只监听 `127.0.0.1:43127`，会打开 GitHub Pages 设置页；在网页填写账号名称和配对码后点击“连接本机并更新”即可。成功执行一次后助手自动关闭，配对码不会写入浏览器存储，响应也不包含 auth/config、完整路径或 CC Switch 数据库路径。
 
 Chrome 或 Edge 首次连接时可能询问是否允许网页访问本地网络，这是浏览器保护本机服务的正常权限提示。只能对 `https://xiaoqi8553.github.io` 允许访问；助手会拒绝其他网页来源。
 

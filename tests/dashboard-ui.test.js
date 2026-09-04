@@ -274,11 +274,11 @@ test("usage trend has no persistent numeric overlays or summaries", () => {
   assert.doesNotMatch(cacheSource, /峰值 active|缓存 \$\{formatToken|命中率 \$\{avgHit\}% \/ active/);
 });
 
-test("0.8.1 uses the engineering workspace shell and removes Work Replay", () => {
-  assert.equal(packageJson.version, "0.8.1");
+test("0.8.2 uses the engineering workspace shell and removes Work Replay", () => {
+  assert.equal(packageJson.version, "0.8.2");
   assert.match(indexSource, /class="side-rail shell"/);
   assert.match(indexSource, /id="viewTitle"/);
-  assert.match(indexSource, /v0\.8\.1/);
+  assert.match(indexSource, /v0\.8\.2/);
   assert.doesNotMatch(indexSource, /replayBtn|replay\.html|工作回放/);
   assert.doesNotMatch(buildSource, /replay\.html/);
   assert.equal(fs.existsSync(path.join(root, "replay.html")), false);
@@ -370,6 +370,19 @@ test("GitHub Pages account bridge requires origin and one-time pairing key", asy
   assert.match(indexSource, /targetAddressSpace:\s*"loopback"/);
   assert.match(indexSource, /start-account-bridge\.bat/);
   assert.doesNotMatch(extractFunction("syncAccountSnapshotViaBridge"), /localStorage/);
+});
+
+test("Windows account bridge launcher is CRLF-safe and keeps diagnostics visible", () => {
+  const launcherPath = path.join(root, "start-account-bridge.bat");
+  const launcher = fs.readFileSync(launcherPath);
+  const launcherText = launcher.toString("utf8");
+  const powershellLauncher = fs.readFileSync(path.join(root, "scripts", "start-account-bridge.ps1"), "utf8");
+
+  assert.doesNotMatch(launcherText, /(?<!\r)\n/);
+  assert.match(launcherText, /powershell\.exe .*start-account-bridge\.ps1/i);
+  assert.match(powershellLauncher, /Find-NodeExecutable/);
+  assert.match(powershellLauncher, /codex-account-bridge-launch\.log/);
+  assert.match(powershellLauncher, /Read-Host/);
 });
 
 test("static build emits the OpenAI Sites worker contract", () => {
