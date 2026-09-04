@@ -61,6 +61,7 @@
 - 2026-07-13: Passing automated screenshots was treated as sufficient even when the total card and ratio chart still looked unbalanced. Manually inspect Overview, Task Review, and dark Overview screenshots for hierarchy, symmetry, whitespace, and component fit before release.
 - 2026-07-13: Dark mode reused `--ink` as an active-control background while keeping hardcoded white text, producing white-on-white navigation and range buttons. Active controls need explicit theme-aware foreground/background tokens and a 4.5:1 contrast check.
 - 2026-07-13: 0.7.0 still centered the hero KPI while every neighboring KPI was left-aligned, and retained first/last bar-label edge exceptions. Emphasis must not introduce a separate alignment model; measure actual text insets and label-to-bar center coordinates instead of checking only element boxes.
+- 2026-09-04: The GitHub Pages-only account bridge was initially omitted from the UI audit matrix, so its four-column form overflowed on mobile despite the standard settings page passing. Every host-, query-, or mode-specific UI state must be included in `ui:shot` and `ui:audit` at all supported viewports before release.
 
 ## Before Finishing
 

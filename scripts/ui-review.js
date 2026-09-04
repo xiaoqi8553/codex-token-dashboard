@@ -19,7 +19,8 @@ const pages = [
   { key: "calendar", name: "AI 使用日历", view: "calendar", screenshot: "calendar", url: baseUrl },
   { key: "tasks", name: "任务复盘", view: "tasks", screenshot: "tasks", url: baseUrl },
   { key: "details", name: "明细表", view: "details", screenshot: "details", url: baseUrl },
-  { key: "settings", name: "设置 / 关于", view: "settings", screenshot: "settings", url: baseUrl }
+  { key: "settings", name: "设置 / 关于", view: "settings", screenshot: "settings", url: baseUrl },
+  { key: "settings-bridge", name: "GitHub Pages 账号桥接", view: "settings", screenshot: "settings-bridge", url: `${baseUrl}?accountBridge=1` }
 ];
 
 const viewports = [
@@ -103,7 +104,7 @@ async function ensureServer() {
 }
 
 async function openPage(page, pageInfo) {
-  await page.goto(baseUrl, { waitUntil: "networkidle" });
+  await page.goto(pageInfo.url || baseUrl, { waitUntil: "networkidle" });
   if (pageInfo.view !== "overview") {
     await page.locator(`[data-view="${pageInfo.view}"]`).click();
     await page.waitForTimeout(450);

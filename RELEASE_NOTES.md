@@ -1,5 +1,9 @@
 # Release Notes
 
+## v0.8.1 - GitHub Pages 本机安全桥接
+
+GitHub Pages 设置页现在可以通过一次性本机助手触发账号快照。助手只监听回环地址，仅接受项目的 GitHub Pages 来源与正确配对码，成功执行一次后自动关闭；auth/config 和完整本机路径不会进入网页响应。
+
 ## v0.8.0 - Local Codex Account Snapshots
 
 0.8.0 新增本地账号快照工具。用户手动切换 Codex 账号并完成登录后，可在系统设置页面点击更新，或运行 `sync-codex-account.bat`，把当前 auth/config 保存到 `~/.codex/XQ_acc/<账号名称>/`。CC Switch 同步需要显式勾选或传入参数，并自动保留数据库备份；公开站点和浏览器静态模式不会接触本机凭据。

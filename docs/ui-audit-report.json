@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-04T02:43:54.505Z",
+  "generatedAt": "2026-09-04T03:17:00.449Z",
   "baseUrl": "http://127.0.0.1:8787",
   "screenshotsDir": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current",
   "pages": [
@@ -151,6 +151,33 @@
       "width": 1920,
       "height": 1080,
       "screenshot": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current\\settings-1920.png",
+      "warnings": [],
+      "failures": [],
+      "metrics": {
+        "scrollWidth": 1905,
+        "clientWidth": 1920,
+        "headerHeight": 113.390625,
+        "occupiedHeight": 113.390625,
+        "viewportHeight": 1080,
+        "filtersVisible": false,
+        "charts": [],
+        "cards": 8,
+        "h1Count": 1,
+        "activeNav": "05系统设置",
+        "kpiBaselineDrift": 0,
+        "kpiTextInsetDrift": 0,
+        "regularBarMinFont": 0,
+        "trendValueCenterDrift": 0,
+        "trendValueOverflowCount": 0
+      }
+    },
+    {
+      "page": "settings-bridge",
+      "name": "GitHub Pages 账号桥接",
+      "viewport": "1920",
+      "width": 1920,
+      "height": 1080,
+      "screenshot": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current\\settings-bridge-1920.png",
       "warnings": [],
       "failures": [],
       "metrics": {
@@ -340,6 +367,33 @@
       }
     },
     {
+      "page": "settings-bridge",
+      "name": "GitHub Pages 账号桥接",
+      "viewport": "1366",
+      "width": 1366,
+      "height": 768,
+      "screenshot": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current\\settings-bridge-1366.png",
+      "warnings": [],
+      "failures": [],
+      "metrics": {
+        "scrollWidth": 1351,
+        "clientWidth": 1366,
+        "headerHeight": 113.390625,
+        "occupiedHeight": 113.390625,
+        "viewportHeight": 768,
+        "filtersVisible": false,
+        "charts": [],
+        "cards": 8,
+        "h1Count": 1,
+        "activeNav": "05系统设置",
+        "kpiBaselineDrift": 0,
+        "kpiTextInsetDrift": 0,
+        "regularBarMinFont": 0,
+        "trendValueCenterDrift": 0,
+        "trendValueOverflowCount": 0
+      }
+    },
+    {
       "page": "overview",
       "name": "总览页",
       "viewport": "mobile",
@@ -487,6 +541,33 @@
       "width": 390,
       "height": 844,
       "screenshot": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current\\settings-mobile.png",
+      "warnings": [],
+      "failures": [],
+      "metrics": {
+        "scrollWidth": 390,
+        "clientWidth": 390,
+        "headerHeight": 111,
+        "occupiedHeight": 111,
+        "viewportHeight": 844,
+        "filtersVisible": false,
+        "charts": [],
+        "cards": 8,
+        "h1Count": 1,
+        "activeNav": "05系统设置",
+        "kpiBaselineDrift": 0,
+        "kpiTextInsetDrift": 0,
+        "regularBarMinFont": 0,
+        "trendValueCenterDrift": 0,
+        "trendValueOverflowCount": 0
+      }
+    },
+    {
+      "page": "settings-bridge",
+      "name": "GitHub Pages 账号桥接",
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "screenshot": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current\\settings-bridge-mobile.png",
       "warnings": [],
       "failures": [],
       "metrics": {

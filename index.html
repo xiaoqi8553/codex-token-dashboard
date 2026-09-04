@@ -3202,7 +3202,10 @@
       gap: 10px;
       align-items: end;
     }
-    .account-sync-form label:first-child {
+    .account-sync-form.bridge {
+      grid-template-columns: minmax(170px, 1fr) minmax(150px, .7fr) auto auto;
+    }
+    .account-sync-field {
       display: grid;
       gap: 5px;
       color: var(--muted);
@@ -3210,6 +3213,21 @@
       font-weight: 700;
     }
     .account-sync-form input[type="text"] { width: 100%; }
+    .account-sync-form .btn { white-space: nowrap; }
+    .account-sync-guide {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 12px;
+      align-items: center;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: color-mix(in srgb, var(--panel) 80%, transparent);
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    .account-sync-guide strong { color: var(--ink); }
     .account-sync-check {
       min-height: 36px;
       display: inline-flex;
@@ -3229,7 +3247,8 @@
     .account-sync-status.error { color: var(--bad); }
     .account-sync-status.success { color: var(--good); }
     @media (max-width: 760px) {
-      .account-sync-form { grid-template-columns: 1fr; align-items: stretch; }
+      .account-sync-form,
+      .account-sync-form.bridge { grid-template-columns: 1fr; align-items: stretch; }
       .account-sync-check { min-height: 32px; }
     }
   </style>
@@ -3266,7 +3285,7 @@
         </div>
         <div class="rail-version">
           <span>LOCAL-FIRST</span>
-          <strong>v0.8.0</strong>
+          <strong>v0.8.1</strong>
         </div>
       </div>
     </aside>
@@ -3473,9 +3492,10 @@
   <div class="chart-tooltip" id="chartTooltip"></div>
 
   <script>
+    const startupAccountBridge = new URLSearchParams(window.location.search).get("accountBridge") === "1";
     const state = {
       range: "7d",
-      view: "overview",
+      view: startupAccountBridge ? "settings" : "overview",
       trendMode: "source",
       calendarMetric: "totalTokens",
       taskMetric: "totalTokens",
@@ -6300,7 +6320,8 @@
         : state.staticSourceType === "demo"
           ? "sample-data/demo-usage-index.json"
           : state.staticPayload?.sessionsDir || "用户手动导入";
-      const accountSyncAvailable = state.dataMode === "server" && state.data?.config?.accountSyncAvailable;
+      const accountSyncAvailable = !startupAccountBridge && state.dataMode === "server" && state.data?.config?.accountSyncAvailable;
+      const accountBridgeAvailable = startupAccountBridge || (!accountSyncAvailable && state.dataMode === "static" && window.location.hostname === "xiaoqi8553.github.io");
       els.viewPanel.innerHTML = `
         <section class="settings-page">
           <article class="panel">
@@ -6309,7 +6330,7 @@
                 <h2>设置 / 关于</h2>
                 <p class="muted">检查当前运行方式、隐私边界、版本和公开部署状态。</p>
               </div>
-              <span class="badge">版本 0.8.0</span>
+              <span class="badge">版本 0.8.1</span>
             </div>
             <div class="settings-grid">
               <div class="settings-card">
@@ -6369,12 +6390,24 @@
                 <p>手动切换账号并登录完成后，在这里保存当前 <code>auth.json</code> 和 <code>config.toml</code> 到本机 <code>~/.codex/XQ_acc</code>，下次可作为账号备份使用。</p>
                 ${accountSyncAvailable ? `
                   <div class="account-sync-form">
-                    <label>账号名称<input id="accountSnapshotName" type="text" maxlength="64" placeholder="例如：工作号 / 账号A" autocomplete="off"></label>
+                    <label class="account-sync-field">账号名称<input id="accountSnapshotName" type="text" maxlength="64" placeholder="例如：工作号 / 账号A" autocomplete="off"></label>
                     <label class="account-sync-check"><input id="accountSyncCcSwitch" type="checkbox">同步 CC Switch 当前官方配置</label>
                     <button class="btn compact" type="button" data-action="sync-account">点击更新</button>
                   </div>
                   <div class="account-sync-status" id="accountSyncStatus">仅本机私有 Node 模式可用；不会在页面显示 Token 内容。</div>
-                ` : `<div class="account-sync-status">请使用本机私有 Node 模式启动看板后使用。公开站点和浏览器静态导入模式不会接触本机 auth.json。</div>`}
+                ` : accountBridgeAvailable ? `
+                  <div class="account-sync-guide">
+                    <strong>GitHub Pages 安全桥接</strong>
+                    <span>先在项目目录双击 <code>start-account-bridge.bat</code>，再输入助手窗口显示的一次性配对码。浏览器询问本地网络访问时请选择允许。</span>
+                  </div>
+                  <div class="account-sync-form bridge">
+                    <label class="account-sync-field">账号名称<input id="accountSnapshotName" type="text" maxlength="64" placeholder="例如：工作号 / 账号A" autocomplete="off"></label>
+                    <label class="account-sync-field">一次性配对码<input id="accountBridgeKey" type="text" maxlength="9" placeholder="ABCD-2345" autocomplete="off" autocapitalize="characters" spellcheck="false"></label>
+                    <label class="account-sync-check"><input id="accountSyncCcSwitch" type="checkbox">同步 CC Switch 当前官方配置</label>
+                    <button class="btn compact" type="button" data-action="sync-account-bridge">连接本机并更新</button>
+                  </div>
+                  <div class="account-sync-status" id="accountSyncStatus">配对码只保留在当前输入框；账号文件不会上传到 GitHub Pages。</div>
+                ` : `<div class="account-sync-status">当前部署不能直接访问本机 auth.json。请使用本机私有 Node 模式，或在 GitHub Pages 版本中启动本机账号助手后配对。</div>`}
               </div>
             </div>
           </article>
@@ -6713,7 +6746,7 @@
       const summary = summarize(safeRecords.map(record => ({ ...record, activeTokens: activeTokens(record), uncachedInputTokens: uncachedInputTokens(record), hitRate: cacheHitRateOf(record) })));
       return {
         snapshotVersion: 1,
-        appVersion: "0.8.0",
+        appVersion: "0.8.1",
         generatedAt: new Date().toISOString(),
         privacy: {
           anonymized: true,
@@ -7185,6 +7218,72 @@
       }
     }
 
+    async function syncAccountSnapshotViaBridge() {
+      const nameInput = document.querySelector("#accountSnapshotName");
+      const keyInput = document.querySelector("#accountBridgeKey");
+      const check = document.querySelector("#accountSyncCcSwitch");
+      const status = document.querySelector("#accountSyncStatus");
+      const button = document.querySelector('[data-action="sync-account-bridge"]');
+      const accountName = nameInput?.value.trim() || "";
+      const pairingKey = keyInput?.value.trim() || "";
+      if (!accountName || !pairingKey) {
+        if (status) {
+          status.textContent = !accountName ? "请先填写账号名称。" : "请输入本机助手窗口显示的一次性配对码。";
+          status.className = "account-sync-status error";
+        }
+        (!accountName ? nameInput : keyInput)?.focus();
+        return;
+      }
+      if (button) button.disabled = true;
+      if (status) {
+        status.textContent = "正在连接 127.0.0.1 本机助手；如果浏览器询问本地网络访问，请选择允许。";
+        status.className = "account-sync-status";
+      }
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000);
+      try {
+        const response = await fetch("http://127.0.0.1:43127/api/account/snapshot", {
+          method: "POST",
+          mode: "cors",
+          credentials: "omit",
+          cache: "no-store",
+          redirect: "error",
+          referrerPolicy: "no-referrer",
+          targetAddressSpace: "loopback",
+          headers: {
+            "content-type": "application/json",
+            "x-codex-bridge-key": pairingKey
+          },
+          body: JSON.stringify({ accountName, syncCcSwitch: Boolean(check?.checked) }),
+          signal: controller.signal
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok || !result.ok) throw new Error(result.error || `本机助手返回错误：${response.status}`);
+        const cc = result.ccswitch?.status === "updated"
+          ? "，CC Switch 官方配置也已更新"
+          : result.ccswitch?.requested
+            ? `，CC Switch 未同步：${result.ccswitch.message || "请检查 CC Switch 状态"}`
+            : "";
+        if (keyInput) keyInput.value = "";
+        if (status) {
+          status.textContent = `已更新账号“${accountName}”的本地快照${cc}。本次助手连接已关闭。`;
+          status.className = result.ccswitch?.status === "failed" ? "account-sync-status error" : "account-sync-status success";
+        }
+        toast(`账号“${accountName}”已通过本机助手更新`);
+      } catch (error) {
+        const connectionFailed = error?.name === "AbortError" || error instanceof TypeError;
+        if (status) {
+          status.textContent = connectionFailed
+            ? "未连接到本机助手。请双击 start-account-bridge.bat，并允许浏览器访问本地网络后重试。"
+            : error.message || "账号快照更新失败";
+          status.className = "account-sync-status error";
+        }
+      } finally {
+        clearTimeout(timeout);
+        if (button) button.disabled = false;
+      }
+    }
+
     function handlePanelAction(action) {
       if (action === "load-demo") {
         loadDemoData("已重新加载示例数据。").catch(error => setStatus(error.message || "示例数据加载失败", "error"));
@@ -7195,6 +7294,7 @@
       if (action === "import-sessions") chooseImportSessionsFolder();
       if (action === "request-location") requestLocation();
       if (action === "sync-account") syncAccountSnapshot();
+      if (action === "sync-account-bridge") syncAccountSnapshotViaBridge();
     }
 
     function weatherCodeLabel(code) {
@@ -7379,6 +7479,10 @@
     setTheme(localStorage.getItem("codexTokenTheme") || "system");
     async function initializeDashboard() {
       await restoreSavedSessionsDirectory({ silent: true });
+      if (startupAccountBridge) {
+        setActiveView("settings");
+        window.history.replaceState(null, "", `${window.location.pathname}${window.location.hash}`);
+      }
       applyRange("7d");
     }
     initializeDashboard();

@@ -1,6 +1,7 @@
 const assert = require("node:assert/strict");
 const childProcess = require("node:child_process");
 const fs = require("node:fs");
+const http = require("node:http");
 const os = require("node:os");
 const path = require("node:path");
 const test = require("node:test");
@@ -12,7 +13,32 @@ const buildSource = fs.readFileSync(path.join(root, "scripts", "build-static.js"
 const auditSource = fs.readFileSync(path.join(root, "scripts", "ui-review.js"), "utf8");
 const visualSource = fs.readFileSync(path.join(root, "scripts", "visual-check.js"), "utf8");
 const serverSource = fs.readFileSync(path.join(root, "server.js"), "utf8");
+const { createBridge } = require(path.join(root, "scripts", "account-bridge.js"));
 const packageJson = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
+
+function bridgeRequest(port, options = {}) {
+  return new Promise((resolve, reject) => {
+    const body = options.body ? JSON.stringify(options.body) : "";
+    const request = http.request({
+      hostname: "127.0.0.1",
+      port,
+      path: options.path || "/api/account/snapshot",
+      method: options.method || "POST",
+      headers: {
+        origin: options.origin || "https://xiaoqi8553.github.io",
+        ...(body ? { "content-type": "application/json", "content-length": Buffer.byteLength(body) } : {}),
+        ...(options.headers || {})
+      }
+    }, response => {
+      let responseBody = "";
+      response.on("data", chunk => { responseBody += chunk; });
+      response.on("end", () => resolve({ status: response.statusCode, headers: response.headers, body: responseBody }));
+    });
+    request.on("error", reject);
+    if (body) request.write(body);
+    request.end();
+  });
+}
 
 function extractFunction(name) {
   const marker = `function ${name}(`;
@@ -246,11 +272,11 @@ test("usage trend has no persistent numeric overlays or summaries", () => {
   assert.doesNotMatch(cacheSource, /峰值 active|缓存 \$\{formatToken|命中率 \$\{avgHit\}% \/ active/);
 });
 
-test("0.8.0 uses the engineering workspace shell and removes Work Replay", () => {
-  assert.equal(packageJson.version, "0.8.0");
+test("0.8.1 uses the engineering workspace shell and removes Work Replay", () => {
+  assert.equal(packageJson.version, "0.8.1");
   assert.match(indexSource, /class="side-rail shell"/);
   assert.match(indexSource, /id="viewTitle"/);
-  assert.match(indexSource, /v0\.8\.0/);
+  assert.match(indexSource, /v0\.8\.1/);
   assert.doesNotMatch(indexSource, /replayBtn|replay\.html|工作回放/);
   assert.doesNotMatch(buildSource, /replay\.html/);
   assert.equal(fs.existsSync(path.join(root, "replay.html")), false);
@@ -278,6 +304,70 @@ test("local account snapshot keeps credentials out of metadata", t => {
   assert.doesNotMatch(fs.readFileSync(path.join(target, "metadata.json"), "utf8"), /SECRET_SHOULD_NOT_BE_IN_METADATA/);
   assert.match(serverSource, /\/api\/account\/snapshot/);
   assert.match(serverSource, /PUBLIC_ACCESS \|\| !isLoopbackHost\(HOST\)/);
+});
+
+test("GitHub Pages account bridge requires origin and one-time pairing key", async t => {
+  let snapshotCalls = 0;
+  const bridge = createBridge({
+    port: 0,
+    pairingKey: "ABCD2345",
+    closeAfterSuccess: false,
+    snapshotRunner: async payload => {
+      snapshotCalls += 1;
+      return {
+        ok: true,
+        accountName: payload.accountName,
+        accountDir: "C:\\SECRET\\ACCOUNT",
+        updatedFiles: ["auth.json", "config.toml"],
+        ccswitch: { requested: true, status: "updated", providerName: "OpenAI Official", backupPath: "C:\\SECRET\\BACKUP" }
+      };
+    }
+  });
+  await new Promise((resolve, reject) => {
+    bridge.server.once("error", reject);
+    bridge.server.listen(0, "127.0.0.1", resolve);
+  });
+  t.after(() => {
+    if (bridge.server.listening) bridge.server.close();
+  });
+  const port = bridge.server.address().port;
+
+  const preflight = await bridgeRequest(port, {
+    method: "OPTIONS",
+    headers: {
+      "access-control-request-method": "POST",
+      "access-control-request-headers": "content-type,x-codex-bridge-key",
+      "access-control-request-private-network": "true"
+    }
+  });
+  assert.equal(preflight.status, 204);
+  assert.equal(preflight.headers["access-control-allow-origin"], "https://xiaoqi8553.github.io");
+  assert.equal(preflight.headers["access-control-allow-private-network"], "true");
+
+  const blockedOrigin = await bridgeRequest(port, {
+    origin: "https://example.com",
+    headers: { "x-codex-bridge-key": "ABCD-2345" },
+    body: { accountName: "工作号" }
+  });
+  assert.equal(blockedOrigin.status, 403);
+
+  const wrongKey = await bridgeRequest(port, {
+    headers: { "x-codex-bridge-key": "WXYZ-6789" },
+    body: { accountName: "工作号" }
+  });
+  assert.equal(wrongKey.status, 401);
+  assert.equal(snapshotCalls, 0);
+
+  const success = await bridgeRequest(port, {
+    headers: { "x-codex-bridge-key": "ABCD-2345" },
+    body: { accountName: "工作号", syncCcSwitch: true }
+  });
+  assert.equal(success.status, 200);
+  assert.equal(snapshotCalls, 1);
+  assert.doesNotMatch(success.body, /SECRET|accountDir|backupPath/);
+  assert.match(indexSource, /targetAddressSpace:\s*"loopback"/);
+  assert.match(indexSource, /start-account-bridge\.bat/);
+  assert.doesNotMatch(extractFunction("syncAccountSnapshotViaBridge"), /localStorage/);
 });
 
 test("static build emits the OpenAI Sites worker contract", () => {
