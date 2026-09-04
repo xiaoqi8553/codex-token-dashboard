@@ -5,6 +5,7 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 const childProcess = require("child_process");
+const { safeAccountName } = require("./account-snapshot-process");
 
 function parseArgs(argv) {
   const args = {};
@@ -23,14 +24,6 @@ function fail(message, json) {
   if (json) console.log(JSON.stringify(payload, null, 2));
   else console.error(message);
   process.exitCode = 1;
-}
-
-function safeAccountName(value) {
-  const name = String(value || "").trim();
-  if (!name || name === "." || name === ".." || name.length > 64 || !/^[\w\u4e00-\u9fff .()\-]+$/u.test(name)) {
-    throw new Error("账号名称只能包含中文、字母、数字、空格、点、括号或短横线，长度不超过 64 个字符");
-  }
-  return name;
 }
 
 function atomicCopy(source, target) {
@@ -83,7 +76,7 @@ function main() {
   const json = Boolean(args.json);
   try {
     const codexHome = path.resolve(args["codex-home"] || process.env.CODEX_HOME || path.join(os.homedir(), ".codex"));
-    const accountRoot = path.resolve(args["account-root"] || process.env.CODEX_ACCOUNT_ARCHIVE_DIR || path.join(codexHome, "XQ_acc"));
+    const accountRoot = path.resolve(args["account-root"] || process.env.CODEX_ACCOUNT_ARCHIVE_DIR || path.join(codexHome, "XQ", "_acc"));
     const accountName = safeAccountName(args["account-name"] || args.name);
     const authPath = path.join(codexHome, "auth.json");
     const configPath = path.join(codexHome, "config.toml");

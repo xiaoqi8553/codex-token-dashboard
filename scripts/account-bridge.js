@@ -4,6 +4,7 @@ const childProcess = require("child_process");
 const crypto = require("crypto");
 const http = require("http");
 const path = require("path");
+const { parseSnapshotProcessOutput } = require("./account-snapshot-process");
 
 const DEFAULT_PORT = 43127;
 const DEFAULT_SITE_URL = "https://xiaoqi8553.github.io/codex-token-dashboard/?accountBridge=1";
@@ -66,11 +67,10 @@ function runAccountSnapshot(payload, options = {}) {
     child.stderr.on("data", chunk => { stderr += chunk; });
     child.on("error", reject);
     child.on("close", code => {
-      const output = stdout.trim().split(/\r?\n/).filter(Boolean).pop() || "";
       try {
-        resolve(JSON.parse(output));
-      } catch {
-        reject(new Error(stderr.trim() || `账号快照脚本退出码：${code}`));
+        resolve(parseSnapshotProcessOutput(stdout, stderr, code));
+      } catch (error) {
+        reject(error);
       }
     });
   });

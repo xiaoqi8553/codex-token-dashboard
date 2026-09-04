@@ -14,6 +14,7 @@ const auditSource = fs.readFileSync(path.join(root, "scripts", "ui-review.js"), 
 const visualSource = fs.readFileSync(path.join(root, "scripts", "visual-check.js"), "utf8");
 const serverSource = fs.readFileSync(path.join(root, "server.js"), "utf8");
 const { createBridge } = require(path.join(root, "scripts", "account-bridge.js"));
+const { safeAccountName } = require(path.join(root, "scripts", "account-snapshot-process.js"));
 const packageJson = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
 
 function bridgeRequest(port, options = {}) {
@@ -274,11 +275,11 @@ test("usage trend has no persistent numeric overlays or summaries", () => {
   assert.doesNotMatch(cacheSource, /峰值 active|缓存 \$\{formatToken|命中率 \$\{avgHit\}% \/ active/);
 });
 
-test("0.8.2 uses the engineering workspace shell and removes Work Replay", () => {
-  assert.equal(packageJson.version, "0.8.2");
+test("0.8.3 uses the engineering workspace shell and removes Work Replay", () => {
+  assert.equal(packageJson.version, "0.8.3");
   assert.match(indexSource, /class="side-rail shell"/);
   assert.match(indexSource, /id="viewTitle"/);
-  assert.match(indexSource, /v0\.8\.2/);
+  assert.match(indexSource, /v0\.8\.3/);
   assert.doesNotMatch(indexSource, /replayBtn|replay\.html|工作回放/);
   assert.doesNotMatch(buildSource, /replay\.html/);
   assert.equal(fs.existsSync(path.join(root, "replay.html")), false);
@@ -306,6 +307,14 @@ test("local account snapshot keeps credentials out of metadata", t => {
   assert.doesNotMatch(fs.readFileSync(path.join(target, "metadata.json"), "utf8"), /SECRET_SHOULD_NOT_BE_IN_METADATA/);
   assert.match(serverSource, /\/api\/account\/snapshot/);
   assert.match(serverSource, /PUBLIC_ACCESS \|\| !isLoopbackHost\(HOST\)/);
+});
+
+test("account snapshot names accept emails but reject unsafe Windows names", () => {
+  assert.equal(safeAccountName("user.name+codex@example.com"), "user.name+codex@example.com");
+  assert.equal(safeAccountName("账号 A（Plus）"), "账号 A（Plus）");
+  assert.throws(() => safeAccountName("../escape"));
+  assert.throws(() => safeAccountName("CON"));
+  assert.throws(() => safeAccountName("trailing."));
 });
 
 test("GitHub Pages account bridge requires origin and one-time pairing key", async t => {
@@ -370,6 +379,45 @@ test("GitHub Pages account bridge requires origin and one-time pairing key", asy
   assert.match(indexSource, /targetAddressSpace:\s*"loopback"/);
   assert.match(indexSource, /start-account-bridge\.bat/);
   assert.doesNotMatch(extractFunction("syncAccountSnapshotViaBridge"), /localStorage/);
+});
+
+test("GitHub Pages bridge runs the real snapshot process and writes the requested archive path", async t => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-token-bridge-e2e-"));
+  t.after(() => fs.rmSync(tempRoot, { recursive: true, force: true }));
+  const codexHome = path.join(tempRoot, ".codex");
+  fs.mkdirSync(codexHome, { recursive: true });
+  fs.writeFileSync(path.join(codexHome, "auth.json"), JSON.stringify({
+    tokens: { account_id: "bridge-test", access_token: "BRIDGE_TEST_SECRET" }
+  }));
+  fs.writeFileSync(path.join(codexHome, "config.toml"), "model = \"bridge-test-model\"\n");
+
+  const bridge = createBridge({
+    port: 0,
+    pairingKey: "ABCD2345",
+    closeAfterSuccess: false,
+    codexHome
+  });
+  await new Promise((resolve, reject) => {
+    bridge.server.once("error", reject);
+    bridge.server.listen(0, "127.0.0.1", resolve);
+  });
+  t.after(() => {
+    if (bridge.server.listening) bridge.server.close();
+  });
+
+  const response = await bridgeRequest(bridge.server.address().port, {
+    headers: { "x-codex-bridge-key": "ABCD-2345" },
+    body: { accountName: "user.name+codex@example.com" }
+  });
+  assert.equal(response.status, 200, response.body);
+  assert.equal(JSON.parse(response.body).ok, true);
+
+  const target = path.join(codexHome, "XQ", "_acc", "user.name+codex@example.com");
+  assert.equal(fs.existsSync(path.join(target, "auth.json")), true);
+  assert.equal(fs.existsSync(path.join(target, "config.toml")), true);
+  assert.equal(JSON.parse(fs.readFileSync(path.join(target, "auth.json"), "utf8")).tokens.account_id, "bridge-test");
+  assert.doesNotMatch(fs.readFileSync(path.join(target, "metadata.json"), "utf8"), /BRIDGE_TEST_SECRET/);
+  assert.doesNotMatch(response.body, /BRIDGE_TEST_SECRET|accountDir/);
 });
 
 test("Windows account bridge launcher is CRLF-safe and keeps diagnostics visible", () => {

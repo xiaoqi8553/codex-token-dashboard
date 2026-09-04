@@ -62,6 +62,7 @@
 - 2026-07-13: Dark mode reused `--ink` as an active-control background while keeping hardcoded white text, producing white-on-white navigation and range buttons. Active controls need explicit theme-aware foreground/background tokens and a 4.5:1 contrast check.
 - 2026-07-13: 0.7.0 still centered the hero KPI while every neighboring KPI was left-aligned, and retained first/last bar-label edge exceptions. Emphasis must not introduce a separate alignment model; measure actual text insets and label-to-bar center coordinates instead of checking only element boxes.
 - 2026-09-04: The GitHub Pages-only account bridge was initially omitted from the UI audit matrix, so both its form and the static-mode welcome panels escaped mobile checks. Every host-, query-, or mode-specific UI state must be reproduced in `ui:shot` and `ui:audit` at all supported viewports before release.
+- 2026-09-04: Account bridge 0.8.2 verified the launcher and status endpoint but stubbed the snapshot runner, missing broken multi-line JSON parsing and overly narrow account-name validation. Bridge releases must exercise the real child process through HTTP, verify files on disk, test common email-style names, and confirm sanitized responses before release.
 
 ## Before Finishing
 

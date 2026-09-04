@@ -7,7 +7,7 @@
 ![Codex Token Dashboard cover](screenshots/project-cover.svg)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-0f766e.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.8.2-17202e.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.8.3-17202e.svg)](CHANGELOG.md)
 [![OpenAI Sites](https://img.shields.io/badge/deploy-OpenAI%20Sites-275dcc.svg)](https://codex-token-dashboard.hazel-saepemx.chatgpt.site)
 [![Netlify Demo](https://img.shields.io/badge/demo-codetoken.netlify.app-2f6fed.svg)](https://codetoken.netlify.app/)
 [![GitHub Pages](https://img.shields.io/badge/pages-github.io-111827.svg)](https://xiaoqi8553.github.io/codex-token-dashboard/)
@@ -148,7 +148,7 @@ npm run visual:test
 
 ### 手动保存 Codex 账号快照
 
-切换账号并完成登录后，在本地 Node 模式的“系统设置”页面填写账号名称，点击“点击更新”。看板会把当前 `~/.codex/auth.json` 和 `~/.codex/config.toml` 保存到 `~/.codex/XQ_acc/<账号名称>/`，并为同名快照保留覆盖前的备份。
+切换账号并完成登录后，在本地 Node 模式的“系统设置”页面填写账号名称，点击“点击更新”。看板会把当前 `~/.codex/auth.json` 和 `~/.codex/config.toml` 保存到 `~/.codex/XQ/_acc/<账号名称>/`，并为同名快照保留覆盖前的备份。旧版 `~/.codex/XQ_acc/` 仍会被识别，但新的快照统一写入前述目录。
 
 也可以直接运行项目根目录的 `sync-codex-account.bat`：
 

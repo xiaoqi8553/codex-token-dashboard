@@ -3289,7 +3289,7 @@
         </div>
         <div class="rail-version">
           <span>LOCAL-FIRST</span>
-          <strong>v0.8.2</strong>
+          <strong>v0.8.3</strong>
         </div>
       </div>
     </aside>
@@ -6334,7 +6334,7 @@
                 <h2>设置 / 关于</h2>
                 <p class="muted">检查当前运行方式、隐私边界、版本和公开部署状态。</p>
               </div>
-              <span class="badge">版本 0.8.2</span>
+              <span class="badge">版本 0.8.3</span>
             </div>
             <div class="settings-grid">
               <div class="settings-card">
@@ -6391,7 +6391,7 @@
               </div>
               <div class="settings-card account-sync-card">
                 <strong>Codex 账号快照</strong>
-                <p>手动切换账号并登录完成后，在这里保存当前 <code>auth.json</code> 和 <code>config.toml</code> 到本机 <code>~/.codex/XQ_acc</code>，下次可作为账号备份使用。</p>
+                <p>手动切换账号并登录完成后，在这里保存当前 <code>auth.json</code> 和 <code>config.toml</code> 到本机 <code>~/.codex/XQ/_acc</code>，下次可作为账号备份使用。</p>
                 ${accountSyncAvailable ? `
                   <div class="account-sync-form">
                     <label class="account-sync-field">账号名称<input id="accountSnapshotName" type="text" maxlength="64" placeholder="例如：工作号 / 账号A" autocomplete="off"></label>
@@ -6750,7 +6750,7 @@
       const summary = summarize(safeRecords.map(record => ({ ...record, activeTokens: activeTokens(record), uncachedInputTokens: uncachedInputTokens(record), hitRate: cacheHitRateOf(record) })));
       return {
         snapshotVersion: 1,
-        appVersion: "0.8.2",
+        appVersion: "0.8.3",
         generatedAt: new Date().toISOString(),
         privacy: {
           anonymized: true,

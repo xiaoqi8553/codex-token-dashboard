@@ -4,6 +4,7 @@ const path = require("path");
 const os = require("os");
 const crypto = require("crypto");
 const childProcess = require("child_process");
+const { parseSnapshotProcessOutput, safeAccountName } = require("./scripts/account-snapshot-process");
 
 const ROOT = __dirname;
 const DATA_DIR = path.join(ROOT, "data");
@@ -311,21 +312,27 @@ function firstScalar(...values) {
 let endpointEvidenceCache;
 
 function hasRightCodeConfig() {
-  const accountRoot = path.join(os.homedir(), ".codex", "XQ_acc");
-  let entries = [];
-  try {
-    entries = fs.readdirSync(accountRoot, { withFileTypes: true });
-  } catch {
-    return false;
-  }
-  return entries.some(entry => {
-    if (!entry.isDirectory()) return false;
-    const configPath = path.join(accountRoot, entry.name, "config.toml");
-    const authPath = path.join(accountRoot, entry.name, "auth.json");
-    const configText = readTextFile(configPath).toLowerCase();
-    if (!configText.includes("right.codes") && !configText.includes("right code")) return false;
-    const authText = readTextFile(authPath).toLowerCase();
-    return authText.includes("openai_api_key") || authText.includes("\"key\"");
+  const codexHome = path.join(os.homedir(), ".codex");
+  const configuredRoot = process.env.CODEX_ACCOUNT_ARCHIVE_DIR;
+  const accountRoots = configuredRoot
+    ? [path.resolve(configuredRoot)]
+    : [path.join(codexHome, "XQ", "_acc"), path.join(codexHome, "XQ_acc")];
+  return accountRoots.some(accountRoot => {
+    let entries = [];
+    try {
+      entries = fs.readdirSync(accountRoot, { withFileTypes: true });
+    } catch {
+      return false;
+    }
+    return entries.some(entry => {
+      if (!entry.isDirectory()) return false;
+      const configPath = path.join(accountRoot, entry.name, "config.toml");
+      const authPath = path.join(accountRoot, entry.name, "auth.json");
+      const configText = readTextFile(configPath).toLowerCase();
+      if (!configText.includes("right.codes") && !configText.includes("right code")) return false;
+      const authText = readTextFile(authPath).toLowerCase();
+      return authText.includes("openai_api_key") || authText.includes("\"key\"");
+    });
   });
 }
 
@@ -1371,10 +1378,7 @@ function isLoopbackHost(host) {
 }
 
 function runAccountSnapshot(payload) {
-  const accountName = String(payload.accountName || "").trim();
-  if (!accountName || accountName.length > 64 || /[\\/:*?"<>|]/.test(accountName)) {
-    throw new Error("请输入有效的账号名称，不能包含路径分隔符或 Windows 保留字符");
-  }
+  const accountName = safeAccountName(payload.accountName);
   const scriptPath = path.join(ROOT, "scripts", "sync-codex-account.js");
   const args = [scriptPath, "--account-name", accountName, "--json"];
   if (payload.syncCcSwitch === true) args.push("--sync-ccswitch");
@@ -1386,12 +1390,10 @@ function runAccountSnapshot(payload) {
     child.stderr.on("data", chunk => { stderr += chunk; });
     child.on("error", reject);
     child.on("close", code => {
-      const output = stdout.trim().split(/\r?\n/).filter(Boolean).pop() || "";
       try {
-        const result = JSON.parse(output);
-        resolve(result);
-      } catch {
-        reject(new Error(stderr.trim() || `账号快照脚本退出码：${code}`));
+        resolve(parseSnapshotProcessOutput(stdout, stderr, code));
+      } catch (error) {
+        reject(error);
       }
     });
   });
