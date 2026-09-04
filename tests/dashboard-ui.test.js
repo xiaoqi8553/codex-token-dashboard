@@ -1,5 +1,7 @@
 const assert = require("node:assert/strict");
+const childProcess = require("node:child_process");
 const fs = require("node:fs");
+const os = require("node:os");
 const path = require("node:path");
 const test = require("node:test");
 const vm = require("node:vm");
@@ -9,6 +11,7 @@ const indexSource = fs.readFileSync(path.join(root, "index.html"), "utf8");
 const buildSource = fs.readFileSync(path.join(root, "scripts", "build-static.js"), "utf8");
 const auditSource = fs.readFileSync(path.join(root, "scripts", "ui-review.js"), "utf8");
 const visualSource = fs.readFileSync(path.join(root, "scripts", "visual-check.js"), "utf8");
+const serverSource = fs.readFileSync(path.join(root, "server.js"), "utf8");
 const packageJson = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
 
 function extractFunction(name) {
@@ -228,6 +231,8 @@ test("UI audit blocks key number overflow, KPI drift, and tiny daily labels", ()
   assert.match(indexSource, /--control-active-ink:\s*#0b1522/);
   assert.match(visualSource, /navContrast >= 4\.5/);
   assert.match(visualSource, /rangeContrast >= 4\.5/);
+  assert.match(auditSource, /nodeModules.*playwright/);
+  assert.match(visualSource, /nodeModules.*playwright/);
 });
 
 test("usage trend has no persistent numeric overlays or summaries", () => {
@@ -241,14 +246,38 @@ test("usage trend has no persistent numeric overlays or summaries", () => {
   assert.doesNotMatch(cacheSource, /峰值 active|缓存 \$\{formatToken|命中率 \$\{avgHit\}% \/ active/);
 });
 
-test("0.7.2 uses the engineering workspace shell and removes Work Replay", () => {
-  assert.equal(packageJson.version, "0.7.2");
+test("0.8.0 uses the engineering workspace shell and removes Work Replay", () => {
+  assert.equal(packageJson.version, "0.8.0");
   assert.match(indexSource, /class="side-rail shell"/);
   assert.match(indexSource, /id="viewTitle"/);
-  assert.match(indexSource, /v0\.7\.2/);
+  assert.match(indexSource, /v0\.8\.0/);
   assert.doesNotMatch(indexSource, /replayBtn|replay\.html|工作回放/);
   assert.doesNotMatch(buildSource, /replay\.html/);
   assert.equal(fs.existsSync(path.join(root, "replay.html")), false);
+});
+
+test("local account snapshot keeps credentials out of metadata", t => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-token-account-"));
+  t.after(() => fs.rmSync(tempRoot, { recursive: true, force: true }));
+  const codexHome = path.join(tempRoot, ".codex");
+  const accountRoot = path.join(tempRoot, "XQ_acc");
+  fs.mkdirSync(codexHome, { recursive: true });
+  fs.writeFileSync(path.join(codexHome, "auth.json"), JSON.stringify({ tokens: { account_id: "test-account", access_token: "SECRET_SHOULD_NOT_BE_IN_METADATA" } }));
+  fs.writeFileSync(path.join(codexHome, "config.toml"), "model = \"gpt-5\"\n");
+  const result = childProcess.spawnSync(process.execPath, [
+    path.join(root, "scripts", "sync-codex-account.js"),
+    "--account-name", "测试账号",
+    "--codex-home", codexHome,
+    "--account-root", accountRoot,
+    "--json"
+  ], { encoding: "utf8" });
+  assert.equal(result.status, 0, result.stderr);
+  const target = path.join(accountRoot, "测试账号");
+  assert.equal(fs.existsSync(path.join(target, "auth.json")), true);
+  assert.equal(fs.existsSync(path.join(target, "config.toml")), true);
+  assert.doesNotMatch(fs.readFileSync(path.join(target, "metadata.json"), "utf8"), /SECRET_SHOULD_NOT_BE_IN_METADATA/);
+  assert.match(serverSource, /\/api\/account\/snapshot/);
+  assert.match(serverSource, /PUBLIC_ACCESS \|\| !isLoopbackHost\(HOST\)/);
 });
 
 test("static build emits the OpenAI Sites worker contract", () => {

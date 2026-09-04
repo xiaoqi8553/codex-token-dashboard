@@ -7,7 +7,7 @@
 ![Codex Token Dashboard cover](screenshots/project-cover.svg)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-0f766e.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.7.2-17202e.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.8.0-17202e.svg)](CHANGELOG.md)
 [![OpenAI Sites](https://img.shields.io/badge/deploy-OpenAI%20Sites-275dcc.svg)](https://codex-token-dashboard.hazel-saepemx.chatgpt.site)
 [![Netlify Demo](https://img.shields.io/badge/demo-codetoken.netlify.app-2f6fed.svg)](https://codetoken.netlify.app/)
 [![GitHub Pages](https://img.shields.io/badge/pages-github.io-111827.svg)](https://xiaoqi8553.github.io/codex-token-dashboard/)
@@ -145,6 +145,19 @@ npm run ui:audit
 npm run ui:report
 npm run visual:test
 ```
+
+### 手动保存 Codex 账号快照
+
+切换账号并完成登录后，在本地 Node 模式的“系统设置”页面填写账号名称，点击“点击更新”。看板会把当前 `~/.codex/auth.json` 和 `~/.codex/config.toml` 保存到 `~/.codex/XQ_acc/<账号名称>/`，并为同名快照保留覆盖前的备份。
+
+也可以直接运行项目根目录的 `sync-codex-account.bat`：
+
+```bat
+sync-codex-account.bat 工作号
+sync-codex-account.bat 工作号 --sync-ccswitch
+```
+
+“同步 CC Switch 当前官方配置”是显式勾选项。它只更新 CC Switch 数据库里的 Codex 官方配置，不会切换当前 provider；同步前会在 `~/.cc-switch/backups/` 留下数据库备份。若 CC Switch 正在写数据库，请先退出 CC Switch 再重试。账号快照不会上传到 Sites、GitHub 或 Token Dashboard。
 
 脚本会启动本地页面，分别截取总览、AI 使用日历、任务复盘、明细表、设置 / 关于页面，并覆盖这些尺寸：
 

@@ -1,5 +1,9 @@
 # Release Notes
 
+## v0.8.0 - Local Codex Account Snapshots
+
+0.8.0 新增本地账号快照工具。用户手动切换 Codex 账号并完成登录后，可在系统设置页面点击更新，或运行 `sync-codex-account.bat`，把当前 auth/config 保存到 `~/.codex/XQ_acc/<账号名称>/`。CC Switch 同步需要显式勾选或传入参数，并自动保留数据库备份；公开站点和浏览器静态模式不会接触本机凭据。
+
 ## v0.7.2 - Daily Trend Visual Refinement
 
 0.7.2 重做每日 Token 趋势柱体的视觉层次：加入轻量网格、统一基线、渐变堆叠色、顶部高光、悬停抬升和更清晰的数值胶囊标签。数据口径、日期补齐、点击筛选和 hover tooltip 保持不变。

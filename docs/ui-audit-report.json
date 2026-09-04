@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-14T02:12:02.296Z",
+  "generatedAt": "2026-09-04T02:43:54.505Z",
   "baseUrl": "http://127.0.0.1:8787",
   "screenshotsDir": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current",
   "pages": [
@@ -161,7 +161,7 @@
         "viewportHeight": 1080,
         "filtersVisible": false,
         "charts": [],
-        "cards": 7,
+        "cards": 8,
         "h1Count": 1,
         "activeNav": "05系统设置",
         "kpiBaselineDrift": 0,
@@ -329,7 +329,7 @@
         "viewportHeight": 768,
         "filtersVisible": false,
         "charts": [],
-        "cards": 7,
+        "cards": 8,
         "h1Count": 1,
         "activeNav": "05系统设置",
         "kpiBaselineDrift": 0,
@@ -438,7 +438,7 @@
         "charts": [
           {
             "selector": ".task-layout",
-            "height": 1190.1875,
+            "height": 1175.34375,
             "hasGraphic": true,
             "hasEmpty": true
           }
@@ -497,7 +497,7 @@
         "viewportHeight": 844,
         "filtersVisible": false,
         "charts": [],
-        "cards": 7,
+        "cards": 8,
         "h1Count": 1,
         "activeNav": "05系统设置",
         "kpiBaselineDrift": 0,

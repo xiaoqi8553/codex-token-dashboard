@@ -3187,6 +3187,52 @@
       .stack span { transition: none; }
     }
   </style>
+  <style id="v080-account-sync">
+    .account-sync-card {
+      grid-column: 1 / -1;
+      border-color: color-mix(in srgb, var(--official) 34%, var(--line));
+      background:
+        linear-gradient(135deg, color-mix(in srgb, var(--official) 8%, var(--panel-2)), var(--panel-2));
+    }
+
+    .account-sync-card > p { max-width: 78ch; }
+    .account-sync-form {
+      display: grid;
+      grid-template-columns: minmax(180px, 280px) auto auto;
+      gap: 10px;
+      align-items: end;
+    }
+    .account-sync-form label:first-child {
+      display: grid;
+      gap: 5px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .account-sync-form input[type="text"] { width: 100%; }
+    .account-sync-check {
+      min-height: 36px;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    .account-sync-check input { accent-color: var(--official); }
+    .account-sync-status {
+      min-height: 18px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    .account-sync-status.error { color: var(--bad); }
+    .account-sync-status.success { color: var(--good); }
+    @media (max-width: 760px) {
+      .account-sync-form { grid-template-columns: 1fr; align-items: stretch; }
+      .account-sync-check { min-height: 32px; }
+    }
+  </style>
 </head>
 <body>
   <main class="app">
@@ -3220,7 +3266,7 @@
         </div>
         <div class="rail-version">
           <span>LOCAL-FIRST</span>
-          <strong>v0.7.2</strong>
+          <strong>v0.8.0</strong>
         </div>
       </div>
     </aside>
@@ -6254,6 +6300,7 @@
         : state.staticSourceType === "demo"
           ? "sample-data/demo-usage-index.json"
           : state.staticPayload?.sessionsDir || "用户手动导入";
+      const accountSyncAvailable = state.dataMode === "server" && state.data?.config?.accountSyncAvailable;
       els.viewPanel.innerHTML = `
         <section class="settings-page">
           <article class="panel">
@@ -6262,7 +6309,7 @@
                 <h2>设置 / 关于</h2>
                 <p class="muted">检查当前运行方式、隐私边界、版本和公开部署状态。</p>
               </div>
-              <span class="badge">版本 0.7.2</span>
+              <span class="badge">版本 0.8.0</span>
             </div>
             <div class="settings-grid">
               <div class="settings-card">
@@ -6316,6 +6363,18 @@
                   <span>定位：本地优先的 AI 使用账本</span>
                   <span>公开部署：OpenAI Sites / Netlify / GitHub Pages</span>
                 </div>
+              </div>
+              <div class="settings-card account-sync-card">
+                <strong>Codex 账号快照</strong>
+                <p>手动切换账号并登录完成后，在这里保存当前 <code>auth.json</code> 和 <code>config.toml</code> 到本机 <code>~/.codex/XQ_acc</code>，下次可作为账号备份使用。</p>
+                ${accountSyncAvailable ? `
+                  <div class="account-sync-form">
+                    <label>账号名称<input id="accountSnapshotName" type="text" maxlength="64" placeholder="例如：工作号 / 账号A" autocomplete="off"></label>
+                    <label class="account-sync-check"><input id="accountSyncCcSwitch" type="checkbox">同步 CC Switch 当前官方配置</label>
+                    <button class="btn compact" type="button" data-action="sync-account">点击更新</button>
+                  </div>
+                  <div class="account-sync-status" id="accountSyncStatus">仅本机私有 Node 模式可用；不会在页面显示 Token 内容。</div>
+                ` : `<div class="account-sync-status">请使用本机私有 Node 模式启动看板后使用。公开站点和浏览器静态导入模式不会接触本机 auth.json。</div>`}
               </div>
             </div>
           </article>
@@ -6654,7 +6713,7 @@
       const summary = summarize(safeRecords.map(record => ({ ...record, activeTokens: activeTokens(record), uncachedInputTokens: uncachedInputTokens(record), hitRate: cacheHitRateOf(record) })));
       return {
         snapshotVersion: 1,
-        appVersion: "0.7.2",
+        appVersion: "0.8.0",
         generatedAt: new Date().toISOString(),
         privacy: {
           anonymized: true,
@@ -7079,6 +7138,53 @@
       els.chartTooltip.classList.remove("show");
     }
 
+    async function syncAccountSnapshot() {
+      const nameInput = document.querySelector("#accountSnapshotName");
+      const check = document.querySelector("#accountSyncCcSwitch");
+      const status = document.querySelector("#accountSyncStatus");
+      const button = document.querySelector('[data-action="sync-account"]');
+      const accountName = nameInput?.value.trim() || "";
+      if (!accountName) {
+        if (status) {
+          status.textContent = "请先填写账号名称。";
+          status.className = "account-sync-status error";
+        }
+        nameInput?.focus();
+        return;
+      }
+      if (button) button.disabled = true;
+      if (status) {
+        status.textContent = "正在保存当前账号文件，请不要同时切换 Codex 配置。";
+        status.className = "account-sync-status";
+      }
+      try {
+        const response = await apiFetch("/api/account/snapshot", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ accountName, syncCcSwitch: Boolean(check?.checked) })
+        });
+        const result = await response.json();
+        if (!response.ok || !result.ok) throw new Error(result.error || "账号快照更新失败");
+        const cc = result.ccswitch?.status === "updated"
+          ? "，CC Switch 官方配置也已更新"
+          : result.ccswitch?.requested
+            ? `，CC Switch 未同步：${result.ccswitch.message || "请检查 CC Switch 状态"}`
+            : "";
+        if (status) {
+          status.textContent = `已更新账号“${accountName}”的本地快照${cc}。`;
+          status.className = result.ccswitch?.status === "failed" ? "account-sync-status error" : "account-sync-status success";
+        }
+        toast(`账号“${accountName}”已更新`);
+      } catch (error) {
+        if (status) {
+          status.textContent = error.message || "账号快照更新失败";
+          status.className = "account-sync-status error";
+        }
+      } finally {
+        if (button) button.disabled = false;
+      }
+    }
+
     function handlePanelAction(action) {
       if (action === "load-demo") {
         loadDemoData("已重新加载示例数据。").catch(error => setStatus(error.message || "示例数据加载失败", "error"));
@@ -7088,6 +7194,7 @@
       if (action === "import-file") chooseImportFile();
       if (action === "import-sessions") chooseImportSessionsFolder();
       if (action === "request-location") requestLocation();
+      if (action === "sync-account") syncAccountSnapshot();
     }
 
     function weatherCodeLabel(code) {

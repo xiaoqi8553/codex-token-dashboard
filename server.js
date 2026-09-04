@@ -1327,7 +1327,8 @@ async function apiUsage(url) {
     config: {
       publicAccess: PUBLIC_ACCESS,
       anonymizeData: ANONYMIZE_DATA,
-      defaultDateRange: CONFIG.defaultDateRange
+      defaultDateRange: CONFIG.defaultDateRange,
+      accountSyncAvailable: !PUBLIC_ACCESS && isLoopbackHost(HOST)
     },
     stats: index.stats,
     filters: query,
@@ -1363,6 +1364,37 @@ function sanitizePayload(payload) {
     records: Array.isArray(payload.records) ? payload.records.map(sanitizeRecord) : payload.records,
     calendarRecords: Array.isArray(payload.calendarRecords) ? payload.calendarRecords.map(sanitizeRecord) : payload.calendarRecords
   };
+}
+
+function isLoopbackHost(host) {
+  return ["127.0.0.1", "localhost", "::1"].includes(String(host || "").toLowerCase());
+}
+
+function runAccountSnapshot(payload) {
+  const accountName = String(payload.accountName || "").trim();
+  if (!accountName || accountName.length > 64 || /[\\/:*?"<>|]/.test(accountName)) {
+    throw new Error("请输入有效的账号名称，不能包含路径分隔符或 Windows 保留字符");
+  }
+  const scriptPath = path.join(ROOT, "scripts", "sync-codex-account.js");
+  const args = [scriptPath, "--account-name", accountName, "--json"];
+  if (payload.syncCcSwitch === true) args.push("--sync-ccswitch");
+  return new Promise((resolve, reject) => {
+    const child = childProcess.spawn(process.execPath, args, { cwd: ROOT, windowsHide: true });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.on("data", chunk => { stdout += chunk; });
+    child.stderr.on("data", chunk => { stderr += chunk; });
+    child.on("error", reject);
+    child.on("close", code => {
+      const output = stdout.trim().split(/\r?\n/).filter(Boolean).pop() || "";
+      try {
+        const result = JSON.parse(output);
+        resolve(result);
+      } catch {
+        reject(new Error(stderr.trim() || `账号快照脚本退出码：${code}`));
+      }
+    });
+  });
 }
 
 function saveImport(payload) {
@@ -1449,7 +1481,8 @@ const server = http.createServer(async (req, res) => {
         publicAccess: PUBLIC_ACCESS,
         anonymizeData: ANONYMIZE_DATA,
         authRequired: PUBLIC_ACCESS,
-        defaultDateRange: CONFIG.defaultDateRange
+        defaultDateRange: CONFIG.defaultDateRange,
+        accountSyncAvailable: !PUBLIC_ACCESS && isLoopbackHost(HOST)
       });
     }
     if (req.method === "GET" && url.pathname === "/api/usage") return sendJson(res, await apiUsage(url));
@@ -1463,6 +1496,15 @@ const server = http.createServer(async (req, res) => {
       const filePath = saveImport(payload);
       const index = await refreshIndexCache({ force: true });
       return sendJson(res, { ok: true, importedPath: PUBLIC_ACCESS || ANONYMIZE_DATA ? "[hidden]" : filePath, updatedAt: index.updatedAt });
+    }
+    if (req.method === "POST" && url.pathname === "/api/account/snapshot") {
+      if (PUBLIC_ACCESS || !isLoopbackHost(HOST)) {
+        return sendJson(res, { ok: false, error: "账号快照只允许本机私有模式使用。" }, 403);
+      }
+      const body = await readRequestBody(req);
+      const payload = JSON.parse(body || "{}");
+      const result = await runAccountSnapshot(payload);
+      return sendJson(res, result, result.ok ? 200 : 500);
     }
     serveStatic(req, res, url);
   } catch (error) {
