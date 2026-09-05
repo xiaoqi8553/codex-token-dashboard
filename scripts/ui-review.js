@@ -20,7 +20,8 @@ const pages = [
   { key: "tasks", name: "任务复盘", view: "tasks", screenshot: "tasks", url: baseUrl },
   { key: "details", name: "明细表", view: "details", screenshot: "details", url: baseUrl },
   { key: "settings", name: "设置 / 关于", view: "settings", screenshot: "settings", url: baseUrl },
-  { key: "settings-bridge", name: "GitHub Pages 账号桥接", view: "settings", screenshot: "settings-bridge", url: `${baseUrl}?accountBridge=1`, staticMode: true }
+  { key: "settings-bridge", name: "GitHub Pages 账号桥接", view: "settings", screenshot: "settings-bridge", url: `${baseUrl}?accountBridge=1`, staticMode: true },
+  { key: "overview-permission", name: "浏览器缓存 / 待授权", view: "overview", screenshot: "overview-permission", url: baseUrl, staticMode: true }
 ];
 
 const viewports = [
@@ -146,6 +147,16 @@ async function openPage(page, pageInfo) {
     });
   }
   await page.goto(pageInfo.url || baseUrl, { waitUntil: "networkidle" });
+  if (pageInfo.key === "overview-permission") {
+    await page.waitForFunction(() => state.initialized && !state.loading);
+    await page.evaluate(async () => {
+      state.staticSourceType = "sessions-folder";
+      state.staticPayload.sourceType = "sessions-folder";
+      state.sessionsDirectoryHandle = { queryPermission: async () => "prompt" };
+      renderStaticUsage();
+      await loadUsage({ silent: true, auto: true });
+    });
+  }
   if (pageInfo.view !== "overview") {
     await page.locator(`[data-view="${pageInfo.view}"]`).click();
     await page.waitForTimeout(450);

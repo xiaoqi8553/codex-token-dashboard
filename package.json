@@ -1,6 +1,6 @@
 {
   "name": "codex-token-dashboard",
-  "version": "0.8.6",
+  "version": "0.8.7",
   "private": false,
   "description": "Local Codex token usage dashboard with official Plus and relay import support.",
   "scripts": {
@@ -8,6 +8,7 @@
     "dev": "node server.js",
     "scan": "node server.js --scan",
     "test": "node --test tests/*.test.js",
+    "sync:test": "node scripts/sync-check.js",
     "build": "node scripts/build-static.js",
     "account:bridge": "node scripts/account-bridge.js --open",
     "visual:shot": "node scripts/visual-check.js --shot",

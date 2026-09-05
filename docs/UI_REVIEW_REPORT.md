@@ -27,6 +27,9 @@
 - docs/screenshots/current/settings-bridge-1920.png
 - docs/screenshots/current/settings-bridge-1366.png
 - docs/screenshots/current/settings-bridge-mobile.png
+- docs/screenshots/current/overview-permission-1920.png
+- docs/screenshots/current/overview-permission-1366.png
+- docs/screenshots/current/overview-permission-mobile.png
 
 ## 页面逐项检查
 
@@ -76,6 +79,15 @@
   - 保持当前结构，人工复核截图中的视觉观感。
 
 ### GitHub Pages 账号桥接
+- 1920：通过
+- 1366：通过
+- mobile：通过
+- 发现的问题：
+  - 未发现自动化规则命中的明显问题。
+- 修复建议：
+  - 保持当前结构，人工复核截图中的视觉观感。
+
+### 浏览器缓存 / 待授权
 - 1920：通过
 - 1366：通过
 - mobile：通过

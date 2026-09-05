@@ -3293,7 +3293,7 @@
         </div>
         <div class="rail-version">
           <span>LOCAL-FIRST</span>
-          <strong>v0.8.6</strong>
+          <strong>v0.8.7</strong>
         </div>
       </div>
     </aside>
@@ -3538,6 +3538,7 @@
       authSecret: localStorage.getItem("codexTokenDashboardSecret") || "",
       dataMode: "server",
       staticPayload: null,
+      staticCacheDirty: false,
       staticReadOnly: false,
       staticSourceType: "empty",
       sessionsDirectoryHandle: null,
@@ -3545,6 +3546,7 @@
       refreshFailures: 0,
       lastRefreshAt: 0,
       accountSyncUi: { busy: false, message: "", tone: "" },
+      initialized: false,
       accountBridgeLaunch: null
     };
 
@@ -3705,7 +3707,7 @@
       els.toDateDisplay.textContent = formatDateDisplay(els.toDate.value);
     }
 
-    function applyRange(range) {
+    function applyRange(range, options = {}) {
       state.range = range;
       setActiveRange(range);
       if (range === "today") {
@@ -3723,7 +3725,7 @@
       }
       syncDateDisplays();
       state.page = 1;
-      loadUsage();
+      if (options.load !== false) return loadUsage();
     }
 
     function formatInt(value) {
@@ -3915,14 +3917,14 @@
         els.statusNotice.className = "notice";
         return;
       }
-      if (type !== "error") {
+      if (type !== "error" && type !== "warning") {
         els.statusNotice.textContent = "";
         els.statusNotice.className = "notice";
         toast(message);
         return;
       }
       els.statusNotice.textContent = message;
-      els.statusNotice.className = "notice show error";
+      els.statusNotice.className = type === "error" ? "notice show error" : "notice show";
     }
 
     function setLoading(isLoading) {
@@ -4793,20 +4795,40 @@
         ? await extractBrowserEndpointEvidence(allEntries)
         : createSourceEvidence();
       const files = allEntries.filter(isSessionImportEntry);
+      // Reuse whole-file results; changed files always run through the existing parser.
+      // Evidence mode continues to reclassify using all current endpoint logs.
+      const previous = options.previousPayload;
+      const manifest = previous?.sessionFileManifest;
+      const reusable = browserSourceAttributionMode === "custom-fast" &&
+        manifest?.parserVersion === staticParserVersion && manifest?.mode === browserSourceAttributionMode && Array.isArray(manifest.files);
+      const previousFiles = new Map(reusable ? manifest.files.map(entry => [entry.relativePath, entry]) : []);
+      const nextFiles = [];
       const records = [];
       let parsedFiles = 0;
+      let reusedFiles = 0;
       let loadedBytes = 0;
       const totalBytes = files.reduce((sum, entry) => sum + toNumber(entry.file?.size), 0);
       const emitProgress = currentFileBytes => options.onProgress?.({
         loadedBytes: Math.min(loadedBytes + currentFileBytes, totalBytes),
         totalBytes,
-        parsedFiles,
+        parsedFiles: parsedFiles + reusedFiles,
         totalFiles: files.length,
         records: records.length
       });
       for (const entry of files) {
         const file = entry.file;
         const relativePath = entry.relativePath || file.webkitRelativePath || file.name;
+        const cached = previousFiles.get(relativePath);
+        const signature = { relativePath, size: file.size, lastModified: file.lastModified, start: records.length };
+        if (cached && cached.size === file.size && cached.lastModified === file.lastModified &&
+            Number.isInteger(cached.start) && Number.isInteger(cached.count) && cached.start >= 0 &&
+            cached.count >= 0 && cached.start + cached.count <= previous.records.length) {
+          for (const record of previous.records.slice(cached.start, cached.start + cached.count)) records.push(record);
+          nextFiles.push({ ...signature, count: cached.count });
+          reusedFiles += 1;
+          loadedBytes += toNumber(file.size);
+          continue;
+        }
         const meta = { sessionId: file.name, provider: "", source: "", model: "unknown", timestamp: new Date(file.lastModified || Date.now()).toISOString(), title: "", cwd: "", turnId: "", previousTotal: null };
         const before = records.length;
         let preview = "";
@@ -4859,18 +4881,23 @@
           }
         }
         parsedFiles += 1;
+        nextFiles.push({ ...signature, count: records.length - before });
         loadedBytes += toNumber(file.size);
         emitProgress(0);
         await yieldSessionImport();
       }
       const classifiedRecords = records.map(record => applyBrowserSourceEvidence(record, evidence));
-      return makeStaticPayload(classifiedRecords, {
+      const payload = makeStaticPayload(classifiedRecords, {
         sourceLabel: "浏览器 sessions 导入",
         sourceType: state.sessionsDirectoryHandle ? "sessions-folder" : "sessions-files",
         sessionFiles: files.length,
         parsedFiles,
+        reusedFiles,
         sourceEvidence: evidence.stats
       });
+      payload.sessionFileManifest = { parserVersion: staticParserVersion, mode: browserSourceAttributionMode, files: nextFiles };
+      emitProgress(0);
+      return payload;
     }
 
     async function refreshSessionsDirectoryHandle(message = "sessions 文件夹已重新扫描。", options = {}) {
@@ -4880,33 +4907,50 @@
       }
       const allowed = await hasDirectoryPermission(state.sessionsDirectoryHandle, !options.silent);
       if (!allowed) {
-        if (!options.silent) setStatus("浏览器没有读取该 sessions 文件夹的权限，请重新选择 sessions 文件夹。", "error");
+        setStatus(`${state.staticPayload?.records?.length ? "已显示上次保存的数据。" : "已记住 sessions 文件夹。"}文件夹读取权限需要确认，请点击“同步数据”授权；若仍未恢复，请重新选择 sessions 文件夹。`, "warning");
         return false;
       }
+      const started = performance.now();
       if (!options.silent) setStatus(`正在重新读取 ${state.sessionsDirectoryName || "sessions"} 文件夹...`);
       const files = await collectDirectoryFiles(state.sessionsDirectoryHandle);
+      const previous = !options.resetCache && state.staticSourceType === "sessions-folder" ? state.staticPayload : null;
       const payload = await parseSessionFiles(files, {
+        previousPayload: previous,
         onProgress: options.silent ? null : reportSessionImportProgress
       });
       state.dataMode = "static";
       state.staticPayload = payload;
       state.staticSourceType = "sessions-folder";
+      if (options.startupRange) applyRange(options.startupRange, { load: false });
       if (options.fitRange) fitDateRangeToRecords(payload.records, { preservePreset: true });
-      await cacheStaticPayload(payload);
-      renderStaticUsage(options.silent ? "" : `${message}${formatInt(payload.records.length)} 条记录。`);
+      const unchanged = previous && payload.stats.parsedFiles === 0 &&
+        payload.stats.reusedFiles === payload.stats.sessionFiles &&
+        previous.sessionFileManifest?.files.length === payload.stats.sessionFiles &&
+        browserSourceAttributionMode === "custom-fast";
+      if (unchanged) payload.updatedAt = previous.updatedAt;
+      payload.scanMs = Math.round(performance.now() - started);
+      state.lastRefreshAt = Date.now();
+      renderStaticUsage(options.silent ? "" : `${message}${formatInt(payload.records.length)} 条记录，复用 ${payload.stats.reusedFiles} 个文件，解析 ${payload.stats.parsedFiles} 个文件，耗时 ${payload.scanMs} ms。`);
+      if (!unchanged) state.staticCacheDirty = true;
+      if (state.staticCacheDirty) state.staticCacheDirty = !await cacheStaticPayload(payload);
       return true;
     }
 
     async function chooseSessionsDirectory() {
+      if (state.loading) return;
       if ("showDirectoryPicker" in window) {
         try {
           const handle = await window.showDirectoryPicker({ mode: "read" });
+          setLoading(true);
           state.sessionsDirectoryHandle = handle;
           state.sessionsDirectoryName = handle.name || "sessions";
           await saveSessionsDirectoryHandle(handle);
-          await refreshSessionsDirectoryHandle("sessions 文件夹解析完成：", { fitRange: true });
+          // A newly selected directory may contain identical relative names.
+          await refreshSessionsDirectoryHandle("sessions 文件夹解析完成：", { fitRange: true, resetCache: true });
         } catch (error) {
           if (error?.name !== "AbortError") setStatus(error.message || "选择 sessions 文件夹失败", "error");
+        } finally {
+          setLoading(false);
         }
         return;
       }
@@ -4994,7 +5038,7 @@
         stats: {
           sessionFiles: options.sessionFiles || 0,
           importFiles: options.importFiles || 0,
-          reusedFiles: 0,
+          reusedFiles: options.reusedFiles || 0,
           parsedFiles: options.parsedFiles || 0,
           records: normalized.length,
           sourceEvidence: options.sourceEvidence || null
@@ -5045,6 +5089,7 @@
         sessionFiles: source.stats?.sessionFiles,
         importFiles: source.stats?.importFiles,
         parsedFiles: source.stats?.parsedFiles,
+        reusedFiles: source.stats?.reusedFiles,
         sourceEvidence: source.stats?.sourceEvidence
       });
       payload.updatedAt = source.updatedAt;
@@ -5205,11 +5250,25 @@
         cached = null;
         setStatus("浏览器缓存来自旧解析器，已清除旧数据。请重新导入 sessions 文件夹以修正中转站归类。", "error");
       }
-      if (cached?.records?.length) {
-        state.staticPayload = makeStaticPayload(cached.records, { sourceLabel: cached.sessionsDir || "浏览器缓存", sourceType: cached.sourceType || "import", readOnly: true, updatedAt: cached.updatedAt });
+      if (cached && Array.isArray(cached.records)) {
+        state.staticPayload = makeStaticPayload(cached.records, { sourceLabel: cached.sessionsDir || "浏览器缓存", sourceType: cached.sourceType || "import", readOnly: true, updatedAt: cached.updatedAt, ...cached.stats });
+        state.staticPayload.sessionFileManifest = cached.sessionFileManifest;
         state.staticSourceType = state.staticPayload.sourceType;
         if (state.staticSourceType === "sessions-folder") await restoreSavedSessionsDirectory({ silent: true });
-        renderStaticUsage(`已进入公开静态模式，并恢复浏览器缓存数据。${reason ? `原因：${reason}` : ""}`);
+        fitDateRangeToRecords(state.staticPayload.records, { preservePreset: true });
+        renderStaticUsage("已恢复上次保存的数据。");
+        return;
+      }
+      // The directory handle can outlive the parsed-data cache.
+      if (state.sessionsDirectoryHandle) {
+        state.staticPayload = makeStaticPayload([], { sourceType: "sessions-folder" });
+        state.staticSourceType = "sessions-folder";
+        renderStaticUsage("正在恢复已记住的 sessions 文件夹...");
+        try {
+          await refreshSessionsDirectoryHandle("", { silent: true, fitRange: true });
+        } catch (error) {
+          setStatus(`文件夹暂时无法读取，请点击“同步数据”重试：${error.message}`, "error");
+        }
         return;
       }
       try {
@@ -5255,12 +5314,12 @@
           return;
         }
         if (state.staticSourceType === "sessions-folder" && !state.sessionsDirectoryHandle) {
-          await restoreSavedSessionsDirectory({ requestPermission: true });
+          await restoreSavedSessionsDirectory({ requestPermission: !silent });
         }
         if (state.staticSourceType === "sessions-folder" && state.sessionsDirectoryHandle) {
           try {
             setBusy(true);
-            await refreshSessionsDirectoryHandle(silent ? "" : "sessions 文件夹已刷新：", { silent });
+            await refreshSessionsDirectoryHandle(silent ? "" : "sessions 文件夹已刷新：", { silent, startupRange: options.startupRange, fitRange: Boolean(options.startupRange) });
             refreshWeatherFromSavedLocation({ silent: true, force: true });
           } catch (error) {
             if (!silent) setStatus(error.message || "sessions 文件夹刷新失败，请重新选择文件夹。", "error");
@@ -6353,7 +6412,7 @@
                 <h2>设置 / 关于</h2>
                 <p class="muted">检查当前运行方式、隐私边界、版本和公开部署状态。</p>
               </div>
-              <span class="badge">版本 0.8.6</span>
+              <span class="badge">版本 0.8.7</span>
             </div>
             <div class="settings-grid">
               <div class="settings-card">
@@ -6768,7 +6827,7 @@
       const summary = summarize(safeRecords.map(record => ({ ...record, activeTokens: activeTokens(record), uncachedInputTokens: uncachedInputTokens(record), hitRate: cacheHitRateOf(record) })));
       return {
         snapshotVersion: 1,
-        appVersion: "0.8.6",
+        appVersion: "0.8.7",
         generatedAt: new Date().toISOString(),
         privacy: {
           anonymized: true,
@@ -7528,18 +7587,37 @@
         setActiveView("settings");
         window.history.replaceState(null, "", `${window.location.pathname}${window.location.hash}`);
       }
-      applyRange("7d");
+      applyRange("7d", { load: false });
+      // GitHub Pages has no local API. Restore IndexedDB without a failed API round trip.
+      if (window.location.hostname.endsWith(".github.io") || window.location.protocol === "file:") {
+        setLoading(true);
+        try {
+          await enterStaticMode();
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        await loadUsage();
+      }
+      if (state.staticSourceType === "sessions-folder" && !state.lastRefreshAt) {
+        await loadUsage({ silent: true, auto: true, startupRange: "7d" });
+      }
+      state.initialized = true;
     }
-    initializeDashboard();
+    initializeDashboard().catch(error => setStatus(`启动失败，请点击“同步数据”重试：${error.message}`, "error"));
     const serverAutoRefreshMs = 5000;
     function refreshServerInBackground(options = {}) {
+      if (!state.initialized) return;
       if (state.dataMode === "server" && !state.loading) {
         loadUsage({ silent: true, auto: true, ...options });
       }
     }
     function refreshServerNow() {
+      if (!state.initialized) return;
       if (state.dataMode === "server" && !state.loading) {
         loadUsage({ silent: true, auto: true, force: true });
+      } else if (state.staticSourceType === "sessions-folder" && !state.loading && Date.now() - state.lastRefreshAt > 5000) {
+        loadUsage({ silent: true, auto: true });
       }
     }
     setInterval(() => {
@@ -7554,11 +7632,12 @@
     setInterval(() => {
       if (
         state.dataMode === "static" &&
+        state.initialized &&
         state.staticSourceType === "sessions-folder" &&
         state.sessionsDirectoryHandle &&
         !state.loading
       ) {
-        refreshSessionsDirectoryHandle("", { silent: true }).catch(() => {});
+        loadUsage({ silent: true, auto: true });
       }
     }, 30000);
   </script>

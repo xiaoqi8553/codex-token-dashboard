@@ -1,4 +1,12 @@
-# Release Notes
+# 发布说明
+
+## v0.8.7 - 打开即恢复，文件同步提速
+
+GitHub Pages 重开页面会先显示上次保存的数据，再自动同步已授权的 sessions 文件夹，无需每次点击同步。Chrome 收回文件夹权限时会保留缓存并提示点击授权；浏览器无法在没有授权的情况下读取本机文件。
+
+重复同步按文件变化复用结果，只解析新增或修改的文件，并处理文件删除。旧版缓存首次升级会完整扫描一次以建立文件索引，后续重开页面也能复用；首次导入仍需读取全部文件。统计口径、导出和账号快照功能保持不变。
+
+验证命令：`npm test`、`npm run sync:test`、`npm run build`，以及顺序执行的 `npm run ui:shot`、`npm run ui:audit`、`npm run ui:report` 和 `npm run visual:test`。
 
 ## v0.8.1 - GitHub Pages 本机安全桥接
 

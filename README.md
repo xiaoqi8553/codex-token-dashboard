@@ -7,7 +7,7 @@
 ![Codex Token Dashboard cover](screenshots/project-cover.svg)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-0f766e.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.8.6-17202e.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.8.7-17202e.svg)](CHANGELOG.md)
 [![OpenAI Sites](https://img.shields.io/badge/deploy-OpenAI%20Sites-275dcc.svg)](https://codex-token-dashboard.hazel-saepemx.chatgpt.site)
 [![Netlify Demo](https://img.shields.io/badge/demo-codetoken.netlify.app-2f6fed.svg)](https://codetoken.netlify.app/)
 [![GitHub Pages](https://img.shields.io/badge/pages-github.io-111827.svg)](https://xiaoqi8553.github.io/codex-token-dashboard/)
@@ -119,7 +119,7 @@ npm run visual:test  # 生成截图并自动检查明显视觉问题
 
 文件通过浏览器 File API 在本地解析，不会自动上传。
 
-在 Chrome / Edge 等支持 File System Access API 的浏览器里，打开托管站点后，点击顶部“导入数据” -> “选择 sessions 文件夹”，选择你的 `.codex/sessions`。页面会把完整解析结果和文件夹授权句柄保存在浏览器 IndexedDB 中。下次打开同一个网址时会直接恢复上次数据；如果文件夹权限仍有效，点击“刷新”还可以重新扫描最新日志。浏览器仍可能要求再次授予文件夹权限，但这不会影响已缓存数据的显示。
+在 Chrome / Edge 等支持 File System Access API 的浏览器里，打开托管站点后，点击顶部“导入数据” -> “选择 sessions 文件夹”，选择你的 `.codex/sessions`。页面会把完整解析结果和文件夹授权句柄保存在浏览器 IndexedDB 中。下次打开同一个网址时会直接恢复上次数据；如果文件夹权限仍有效，页面会立即自动同步最新日志，回到前台也会检查更新，无需每次点击。浏览器仍可能要求再次授予文件夹权限，但这不会影响已缓存数据的显示。重复同步会复用未变化文件的解析结果，只重新解析新增或修改的文件；升级前的旧缓存首次同步需要完整扫描一次以建立文件索引。
 
 ## 页面模块
 
@@ -443,7 +443,7 @@ screenshots/dashboard-preview.svg
 
 ### 公开网址能记住我选择过的 sessions 文件夹吗？
 
-可以。第一次选择文件夹并解析完成后，页面会把解析结果保存在浏览器 IndexedDB 中，下次打开同一个网址会直接恢复，不必再次导入。Chrome / Edge 还会保存文件夹句柄；权限仍有效时可点击“刷新”读取最新日志。如果浏览器拒绝文件夹权限，已缓存的数据仍可查看，只是更新时需要重新授权。
+可以。第一次选择文件夹并解析完成后，页面会把解析结果保存在浏览器 IndexedDB 中，下次打开同一个网址会直接恢复，不必再次导入。Chrome / Edge 还会保存文件夹句柄；权限仍有效时会在启动和回到前台时自动读取最新日志，也可点击“同步数据”手动更新。如果浏览器拒绝文件夹权限，已缓存的数据仍可查看，只是更新时需要重新授权。
 
 ### 官方 Plus Token 一定精确吗？
 
