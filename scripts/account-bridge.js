@@ -120,6 +120,7 @@ function createBridge(options = {}) {
   const allowedOrigins = options.allowedOrigins || parseOrigins(process.env.CODEX_ACCOUNT_BRIDGE_ORIGINS);
   const snapshotRunner = options.snapshotRunner || (payload => runAccountSnapshot(payload, options));
   const closeAfterSuccess = options.closeAfterSuccess !== false;
+  const maxLifetimeMs = Number(options.maxLifetimeMs || 90000);
   const maxFailedAttempts = Number(options.maxFailedAttempts || 5);
   let failedAttempts = 0;
   let completed = false;
@@ -201,6 +202,19 @@ function createBridge(options = {}) {
     }
   });
 
+  const lifetimeTimer = Number.isFinite(maxLifetimeMs) && maxLifetimeMs > 0
+    ? setTimeout(() => {
+      server.close();
+      server.closeIdleConnections?.();
+    }, maxLifetimeMs)
+    : null;
+  server.on("close", () => {
+    if (lifetimeTimer) clearTimeout(lifetimeTimer);
+  });
+  server.on("error", () => {
+    if (lifetimeTimer) clearTimeout(lifetimeTimer);
+  });
+
   return { server, pairingKey, port, allowedOrigins };
 }
 
@@ -236,7 +250,13 @@ function main() {
     return;
   }
   const siteUrl = args["site-url"] || DEFAULT_SITE_URL;
-  const bridge = createBridge({ port });
+  const pairingKey = args["pairing-key"] ? normalizePairingKey(args["pairing-key"]) : undefined;
+  if (args["pairing-key"] && !/^[A-HJ-NP-Z2-9]{8}$/.test(pairingKey)) {
+    console.error("本机助手配对密钥格式无效");
+    process.exitCode = 1;
+    return;
+  }
+  const bridge = createBridge({ port, pairingKey });
   bridge.server.on("error", error => {
     console.error(`本机账号助手启动失败：${error.message}`);
     process.exitCode = 1;
@@ -245,7 +265,7 @@ function main() {
     console.log("");
     console.log("Codex 账号快照本机助手已启动");
     console.log("网页已自动完成一次性配对，请点击“保存当前账号”。");
-    console.log("成功更新一次后助手会自动关闭。按 Ctrl+C 可随时取消。");
+    console.log("成功更新一次后助手会自动关闭；无操作也会自动超时退出。按 Ctrl+C 可随时取消。");
     console.log("");
     if (args.open) openSite(buildBridgeSiteUrl(siteUrl, bridge.pairingKey));
   });

@@ -3292,7 +3292,7 @@
         </div>
         <div class="rail-version">
           <span>LOCAL-FIRST</span>
-          <strong>v0.8.4</strong>
+          <strong>v0.8.5</strong>
         </div>
       </div>
     </aside>
@@ -3503,6 +3503,8 @@
     const startupHashParams = new URLSearchParams(window.location.hash.slice(1));
     const startupAccountBridgeKey = startupHashParams.get("accountBridgeKey") || "";
     const startupAccountBridge = startupSearchParams.get("accountBridge") === "1" || Boolean(startupAccountBridgeKey);
+    const accountBridgePortMin = 43127;
+    const accountBridgePortMax = 43175;
     if (startupAccountBridgeKey) {
       history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
     }
@@ -6343,7 +6345,7 @@
                 <h2>设置 / 关于</h2>
                 <p class="muted">检查当前运行方式、隐私边界、版本和公开部署状态。</p>
               </div>
-              <span class="badge">版本 0.8.4</span>
+              <span class="badge">版本 0.8.5</span>
             </div>
             <div class="settings-grid">
               <div class="settings-card">
@@ -6409,14 +6411,14 @@
                   <div class="account-sync-status" id="accountSyncStatus">账号名称会从当前 Codex 登录信息自动识别，不需要手工填写。</div>
                 ` : accountBridgeAvailable ? `
                   <div class="account-sync-guide">
-                    <strong>GitHub Pages 安全桥接</strong>
-                    <span>${startupAccountBridgeKey ? "本机助手已自动配对，可以直接保存当前账号。" : "请先双击 start-account-bridge.bat，启动器会打开并自动配对此页面。"} 浏览器询问本地网络访问时请选择允许。</span>
+                    <strong>网页一键保存</strong>
+                    <span>${startupAccountBridgeKey ? "已连接兼容模式本机助手。" : "点击下方按钮会自动唤起本机组件，不需要预先启动 BAT。"} 浏览器首次询问是否打开或访问本机组件时请选择允许。</span>
                   </div>
                   <div class="account-sync-form bridge">
                     <button class="btn primary compact" type="button" data-action="sync-account-bridge">保存当前账号</button>
                     <label class="account-sync-check"><input id="accountSyncCcSwitch" type="checkbox" checked>同时更新 CC Switch 官方配置</label>
                   </div>
-                  <div class="account-sync-status" id="accountSyncStatus">邮箱和配对信息自动识别；账号文件不会上传到 GitHub Pages。</div>
+                  <div class="account-sync-status" id="accountSyncStatus">邮箱和保存路径自动识别；账号文件不会上传到 GitHub Pages。</div>
                 ` : `<div class="account-sync-status">当前部署不能直接访问本机 auth.json。请使用本机私有 Node 模式，或在 GitHub Pages 版本中启动本机账号助手后配对。</div>`}
               </div>
             </div>
@@ -6756,7 +6758,7 @@
       const summary = summarize(safeRecords.map(record => ({ ...record, activeTokens: activeTokens(record), uncachedInputTokens: uncachedInputTokens(record), hitRate: cacheHitRateOf(record) })));
       return {
         snapshotVersion: 1,
-        appVersion: "0.8.4",
+        appVersion: "0.8.5",
         generatedAt: new Date().toISOString(),
         privacy: {
           anonymized: true,
@@ -7218,26 +7220,73 @@
       }
     }
 
+    function createAccountBridgeLaunch() {
+      const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+      const random = crypto.getRandomValues(new Uint8Array(9));
+      const key = Array.from(random.slice(0, 8), value => alphabet[value % alphabet.length]).join("");
+      const port = accountBridgePortMin + (random[8] % (accountBridgePortMax - accountBridgePortMin + 1));
+      return { key, port };
+    }
+
+    function launchAccountSnapshotProtocol(key, port) {
+      const link = document.createElement("a");
+      link.href = `codex-token-dashboard://snapshot?key=${encodeURIComponent(key)}&port=${port}`;
+      link.hidden = true;
+      link.tabIndex = -1;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    }
+
+    async function waitForAccountBridge(port, timeoutMs = 20000) {
+      const deadline = Date.now() + timeoutMs;
+      while (Date.now() < deadline) {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 900);
+        try {
+          const response = await fetch(`http://127.0.0.1:${port}/api/account/bridge/status`, {
+            method: "GET",
+            mode: "cors",
+            credentials: "omit",
+            cache: "no-store",
+            redirect: "error",
+            referrerPolicy: "no-referrer",
+            targetAddressSpace: "loopback",
+            signal: controller.signal
+          });
+          if (response.ok) return;
+        } catch {
+          // The protocol handler needs a brief moment to start its loopback server.
+        } finally {
+          clearTimeout(timeout);
+        }
+        await new Promise(resolve => setTimeout(resolve, 250));
+      }
+      throw new Error("未检测到网页一键保存组件。请只运行一次 install-account-button.bat，安装后无需再启动 BAT。");
+    }
+
     async function syncAccountSnapshotViaBridge() {
       const check = document.querySelector("#accountSyncCcSwitch");
       const status = document.querySelector("#accountSyncStatus");
       const button = document.querySelector('[data-action="sync-account-bridge"]');
-      if (!startupAccountBridgeKey) {
-        if (status) {
-          status.textContent = "请双击 start-account-bridge.bat，让启动器重新打开并自动配对此页面。";
-          status.className = "account-sync-status error";
-        }
-        return;
-      }
+      const launch = startupAccountBridgeKey
+        ? { key: startupAccountBridgeKey, port: 43127, needsLaunch: false }
+        : { ...createAccountBridgeLaunch(), needsLaunch: true };
       if (button) button.disabled = true;
       if (status) {
-        status.textContent = "正在连接 127.0.0.1 本机助手；如果浏览器询问本地网络访问，请选择允许。";
+        status.textContent = launch.needsLaunch
+          ? "正在自动唤起本机组件并保存；浏览器首次询问时请选择允许。"
+          : "正在连接本机助手并保存当前账号。";
         status.className = "account-sync-status";
       }
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 15000);
+      const timeout = setTimeout(() => controller.abort(), 30000);
       try {
-        const response = await fetch("http://127.0.0.1:43127/api/account/snapshot", {
+        if (launch.needsLaunch) {
+          launchAccountSnapshotProtocol(launch.key, launch.port);
+          await waitForAccountBridge(launch.port);
+        }
+        const response = await fetch(`http://127.0.0.1:${launch.port}/api/account/snapshot`, {
           method: "POST",
           mode: "cors",
           credentials: "omit",
@@ -7247,7 +7296,7 @@
           targetAddressSpace: "loopback",
           headers: {
             "content-type": "application/json",
-            "x-codex-bridge-key": startupAccountBridgeKey
+            "x-codex-bridge-key": launch.key
           },
           body: JSON.stringify({ syncCcSwitch: Boolean(check?.checked) }),
           signal: controller.signal
@@ -7260,15 +7309,14 @@
             ? `，CC Switch 未同步：${result.ccswitch.message || "请检查 CC Switch 状态"}`
             : "";
         if (status) {
-          status.textContent = `已保存当前账号“${result.accountName}”${cc}。本次助手连接已关闭。`;
+          status.textContent = `已保存当前账号“${result.accountName}”${cc}。本机组件已自动关闭。`;
           status.className = result.ccswitch?.status === "failed" ? "account-sync-status error" : "account-sync-status success";
         }
         toast(`账号“${result.accountName}”已保存`);
       } catch (error) {
-        const connectionFailed = error?.name === "AbortError" || error instanceof TypeError;
         if (status) {
-          status.textContent = connectionFailed
-            ? "未连接到本机助手。请双击 start-account-bridge.bat，并允许浏览器访问本地网络后重试。"
+          status.textContent = error?.name === "AbortError"
+            ? "本机组件响应超时，请重试；首次使用请运行一次 install-account-button.bat。"
             : error.message || "账号快照更新失败";
           status.className = "account-sync-status error";
         }

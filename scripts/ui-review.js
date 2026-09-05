@@ -20,7 +20,7 @@ const pages = [
   { key: "tasks", name: "任务复盘", view: "tasks", screenshot: "tasks", url: baseUrl },
   { key: "details", name: "明细表", view: "details", screenshot: "details", url: baseUrl },
   { key: "settings", name: "设置 / 关于", view: "settings", screenshot: "settings", url: baseUrl },
-  { key: "settings-bridge", name: "GitHub Pages 账号桥接", view: "settings", screenshot: "settings-bridge", url: `${baseUrl}?accountBridge=1#accountBridgeKey=ABCD-2345`, staticMode: true }
+  { key: "settings-bridge", name: "GitHub Pages 账号桥接", view: "settings", screenshot: "settings-bridge", url: `${baseUrl}?accountBridge=1`, staticMode: true }
 ];
 
 const viewports = [
@@ -113,7 +113,25 @@ async function openPage(page, pageInfo) {
     }));
   }
   if (pageInfo.key === "settings-bridge") {
-    await page.route("http://127.0.0.1:43127/api/account/snapshot", async route => {
+    await page.addInitScript(() => {
+      const nativeClick = HTMLAnchorElement.prototype.click;
+      HTMLAnchorElement.prototype.click = function click() {
+        if (this.href.startsWith("codex-token-dashboard://snapshot")) {
+          window.__accountProtocolLaunch = this.href;
+          return;
+        }
+        return nativeClick.call(this);
+      };
+    });
+    await page.route("http://127.0.0.1:*/api/account/**", async route => {
+      if (new URL(route.request().url()).pathname.endsWith("/status")) {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json; charset=utf-8",
+          body: JSON.stringify({ ok: true, service: "codex-account-bridge", ready: true })
+        });
+        return;
+      }
       bridgeRequestBody = JSON.parse(route.request().postData() || "{}");
       await route.fulfill({
         status: 200,
@@ -138,9 +156,10 @@ async function openPage(page, pageInfo) {
     const state = await page.evaluate(() => ({
       hash: window.location.hash,
       manualFields: document.querySelectorAll("#accountSnapshotName, #accountBridgeKey").length,
+      protocolLaunch: window.__accountProtocolLaunch || "",
       status: document.querySelector("#accountSyncStatus")?.textContent || ""
     }));
-    if (state.hash || state.manualFields || bridgeRequestBody?.accountName || !state.status.includes("current.account@example.com")) {
+    if (state.hash || state.manualFields || !state.protocolLaunch.startsWith("codex-token-dashboard://snapshot") || bridgeRequestBody?.accountName || !state.status.includes("current.account@example.com")) {
       throw new Error(`GitHub Pages 一键账号快照验收失败：${JSON.stringify({ state, bridgeRequestBody })}`);
     }
   }

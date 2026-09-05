@@ -2,6 +2,7 @@ const assert = require("node:assert/strict");
 const childProcess = require("node:child_process");
 const fs = require("node:fs");
 const http = require("node:http");
+const net = require("node:net");
 const os = require("node:os");
 const path = require("node:path");
 const test = require("node:test");
@@ -10,6 +11,7 @@ const vm = require("node:vm");
 const root = path.resolve(__dirname, "..");
 const indexSource = fs.readFileSync(path.join(root, "index.html"), "utf8");
 const buildSource = fs.readFileSync(path.join(root, "scripts", "build-static.js"), "utf8");
+const bridgeSource = fs.readFileSync(path.join(root, "scripts", "account-bridge.js"), "utf8");
 const auditSource = fs.readFileSync(path.join(root, "scripts", "ui-review.js"), "utf8");
 const visualSource = fs.readFileSync(path.join(root, "scripts", "visual-check.js"), "utf8");
 const serverSource = fs.readFileSync(path.join(root, "server.js"), "utf8");
@@ -39,6 +41,32 @@ function bridgeRequest(port, options = {}) {
     if (body) request.write(body);
     request.end();
   });
+}
+
+async function findFreeProtocolPort() {
+  for (let port = 43127; port <= 43175; port += 1) {
+    const available = await new Promise(resolve => {
+      const server = net.createServer();
+      server.once("error", () => resolve(false));
+      server.listen(port, "127.0.0.1", () => server.close(() => resolve(true)));
+    });
+    if (available) return port;
+  }
+  throw new Error("No free account protocol test port");
+}
+
+async function waitForBridge(port, timeoutMs = 10000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    try {
+      const response = await bridgeRequest(port, { method: "GET", path: "/api/account/bridge/status" });
+      if (response.status === 200) return;
+    } catch {
+      // The protocol process is still starting.
+    }
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+  throw new Error(`Account protocol bridge did not start on ${port}`);
 }
 
 function extractFunction(name) {
@@ -275,11 +303,11 @@ test("usage trend has no persistent numeric overlays or summaries", () => {
   assert.doesNotMatch(cacheSource, /峰值 active|缓存 \$\{formatToken|命中率 \$\{avgHit\}% \/ active/);
 });
 
-test("0.8.4 uses the engineering workspace shell and removes Work Replay", () => {
-  assert.equal(packageJson.version, "0.8.4");
+test("0.8.5 uses the engineering workspace shell and removes Work Replay", () => {
+  assert.equal(packageJson.version, "0.8.5");
   assert.match(indexSource, /class="side-rail shell"/);
   assert.match(indexSource, /id="viewTitle"/);
-  assert.match(indexSource, /v0\.8\.4/);
+  assert.match(indexSource, /v0\.8\.5/);
   assert.doesNotMatch(indexSource, /replayBtn|replay\.html|工作回放/);
   assert.doesNotMatch(buildSource, /replay\.html/);
   assert.equal(fs.existsSync(path.join(root, "replay.html")), false);
@@ -383,7 +411,7 @@ test("GitHub Pages account bridge requires origin and one-time pairing key", asy
   assert.equal(snapshotCalls, 1);
   assert.doesNotMatch(success.body, /SECRET|accountDir|backupPath/);
   assert.match(indexSource, /targetAddressSpace:\s*"loopback"/);
-  assert.match(indexSource, /start-account-bridge\.bat/);
+  assert.match(indexSource, /install-account-button\.bat/);
   assert.doesNotMatch(extractFunction("syncAccountSnapshotViaBridge"), /localStorage/);
 });
 
@@ -431,7 +459,7 @@ test("GitHub Pages bridge runs the real snapshot process and writes the requeste
   assert.doesNotMatch(response.body, /BRIDGE_TEST_SECRET|accountDir/);
 });
 
-test("one-click bridge passes its key in a transient fragment and removes manual fields", () => {
+test("one-click bridge supports transient fragments and automatic protocol launch", () => {
   const bridgeUrl = buildBridgeSiteUrl("https://xiaoqi8553.github.io/codex-token-dashboard/?accountBridge=1", "ABCD2345");
   assert.equal(bridgeUrl, "https://xiaoqi8553.github.io/codex-token-dashboard/?accountBridge=1#accountBridgeKey=ABCD-2345");
   assert.match(indexSource, /startupHashParams\.get\("accountBridgeKey"\)/);
@@ -440,6 +468,79 @@ test("one-click bridge passes its key in a transient fragment and removes manual
   assert.match(indexSource, /data-action="sync-account-bridge">保存当前账号/);
   assert.match(indexSource, /id="accountSyncCcSwitch" type="checkbox" checked/);
   assert.doesNotMatch(extractFunction("syncAccountSnapshotViaBridge"), /localStorage|accountName:/);
+  assert.match(extractFunction("launchAccountSnapshotProtocol"), /codex-token-dashboard:\/\/snapshot/);
+  assert.match(extractFunction("createAccountBridgeLaunch"), /crypto\.getRandomValues/);
+  assert.match(extractFunction("waitForAccountBridge"), /api\/account\/bridge\/status/);
+  assert.doesNotMatch(indexSource, /请先双击 start-account-bridge\.bat/);
+});
+
+test("Windows protocol handler launches the real bridge and writes account files", { skip: process.platform !== "win32" }, async t => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-token-protocol-e2e-"));
+  t.after(() => fs.rmSync(tempRoot, { recursive: true, force: true }));
+  const codexHome = path.join(tempRoot, ".codex");
+  fs.mkdirSync(codexHome, { recursive: true });
+  const idTokenPayload = Buffer.from(JSON.stringify({ email: "protocol.account@example.com" })).toString("base64url");
+  fs.writeFileSync(path.join(codexHome, "auth.json"), JSON.stringify({
+    tokens: {
+      account_id: "protocol-test",
+      access_token: "PROTOCOL_TEST_SECRET",
+      id_token: `header.${idTokenPayload}.signature`
+    }
+  }));
+  fs.writeFileSync(path.join(codexHome, "config.toml"), "model = \"protocol-test-model\"\n");
+
+  const port = await findFreeProtocolPort();
+  const powershell = path.join(process.env.SystemRoot, "System32", "WindowsPowerShell", "v1.0", "powershell.exe");
+  const handler = path.join(root, "scripts", "handle-account-protocol.ps1");
+  const child = childProcess.spawn(powershell, [
+    "-NoLogo", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", handler,
+    `codex-token-dashboard://snapshot?key=ABCD2345&port=${port}`
+  ], {
+    cwd: root,
+    env: { ...process.env, CODEX_HOME: codexHome },
+    windowsHide: true,
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  let stderr = "";
+  child.stderr.on("data", chunk => { stderr += chunk; });
+  t.after(() => { if (!child.killed) child.kill(); });
+
+  await waitForBridge(port);
+  const response = await bridgeRequest(port, {
+    headers: { "x-codex-bridge-key": "ABCD-2345" },
+    body: { syncCcSwitch: false }
+  });
+  assert.equal(response.status, 200, response.body);
+  const exitCode = await new Promise((resolve, reject) => {
+    child.once("error", reject);
+    child.once("close", resolve);
+  });
+  assert.equal(exitCode, 0, stderr);
+
+  const target = path.join(codexHome, "XQ_acc", "protocol.account@example.com");
+  assert.equal(fs.existsSync(path.join(target, "auth.json")), true);
+  assert.equal(fs.existsSync(path.join(target, "config.toml")), true);
+  assert.doesNotMatch(fs.readFileSync(path.join(target, "metadata.json"), "utf8"), /PROTOCOL_TEST_SECRET/);
+  assert.doesNotMatch(response.body, /PROTOCOL_TEST_SECRET|accountDir/);
+});
+
+test("Windows account protocol installation is user-scoped and rejects extra parameters", { skip: process.platform !== "win32" }, () => {
+  const installer = fs.readFileSync(path.join(root, "scripts", "install-account-protocol.ps1"), "utf8");
+  const handler = fs.readFileSync(path.join(root, "scripts", "handle-account-protocol.ps1"), "utf8");
+  const launcher = fs.readFileSync(path.join(root, "install-account-button.bat"));
+  const powershell = path.join(process.env.SystemRoot, "System32", "WindowsPowerShell", "v1.0", "powershell.exe");
+  const invalid = childProcess.spawnSync(powershell, [
+    "-NoLogo", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File",
+    path.join(root, "scripts", "handle-account-protocol.ps1"),
+    "codex-token-dashboard://snapshot?key=ABCD2345&port=43127&extra=blocked"
+  ], { encoding: "utf8", windowsHide: true });
+
+  assert.match(installer, /HKCU:\\Software\\Classes\\codex-token-dashboard/);
+  assert.match(installer, /WindowStyle Hidden/);
+  assert.match(handler, /Keys\.Count -ne 2/);
+  assert.match(bridgeSource, /maxLifetimeMs \|\| 90000/);
+  assert.equal(invalid.status, 1);
+  assert.doesNotMatch(launcher.toString("utf8"), /(?<!\r)\n/);
 });
 
 test("Windows account bridge launcher is CRLF-safe and keeps diagnostics visible", () => {
