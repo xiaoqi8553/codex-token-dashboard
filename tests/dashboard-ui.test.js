@@ -303,11 +303,11 @@ test("usage trend has no persistent numeric overlays or summaries", () => {
   assert.doesNotMatch(cacheSource, /峰值 active|缓存 \$\{formatToken|命中率 \$\{avgHit\}% \/ active/);
 });
 
-test("0.8.5 uses the engineering workspace shell and removes Work Replay", () => {
-  assert.equal(packageJson.version, "0.8.5");
+test("0.8.6 uses the engineering workspace shell and removes Work Replay", () => {
+  assert.equal(packageJson.version, "0.8.6");
   assert.match(indexSource, /class="side-rail shell"/);
   assert.match(indexSource, /id="viewTitle"/);
-  assert.match(indexSource, /v0\.8\.5/);
+  assert.match(indexSource, /v0\.8\.6/);
   assert.doesNotMatch(indexSource, /replayBtn|replay\.html|工作回放/);
   assert.doesNotMatch(buildSource, /replay\.html/);
   assert.equal(fs.existsSync(path.join(root, "replay.html")), false);
@@ -465,12 +465,17 @@ test("one-click bridge supports transient fragments and automatic protocol launc
   assert.match(indexSource, /startupHashParams\.get\("accountBridgeKey"\)/);
   assert.match(indexSource, /history\.replaceState\(null, "",/);
   assert.doesNotMatch(indexSource, /id="accountSnapshotName"|id="accountBridgeKey"/);
-  assert.match(indexSource, /data-action="sync-account-bridge">保存当前账号/);
+  assert.match(indexSource, /data-action="sync-account-bridge"[^>]*>保存当前账号/);
   assert.match(indexSource, /id="accountSyncCcSwitch" type="checkbox" checked/);
   assert.doesNotMatch(extractFunction("syncAccountSnapshotViaBridge"), /localStorage|accountName:/);
-  assert.match(extractFunction("launchAccountSnapshotProtocol"), /codex-token-dashboard:\/\/snapshot/);
+  assert.match(extractFunction("accountBridgeProtocolUrl"), /codex-token-dashboard:\/\/snapshot/);
   assert.match(extractFunction("createAccountBridgeLaunch"), /crypto\.getRandomValues/);
   assert.match(extractFunction("waitForAccountBridge"), /api\/account\/bridge\/status/);
+  assert.match(extractFunction("renderSettings"), /href="\$\{escapeHtml\(accountBridgeProtocolUrl/);
+  assert.match(extractFunction("renderSettings"), /state\.accountSyncUi/);
+  assert.equal((indexSource.match(/els\.viewPanel\.addEventListener\("click", event => \{\s*const actionButton/g) || []).length, 1);
+  assert.match(auditSource, /__accountProtocolLaunchCount/);
+  assert.match(auditSource, /renderSettings\(summarize\(state\.records\)\)/);
   assert.doesNotMatch(indexSource, /请先双击 start-account-bridge\.bat/);
 });
 

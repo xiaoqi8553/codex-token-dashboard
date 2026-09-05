@@ -114,14 +114,14 @@ async function openPage(page, pageInfo) {
   }
   if (pageInfo.key === "settings-bridge") {
     await page.addInitScript(() => {
-      const nativeClick = HTMLAnchorElement.prototype.click;
-      HTMLAnchorElement.prototype.click = function click() {
-        if (this.href.startsWith("codex-token-dashboard://snapshot")) {
-          window.__accountProtocolLaunch = this.href;
-          return;
+      document.addEventListener("click", event => {
+        const link = event.target.closest('a[href^="codex-token-dashboard://snapshot"]');
+        if (link) {
+          window.__accountProtocolLaunch = link.href;
+          window.__accountProtocolLaunchCount = (window.__accountProtocolLaunchCount || 0) + 1;
+          event.preventDefault();
         }
-        return nativeClick.call(this);
-      };
+      }, true);
     });
     await page.route("http://127.0.0.1:*/api/account/**", async route => {
       if (new URL(route.request().url()).pathname.endsWith("/status")) {
@@ -153,13 +153,15 @@ async function openPage(page, pageInfo) {
   if (pageInfo.key === "settings-bridge") {
     await page.locator('[data-action="sync-account-bridge"]').click();
     await page.waitForFunction(() => document.querySelector("#accountSyncStatus")?.classList.contains("success"));
+    await page.evaluate(() => renderSettings(summarize(state.records)));
     const state = await page.evaluate(() => ({
       hash: window.location.hash,
       manualFields: document.querySelectorAll("#accountSnapshotName, #accountBridgeKey").length,
       protocolLaunch: window.__accountProtocolLaunch || "",
+      protocolLaunchCount: window.__accountProtocolLaunchCount || 0,
       status: document.querySelector("#accountSyncStatus")?.textContent || ""
     }));
-    if (state.hash || state.manualFields || !state.protocolLaunch.startsWith("codex-token-dashboard://snapshot") || bridgeRequestBody?.accountName || !state.status.includes("current.account@example.com")) {
+    if (state.hash || state.manualFields || !state.protocolLaunch.startsWith("codex-token-dashboard://snapshot") || state.protocolLaunchCount !== 1 || bridgeRequestBody?.accountName || !state.status.includes("current.account@example.com")) {
       throw new Error(`GitHub Pages 一键账号快照验收失败：${JSON.stringify({ state, bridgeRequestBody })}`);
     }
   }

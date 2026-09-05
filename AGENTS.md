@@ -65,6 +65,7 @@
 - 2026-09-04: Account bridge 0.8.2 verified the launcher and status endpoint but stubbed the snapshot runner, missing broken multi-line JSON parsing and overly narrow account-name validation. Bridge releases must exercise the real child process through HTTP, verify files on disk, test common email-style names, and confirm sanitized responses before release.
 - 2026-09-04: The snapshot path was changed from the user's existing `~/.codex/XQ_acc` structure based on a literal reading of an escaped path, and the UI exposed implementation details as required inputs. Inspect the existing filesystem before changing defaults, preserve established storage layouts, and measure user actions: account snapshots should require no manual name or pairing-code entry.
 - 2026-09-05: Calling a two-step launcher-plus-button flow “one click” optimized the form but missed the user's actual interaction count. For browser-to-local actions, separate unavoidable one-time installation from repeated use, then make the normal path a single in-page action with a short-lived, validated local capability.
+- 2026-09-05: The first protocol-launch button was tested with a mocked programmatic anchor click while production had duplicate delegated click handlers and periodic rerenders that reset progress. Interaction tests must use the same native activation path as production, assert one dispatch per click, and verify async status survives background data refreshes.
 
 ## Before Finishing
 

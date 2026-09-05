@@ -353,6 +353,7 @@
       align-items: center;
       justify-content: center;
       gap: 6px;
+      text-decoration: none;
       transition: border-color 140ms ease, transform 140ms ease, box-shadow 140ms ease;
     }
 
@@ -360,7 +361,7 @@
     .btn.primary { background: var(--ink); color: var(--panel); border-color: var(--ink); }
     .btn.ghost { background: transparent; }
     .btn.compact { min-height: 28px; padding: 4px 7px; font-size: 12px; }
-    .btn[disabled] { opacity: .55; cursor: wait; box-shadow: none; }
+    .btn[disabled], .btn[aria-disabled="true"] { opacity: .55; cursor: wait; box-shadow: none; }
 
     .segmented {
       display: inline-flex;
@@ -3292,7 +3293,7 @@
         </div>
         <div class="rail-version">
           <span>LOCAL-FIRST</span>
-          <strong>v0.8.5</strong>
+          <strong>v0.8.6</strong>
         </div>
       </div>
     </aside>
@@ -3542,7 +3543,9 @@
       sessionsDirectoryHandle: null,
       sessionsDirectoryName: "",
       refreshFailures: 0,
-      lastRefreshAt: 0
+      lastRefreshAt: 0,
+      accountSyncUi: { busy: false, message: "", tone: "" },
+      accountBridgeLaunch: null
     };
 
     const els = {
@@ -6337,6 +6340,11 @@
           : state.staticPayload?.sessionsDir || "用户手动导入";
       const accountSyncAvailable = !startupAccountBridge && state.dataMode === "server" && state.data?.config?.accountSyncAvailable;
       const accountBridgeAvailable = startupAccountBridge || (!accountSyncAvailable && state.dataMode === "static" && window.location.hostname === "xiaoqi8553.github.io");
+      const accountBridgeLaunch = accountBridgeAvailable && !startupAccountBridgeKey
+        ? (state.accountBridgeLaunch || (state.accountBridgeLaunch = createAccountBridgeLaunch()))
+        : null;
+      const accountSyncBusy = Boolean(state.accountSyncUi?.busy);
+      const accountSyncTone = state.accountSyncUi?.tone ? ` ${state.accountSyncUi.tone}` : "";
       els.viewPanel.innerHTML = `
         <section class="settings-page">
           <article class="panel">
@@ -6345,7 +6353,7 @@
                 <h2>设置 / 关于</h2>
                 <p class="muted">检查当前运行方式、隐私边界、版本和公开部署状态。</p>
               </div>
-              <span class="badge">版本 0.8.5</span>
+              <span class="badge">版本 0.8.6</span>
             </div>
             <div class="settings-grid">
               <div class="settings-card">
@@ -6405,20 +6413,22 @@
                 <p>切换账号并登录完成后，一键保存当前 <code>auth.json</code> 和 <code>config.toml</code> 到现有账号目录 <code>~/.codex/XQ_acc/&lt;当前邮箱&gt;</code>。</p>
                 ${accountSyncAvailable ? `
                   <div class="account-sync-form">
-                    <button class="btn primary compact" type="button" data-action="sync-account">保存当前账号</button>
+                    <button class="btn primary compact" type="button" data-action="sync-account" ${accountSyncBusy ? "disabled" : ""}>保存当前账号</button>
                     <label class="account-sync-check"><input id="accountSyncCcSwitch" type="checkbox" checked>同时更新 CC Switch 官方配置</label>
                   </div>
-                  <div class="account-sync-status" id="accountSyncStatus">账号名称会从当前 Codex 登录信息自动识别，不需要手工填写。</div>
+                  <div class="account-sync-status${accountSyncTone}" id="accountSyncStatus">${escapeHtml(state.accountSyncUi?.message || "账号名称会从当前 Codex 登录信息自动识别，不需要手工填写。")}</div>
                 ` : accountBridgeAvailable ? `
                   <div class="account-sync-guide">
                     <strong>网页一键保存</strong>
                     <span>${startupAccountBridgeKey ? "已连接兼容模式本机助手。" : "点击下方按钮会自动唤起本机组件，不需要预先启动 BAT。"} 浏览器首次询问是否打开或访问本机组件时请选择允许。</span>
                   </div>
                   <div class="account-sync-form bridge">
-                    <button class="btn primary compact" type="button" data-action="sync-account-bridge">保存当前账号</button>
+                    ${accountBridgeLaunch
+                      ? `<a class="btn primary compact" role="button" data-action="sync-account-bridge" href="${escapeHtml(accountBridgeProtocolUrl(accountBridgeLaunch.key, accountBridgeLaunch.port))}" aria-disabled="${accountSyncBusy}">保存当前账号</a>`
+                      : `<button class="btn primary compact" type="button" data-action="sync-account-bridge" ${accountSyncBusy ? "disabled" : ""}>保存当前账号</button>`}
                     <label class="account-sync-check"><input id="accountSyncCcSwitch" type="checkbox" checked>同时更新 CC Switch 官方配置</label>
                   </div>
-                  <div class="account-sync-status" id="accountSyncStatus">邮箱和保存路径自动识别；账号文件不会上传到 GitHub Pages。</div>
+                  <div class="account-sync-status${accountSyncTone}" id="accountSyncStatus">${escapeHtml(state.accountSyncUi?.message || "邮箱和保存路径自动识别；账号文件不会上传到 GitHub Pages。")}</div>
                 ` : `<div class="account-sync-status">当前部署不能直接访问本机 auth.json。请使用本机私有 Node 模式，或在 GitHub Pages 版本中启动本机账号助手后配对。</div>`}
               </div>
             </div>
@@ -6758,7 +6768,7 @@
       const summary = summarize(safeRecords.map(record => ({ ...record, activeTokens: activeTokens(record), uncachedInputTokens: uncachedInputTokens(record), hitRate: cacheHitRateOf(record) })));
       return {
         snapshotVersion: 1,
-        appVersion: "0.8.5",
+        appVersion: "0.8.6",
         generatedAt: new Date().toISOString(),
         privacy: {
           anonymized: true,
@@ -7006,6 +7016,10 @@
     els.viewPanel.addEventListener("click", event => {
       const actionButton = event.target.closest("[data-action]");
       if (actionButton) {
+        if (state.accountSyncUi.busy && actionButton.dataset.action === "sync-account-bridge") {
+          event.preventDefault();
+          return;
+        }
         handlePanelAction(actionButton.dataset.action);
         return;
       }
@@ -7115,11 +7129,6 @@
       }
     });
     els.viewPanel.addEventListener("click", event => {
-      const actionButton = event.target.closest("[data-action]");
-      if (actionButton) {
-        handlePanelAction(actionButton.dataset.action);
-        return;
-      }
       if (event.target.id === "prevPageBtn") { state.page -= 1; renderDetails(); }
       if (event.target.id === "nextPageBtn") { state.page += 1; renderDetails(); }
       if (event.target.id === "invertPageBtn") {
@@ -7184,14 +7193,9 @@
     }
 
     async function syncAccountSnapshot() {
+      if (state.accountSyncUi.busy) return;
       const check = document.querySelector("#accountSyncCcSwitch");
-      const status = document.querySelector("#accountSyncStatus");
-      const button = document.querySelector('[data-action="sync-account"]');
-      if (button) button.disabled = true;
-      if (status) {
-        status.textContent = "正在保存当前账号文件，请不要同时切换 Codex 配置。";
-        status.className = "account-sync-status";
-      }
+      setAccountSyncUi("正在保存当前账号文件，请不要同时切换 Codex 配置。", "", true);
       try {
         const response = await apiFetch("/api/account/snapshot", {
           method: "POST",
@@ -7205,18 +7209,12 @@
           : result.ccswitch?.requested
             ? `，CC Switch 未同步：${result.ccswitch.message || "请检查 CC Switch 状态"}`
             : "";
-        if (status) {
-          status.textContent = `已保存当前账号“${result.accountName}”${cc}。`;
-          status.className = result.ccswitch?.status === "failed" ? "account-sync-status error" : "account-sync-status success";
-        }
+        setAccountSyncUi(`已保存当前账号“${result.accountName}”${cc}。`, result.ccswitch?.status === "failed" ? "error" : "success", false);
         toast(`账号“${result.accountName}”已保存`);
       } catch (error) {
-        if (status) {
-          status.textContent = error.message || "账号快照更新失败";
-          status.className = "account-sync-status error";
-        }
+        setAccountSyncUi(error.message || "账号快照更新失败", "error", false);
       } finally {
-        if (button) button.disabled = false;
+        if (state.accountSyncUi.busy) setAccountSyncUi(state.accountSyncUi.message, state.accountSyncUi.tone, false);
       }
     }
 
@@ -7228,17 +7226,23 @@
       return { key, port };
     }
 
-    function launchAccountSnapshotProtocol(key, port) {
-      const link = document.createElement("a");
-      link.href = `codex-token-dashboard://snapshot?key=${encodeURIComponent(key)}&port=${port}`;
-      link.hidden = true;
-      link.tabIndex = -1;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
+    function accountBridgeProtocolUrl(key, port) {
+      return `codex-token-dashboard://snapshot?key=${encodeURIComponent(key)}&port=${port}`;
     }
 
-    async function waitForAccountBridge(port, timeoutMs = 20000) {
+    function setAccountSyncUi(message, tone = "", busy = state.accountSyncUi.busy) {
+      state.accountSyncUi = { busy: Boolean(busy), message: String(message || ""), tone: String(tone || "") };
+      const status = document.querySelector("#accountSyncStatus");
+      if (status) {
+        status.textContent = state.accountSyncUi.message;
+        status.className = `account-sync-status${state.accountSyncUi.tone ? ` ${state.accountSyncUi.tone}` : ""}`;
+      }
+      const button = document.querySelector('[data-action="sync-account"], [data-action="sync-account-bridge"]');
+      if (button instanceof HTMLButtonElement) button.disabled = state.accountSyncUi.busy;
+      if (button) button.setAttribute("aria-disabled", String(state.accountSyncUi.busy));
+    }
+
+    async function waitForAccountBridge(port, timeoutMs = 12000) {
       const deadline = Date.now() + timeoutMs;
       while (Date.now() < deadline) {
         const controller = new AbortController();
@@ -7266,24 +7270,23 @@
     }
 
     async function syncAccountSnapshotViaBridge() {
+      if (state.accountSyncUi.busy) return;
       const check = document.querySelector("#accountSyncCcSwitch");
-      const status = document.querySelector("#accountSyncStatus");
-      const button = document.querySelector('[data-action="sync-account-bridge"]');
       const launch = startupAccountBridgeKey
         ? { key: startupAccountBridgeKey, port: 43127, needsLaunch: false }
-        : { ...createAccountBridgeLaunch(), needsLaunch: true };
-      if (button) button.disabled = true;
-      if (status) {
-        status.textContent = launch.needsLaunch
-          ? "正在自动唤起本机组件并保存；浏览器首次询问时请选择允许。"
-          : "正在连接本机助手并保存当前账号。";
-        status.className = "account-sync-status";
-      }
+        : { ...(state.accountBridgeLaunch || (state.accountBridgeLaunch = createAccountBridgeLaunch())), needsLaunch: true };
+      setAccountSyncUi(launch.needsLaunch
+        ? "正在自动唤起本机组件并保存；浏览器首次询问时请选择允许。"
+        : "正在连接本机助手并保存当前账号。", "", true);
+      const launchReminder = launch.needsLaunch ? setTimeout(() => {
+        if (state.accountSyncUi.busy) {
+          setAccountSyncUi("仍在等待浏览器确认。请查看地址栏附近或系统弹窗，并选择打开本机组件。", "", true);
+        }
+      }, 2500) : null;
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 30000);
+      const timeout = setTimeout(() => controller.abort(), 18000);
       try {
         if (launch.needsLaunch) {
-          launchAccountSnapshotProtocol(launch.key, launch.port);
           await waitForAccountBridge(launch.port);
         }
         const response = await fetch(`http://127.0.0.1:${launch.port}/api/account/snapshot`, {
@@ -7308,21 +7311,21 @@
           : result.ccswitch?.requested
             ? `，CC Switch 未同步：${result.ccswitch.message || "请检查 CC Switch 状态"}`
             : "";
-        if (status) {
-          status.textContent = `已保存当前账号“${result.accountName}”${cc}。本机组件已自动关闭。`;
-          status.className = result.ccswitch?.status === "failed" ? "account-sync-status error" : "account-sync-status success";
-        }
+        setAccountSyncUi(`已保存当前账号“${result.accountName}”${cc}。本机组件已自动关闭。`, result.ccswitch?.status === "failed" ? "error" : "success", false);
         toast(`账号“${result.accountName}”已保存`);
       } catch (error) {
-        if (status) {
-          status.textContent = error?.name === "AbortError"
-            ? "本机组件响应超时，请重试；首次使用请运行一次 install-account-button.bat。"
-            : error.message || "账号快照更新失败";
-          status.className = "account-sync-status error";
-        }
+        setAccountSyncUi(error?.name === "AbortError"
+          ? "本机组件响应超时，请重试；首次使用请运行一次 install-account-button.bat。"
+          : error.message || "账号快照更新失败", "error", false);
       } finally {
+        if (launchReminder) clearTimeout(launchReminder);
         clearTimeout(timeout);
-        if (button) button.disabled = false;
+        if (state.accountSyncUi.busy) setAccountSyncUi(state.accountSyncUi.message, state.accountSyncUi.tone, false);
+        if (launch.needsLaunch) {
+          state.accountBridgeLaunch = createAccountBridgeLaunch();
+          const button = document.querySelector('[data-action="sync-account-bridge"]');
+          if (button) button.setAttribute("href", accountBridgeProtocolUrl(state.accountBridgeLaunch.key, state.accountBridgeLaunch.port));
+        }
       }
     }
 
