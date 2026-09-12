@@ -10,7 +10,7 @@ const ROOT = __dirname;
 const DATA_DIR = path.join(ROOT, "data");
 const IMPORT_DIR = path.join(DATA_DIR, "imports");
 const INDEX_PATH = path.join(DATA_DIR, "usage-index.json");
-const INDEX_VERSION = 17;
+const INDEX_VERSION = 18;
 const SUPPORTED_SESSION_EXTENSIONS = new Set([".jsonl", ".json", ".log", ".txt"]);
 
 loadDotEnv();
@@ -689,15 +689,18 @@ function getPayloadObject(item) {
 }
 
 function usageFromObject(item) {
+  if (!item || typeof item !== "object" || item.type !== "token_usage_record") return null;
+
   const payload = getPayloadObject(item);
-  const info = payload.info || payload;
-  const total = info.total_token_usage || info.usage || info.token_usage || info;
-  const last = info.last_token_usage || payload.last_token_usage || null;
-  const input = toNumber(total.input_tokens || total.prompt_tokens || total.input);
-  const cached = toNumber(total.cached_input_tokens || total.cached_tokens || total.cache_read_input_tokens);
-  const output = toNumber(total.output_tokens || total.completion_tokens || total.output);
-  const totalTokens = toNumber(total.total_tokens || total.tokens || input + output);
-  const reasoning = toNumber(total.reasoning_output_tokens || total.reasoning_tokens);
+  const usage = payload.usage;
+  if (!usage || typeof usage !== "object") return null;
+
+  const input = toNumber(usage.input_tokens);
+  const cached = toNumber(usage.cached_input_tokens);
+  const output = toNumber(usage.output_tokens);
+  const hasTotalTokens = usage.total_tokens !== undefined && usage.total_tokens !== null;
+  const totalTokens = hasTotalTokens ? toNumber(usage.total_tokens) : input + output;
+  const reasoning = toNumber(usage.reasoning_output_tokens);
 
   if (!input && !cached && !output && !totalTokens && !reasoning) return null;
 
@@ -706,14 +709,7 @@ function usageFromObject(item) {
     cachedInputTokens: cached,
     outputTokens: output,
     totalTokens,
-    reasoningOutputTokens: reasoning,
-    lastUsage: last ? {
-      inputTokens: toNumber(last.input_tokens || last.prompt_tokens || last.input),
-      cachedInputTokens: toNumber(last.cached_input_tokens || last.cached_tokens || last.cache_read_input_tokens),
-      outputTokens: toNumber(last.output_tokens || last.completion_tokens || last.output),
-      totalTokens: toNumber(last.total_tokens || last.tokens),
-      reasoningOutputTokens: toNumber(last.reasoning_output_tokens || last.reasoning_tokens)
-    } : null
+    reasoningOutputTokens: reasoning
   };
 }
 
@@ -845,8 +841,6 @@ function parseSessionFile(filePath) {
   const records = [];
   const seen = new Set();
   let parseErrors = 0;
-  let previousTotal = null;
-
   function addUsage(usage, item, lineNumber, fallbackText = "") {
     const payload = getPayloadObject(item);
     const timestamp = item?.timestamp || payload.timestamp || meta.timestamp || "";
@@ -856,22 +850,7 @@ function parseSessionFile(filePath) {
     const source = firstScalar(payload.source, payload.thread_source, meta.source);
     const requestId = firstScalar(payload.request_id, payload.requestId, payload.id);
     const turnId = firstScalar(payload.turn_id, payload.turnId, meta.turnId);
-    let tokenSet = usage;
-
-    // Codex token_count records contain cumulative totals plus last_token_usage.
-    // Prefer last_token_usage for request-level records; otherwise calculate a delta from the previous cumulative total.
-    if (usage.lastUsage && (usage.lastUsage.totalTokens || usage.lastUsage.inputTokens || usage.lastUsage.outputTokens)) {
-      tokenSet = usage.lastUsage;
-    } else if (previousTotal && usage.totalTokens >= previousTotal.totalTokens) {
-      tokenSet = {
-        inputTokens: Math.max(usage.inputTokens - previousTotal.inputTokens, 0),
-        cachedInputTokens: Math.max(usage.cachedInputTokens - previousTotal.cachedInputTokens, 0),
-        outputTokens: Math.max(usage.outputTokens - previousTotal.outputTokens, 0),
-        reasoningOutputTokens: Math.max(usage.reasoningOutputTokens - previousTotal.reasoningOutputTokens, 0),
-        totalTokens: Math.max(usage.totalTokens - previousTotal.totalTokens, 0)
-      };
-    }
-    previousTotal = usage;
+    const tokenSet = usage;
 
     const id = recordId([
       filePath,
@@ -932,7 +911,7 @@ function parseSessionFile(filePath) {
       considerSessionTitle(meta, textFromMessagePayload(payload) || textFromMessagePayload(item));
     }
 
-    const usage = usageFromObject(item);
+    const usage = item.type === "token_usage_record" ? usageFromObject(item) : null;
     if (usage) {
       addUsage(usage, item, lineNumber, meta.title);
       return;

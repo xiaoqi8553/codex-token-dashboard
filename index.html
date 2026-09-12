@@ -3674,7 +3674,7 @@
       sessionsKey: "sessionsDirectory",
       staticPayloadKey: "staticPayload"
     };
-    const staticParserVersion = 10;
+    const staticParserVersion = 12;
     const browserSourceAttributionMode = localStorage.getItem("codexTokenSourceAttributionMode") || "custom-fast";
 
     function localDateKey(date) {
@@ -4221,61 +4221,30 @@
     }
 
     function usageFromObject(item) {
-      if (!item || typeof item !== "object") return null;
+      if (!item || typeof item !== "object" || item.type !== "token_usage_record") return null;
+
       const payload = item.payload && typeof item.payload === "object" ? item.payload : item;
-      const info = payload.info || payload;
-      const total = info.total_token_usage || info.usage || info.token_usage || info;
-      const last = info.last_token_usage || payload.last_token_usage || null;
-      const chosen = last || total;
-      const input = toNumber(chosen.input_tokens || chosen.prompt_tokens || chosen.input);
-      const cached = toNumber(chosen.cached_input_tokens || chosen.cached_tokens || chosen.cache_read_input_tokens);
-      const output = toNumber(chosen.output_tokens || chosen.completion_tokens || chosen.output);
-      const totalTokens = toNumber(chosen.total_tokens || chosen.tokens || input + output);
-      const reasoning = toNumber(chosen.reasoning_output_tokens || chosen.reasoning_tokens);
+      const usage = payload.usage;
+      if (!usage || typeof usage !== "object") return null;
+
+      const input = toNumber(usage.input_tokens);
+      const cached = toNumber(usage.cached_input_tokens);
+      const output = toNumber(usage.output_tokens);
+      const hasTotalTokens = usage.total_tokens !== undefined && usage.total_tokens !== null;
+      const totalTokens = hasTotalTokens ? toNumber(usage.total_tokens) : input + output;
+      const reasoning = toNumber(usage.reasoning_output_tokens);
       if (!input && !cached && !output && !totalTokens && !reasoning) return null;
       return {
         inputTokens: input,
         cachedInputTokens: cached,
         outputTokens: output,
         totalTokens,
-        reasoningOutputTokens: reasoning,
-        cumulativeUsage: {
-          inputTokens: toNumber(total.input_tokens || total.prompt_tokens || total.input),
-          cachedInputTokens: toNumber(total.cached_input_tokens || total.cached_tokens || total.cache_read_input_tokens),
-          outputTokens: toNumber(total.output_tokens || total.completion_tokens || total.output),
-          totalTokens: toNumber(total.total_tokens || total.tokens),
-          reasoningOutputTokens: toNumber(total.reasoning_output_tokens || total.reasoning_tokens)
-        },
-        lastUsage: last ? {
-          inputTokens: toNumber(last.input_tokens || last.prompt_tokens || last.input),
-          cachedInputTokens: toNumber(last.cached_input_tokens || last.cached_tokens || last.cache_read_input_tokens),
-          outputTokens: toNumber(last.output_tokens || last.completion_tokens || last.output),
-          totalTokens: toNumber(last.total_tokens || last.tokens),
-          reasoningOutputTokens: toNumber(last.reasoning_output_tokens || last.reasoning_tokens)
-        } : null
+        reasoningOutputTokens: reasoning
       };
     }
 
     function selectUsageTokens(usage, meta) {
-      if (!usage) return null;
-      if (usage.lastUsage && (usage.lastUsage.totalTokens || usage.lastUsage.inputTokens || usage.lastUsage.outputTokens)) {
-        meta.previousTotal = usage.cumulativeUsage || usage;
-        return usage.lastUsage;
-      }
-      const previous = meta.previousTotal;
-      const cumulative = usage.cumulativeUsage || usage;
-      let tokenSet = usage;
-      if (previous && cumulative.totalTokens >= previous.totalTokens) {
-        tokenSet = {
-          inputTokens: Math.max(cumulative.inputTokens - previous.inputTokens, 0),
-          cachedInputTokens: Math.max(cumulative.cachedInputTokens - previous.cachedInputTokens, 0),
-          outputTokens: Math.max(cumulative.outputTokens - previous.outputTokens, 0),
-          reasoningOutputTokens: Math.max(cumulative.reasoningOutputTokens - previous.reasoningOutputTokens, 0),
-          totalTokens: Math.max(cumulative.totalTokens - previous.totalTokens, 0)
-        };
-      }
-      meta.previousTotal = cumulative;
-      return tokenSet;
+      return usage || null;
     }
 
     function textFromMessagePayload(payload) {
@@ -4326,7 +4295,7 @@
       if (payload.role === "user" || item.role === "user") {
         considerSessionTitle(meta, textFromMessagePayload(payload) || textFromMessagePayload(item));
       }
-      const usage = usageFromObject(item);
+      const usage = item.type === "token_usage_record" ? usageFromObject(item) : null;
       if (usage) {
         const tokenSet = selectUsageTokens(usage, meta);
         if (!tokenSet || (!tokenSet.inputTokens && !tokenSet.cachedInputTokens && !tokenSet.outputTokens && !tokenSet.totalTokens)) return;
@@ -4829,7 +4798,7 @@
           loadedBytes += toNumber(file.size);
           continue;
         }
-        const meta = { sessionId: file.name, provider: "", source: "", model: "unknown", timestamp: new Date(file.lastModified || Date.now()).toISOString(), title: "", cwd: "", turnId: "", previousTotal: null };
+        const meta = { sessionId: file.name, provider: "", source: "", model: "unknown", timestamp: new Date(file.lastModified || Date.now()).toISOString(), title: "", cwd: "", turnId: "" };
         const before = records.length;
         let preview = "";
         let fallbackText = "";
