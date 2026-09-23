@@ -10,7 +10,8 @@ const ROOT = __dirname;
 const DATA_DIR = path.join(ROOT, "data");
 const IMPORT_DIR = path.join(DATA_DIR, "imports");
 const INDEX_PATH = path.join(DATA_DIR, "usage-index.json");
-const INDEX_VERSION = 17;
+const UsageAccounting = require("./usage-accounting");
+const INDEX_VERSION = UsageAccounting.version;
 const SUPPORTED_SESSION_EXTENSIONS = new Set([".jsonl", ".json", ".log", ".txt"]);
 
 loadDotEnv();
@@ -689,32 +690,7 @@ function getPayloadObject(item) {
 }
 
 function usageFromObject(item) {
-  const payload = getPayloadObject(item);
-  const info = payload.info || payload;
-  const total = info.total_token_usage || info.usage || info.token_usage || info;
-  const last = info.last_token_usage || payload.last_token_usage || null;
-  const input = toNumber(total.input_tokens || total.prompt_tokens || total.input);
-  const cached = toNumber(total.cached_input_tokens || total.cached_tokens || total.cache_read_input_tokens);
-  const output = toNumber(total.output_tokens || total.completion_tokens || total.output);
-  const totalTokens = toNumber(total.total_tokens || total.tokens || input + output);
-  const reasoning = toNumber(total.reasoning_output_tokens || total.reasoning_tokens);
-
-  if (!input && !cached && !output && !totalTokens && !reasoning) return null;
-
-  return {
-    inputTokens: input,
-    cachedInputTokens: cached,
-    outputTokens: output,
-    totalTokens,
-    reasoningOutputTokens: reasoning,
-    lastUsage: last ? {
-      inputTokens: toNumber(last.input_tokens || last.prompt_tokens || last.input),
-      cachedInputTokens: toNumber(last.cached_input_tokens || last.cached_tokens || last.cache_read_input_tokens),
-      outputTokens: toNumber(last.output_tokens || last.completion_tokens || last.output),
-      totalTokens: toNumber(last.total_tokens || last.tokens),
-      reasoningOutputTokens: toNumber(last.reasoning_output_tokens || last.reasoning_tokens)
-    } : null
-  };
+  return UsageAccounting.extract(item);
 }
 
 function textFromMessagePayload(payload) {
@@ -845,8 +821,7 @@ function parseSessionFile(filePath) {
   const records = [];
   const seen = new Set();
   let parseErrors = 0;
-  let previousTotal = null;
-
+  const accounting = UsageAccounting.createTracker();
   function addUsage(usage, item, lineNumber, fallbackText = "") {
     const payload = getPayloadObject(item);
     const timestamp = item?.timestamp || payload.timestamp || meta.timestamp || "";
@@ -854,24 +829,10 @@ function parseSessionFile(filePath) {
     const model = firstScalar(payload.model, payload.model_name, meta.model);
     const provider = firstScalar(payload.model_provider, payload.provider, meta.provider);
     const source = firstScalar(payload.source, payload.thread_source, meta.source);
-    const requestId = firstScalar(payload.request_id, payload.requestId, payload.id);
+    const requestId = firstScalar(payload.response_id, payload.request_id, payload.requestId, payload.id);
     const turnId = firstScalar(payload.turn_id, payload.turnId, meta.turnId);
-    let tokenSet = usage;
-
-    // Codex token_count records contain cumulative totals plus last_token_usage.
-    // Prefer last_token_usage for request-level records; otherwise calculate a delta from the previous cumulative total.
-    if (usage.lastUsage && (usage.lastUsage.totalTokens || usage.lastUsage.inputTokens || usage.lastUsage.outputTokens)) {
-      tokenSet = usage.lastUsage;
-    } else if (previousTotal && usage.totalTokens >= previousTotal.totalTokens) {
-      tokenSet = {
-        inputTokens: Math.max(usage.inputTokens - previousTotal.inputTokens, 0),
-        cachedInputTokens: Math.max(usage.cachedInputTokens - previousTotal.cachedInputTokens, 0),
-        outputTokens: Math.max(usage.outputTokens - previousTotal.outputTokens, 0),
-        reasoningOutputTokens: Math.max(usage.reasoningOutputTokens - previousTotal.reasoningOutputTokens, 0),
-        totalTokens: Math.max(usage.totalTokens - previousTotal.totalTokens, 0)
-      };
-    }
-    previousTotal = usage;
+    const tokenSet = usage.kind ? accounting.select(usage, { sessionId, turnId }) : usage;
+    if (!tokenSet) return;
 
     const id = recordId([
       filePath,
@@ -1467,7 +1428,7 @@ function serveStatic(req, res, url) {
       res.end("Not found");
       return;
     }
-    const type = path.extname(filePath).toLowerCase() === ".html" ? "text/html; charset=utf-8" : "text/plain; charset=utf-8";
+    const type = ({ ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".json": "application/json; charset=utf-8" })[path.extname(filePath).toLowerCase()] || "text/plain; charset=utf-8";
     res.writeHead(200, { "content-type": type });
     res.end(data);
   });
@@ -1551,6 +1512,7 @@ function startIndexRefreshLoop() {
   setInterval(() => refreshIndexCache().catch(error => console.warn(`Background index refresh failed: ${error.message}`)), INDEX_REFRESH_INTERVAL_MS);
 }
 
+if (require.main === module) {
 try {
   validateSecurityConfig();
   ensureDirs();
@@ -1565,4 +1527,8 @@ try {
 } catch (error) {
   console.error(error.message);
   process.exitCode = 1;
+}
+
+} else {
+  module.exports = { parseSessionFile };
 }

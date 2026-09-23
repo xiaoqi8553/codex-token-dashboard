@@ -303,14 +303,19 @@ test("usage trend has no persistent numeric overlays or summaries", () => {
   assert.doesNotMatch(cacheSource, /峰值 active|缓存 \$\{formatToken|命中率 \$\{avgHit\}% \/ active/);
 });
 
-test("0.8.7 uses the engineering workspace shell and removes Work Replay", () => {
-  assert.equal(packageJson.version, "0.8.7");
+test("0.8.8 uses the engineering workspace shell and removes Work Replay", () => {
+  assert.equal(packageJson.version, "0.8.8");
   assert.match(indexSource, /class="side-rail shell"/);
   assert.match(indexSource, /id="viewTitle"/);
-  assert.match(indexSource, /v0\.8\.7/);
+  assert.match(indexSource, /v0\.8\.8/);
   assert.doesNotMatch(indexSource, /replayBtn|replay\.html|工作回放/);
   assert.doesNotMatch(buildSource, /replay\.html/);
   assert.equal(fs.existsSync(path.join(root, "replay.html")), false);
+});
+
+test("UI review captures and audits the current dark overview", () => {
+  assert.match(auditSource, /key: "overview-dark"[\s\S]*theme: "dark"/);
+  assert.match(auditSource, /localStorage\.setItem\("codexTokenTheme", theme\)/);
 });
 
 test("local account snapshot keeps credentials out of metadata", t => {

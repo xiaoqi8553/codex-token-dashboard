@@ -21,7 +21,8 @@ const pages = [
   { key: "details", name: "明细表", view: "details", screenshot: "details", url: baseUrl },
   { key: "settings", name: "设置 / 关于", view: "settings", screenshot: "settings", url: baseUrl },
   { key: "settings-bridge", name: "GitHub Pages 账号桥接", view: "settings", screenshot: "settings-bridge", url: `${baseUrl}?accountBridge=1`, staticMode: true },
-  { key: "overview-permission", name: "浏览器缓存 / 待授权", view: "overview", screenshot: "overview-permission", url: baseUrl, staticMode: true }
+  { key: "overview-permission", name: "旧统计缓存 / 待授权", view: "overview", screenshot: "overview-permission", url: baseUrl, staticMode: true },
+  { key: "overview-dark", name: "深色总览页", view: "overview", screenshot: "overview-dark", url: baseUrl, theme: "dark" }
 ];
 
 const viewports = [
@@ -106,6 +107,9 @@ async function ensureServer() {
 
 async function openPage(page, pageInfo) {
   let bridgeRequestBody = null;
+  if (pageInfo.theme) {
+    await page.addInitScript(theme => localStorage.setItem("codexTokenTheme", theme), pageInfo.theme);
+  }
   if (pageInfo.staticMode) {
     await page.route("**/api/usage**", route => route.fulfill({
       status: 200,
@@ -152,6 +156,7 @@ async function openPage(page, pageInfo) {
     await page.evaluate(async () => {
       state.staticSourceType = "sessions-folder";
       state.staticPayload.sourceType = "sessions-folder";
+      state.staticPayload.parserStale = true;
       state.sessionsDirectoryHandle = { queryPermission: async () => "prompt" };
       renderStaticUsage();
       await loadUsage({ silent: true, auto: true });

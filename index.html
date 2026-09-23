@@ -3293,7 +3293,7 @@
         </div>
         <div class="rail-version">
           <span>LOCAL-FIRST</span>
-          <strong>v0.8.7</strong>
+          <strong>v0.8.8</strong>
         </div>
       </div>
     </aside>
@@ -3499,6 +3499,7 @@
   <div class="toast" id="toast"></div>
   <div class="chart-tooltip" id="chartTooltip"></div>
 
+  <script src="usage-accounting.js"></script>
   <script>
     const startupSearchParams = new URLSearchParams(window.location.search);
     const startupHashParams = new URLSearchParams(window.location.hash.slice(1));
@@ -3674,7 +3675,7 @@
       sessionsKey: "sessionsDirectory",
       staticPayloadKey: "staticPayload"
     };
-    const staticParserVersion = 10;
+    const staticParserVersion = CodexUsageAccounting.version;
     const browserSourceAttributionMode = localStorage.getItem("codexTokenSourceAttributionMode") || "custom-fast";
 
     function localDateKey(date) {
@@ -4221,61 +4222,12 @@
     }
 
     function usageFromObject(item) {
-      if (!item || typeof item !== "object") return null;
-      const payload = item.payload && typeof item.payload === "object" ? item.payload : item;
-      const info = payload.info || payload;
-      const total = info.total_token_usage || info.usage || info.token_usage || info;
-      const last = info.last_token_usage || payload.last_token_usage || null;
-      const chosen = last || total;
-      const input = toNumber(chosen.input_tokens || chosen.prompt_tokens || chosen.input);
-      const cached = toNumber(chosen.cached_input_tokens || chosen.cached_tokens || chosen.cache_read_input_tokens);
-      const output = toNumber(chosen.output_tokens || chosen.completion_tokens || chosen.output);
-      const totalTokens = toNumber(chosen.total_tokens || chosen.tokens || input + output);
-      const reasoning = toNumber(chosen.reasoning_output_tokens || chosen.reasoning_tokens);
-      if (!input && !cached && !output && !totalTokens && !reasoning) return null;
-      return {
-        inputTokens: input,
-        cachedInputTokens: cached,
-        outputTokens: output,
-        totalTokens,
-        reasoningOutputTokens: reasoning,
-        cumulativeUsage: {
-          inputTokens: toNumber(total.input_tokens || total.prompt_tokens || total.input),
-          cachedInputTokens: toNumber(total.cached_input_tokens || total.cached_tokens || total.cache_read_input_tokens),
-          outputTokens: toNumber(total.output_tokens || total.completion_tokens || total.output),
-          totalTokens: toNumber(total.total_tokens || total.tokens),
-          reasoningOutputTokens: toNumber(total.reasoning_output_tokens || total.reasoning_tokens)
-        },
-        lastUsage: last ? {
-          inputTokens: toNumber(last.input_tokens || last.prompt_tokens || last.input),
-          cachedInputTokens: toNumber(last.cached_input_tokens || last.cached_tokens || last.cache_read_input_tokens),
-          outputTokens: toNumber(last.output_tokens || last.completion_tokens || last.output),
-          totalTokens: toNumber(last.total_tokens || last.tokens),
-          reasoningOutputTokens: toNumber(last.reasoning_output_tokens || last.reasoning_tokens)
-        } : null
-      };
+      return CodexUsageAccounting.extract(item);
     }
 
     function selectUsageTokens(usage, meta) {
-      if (!usage) return null;
-      if (usage.lastUsage && (usage.lastUsage.totalTokens || usage.lastUsage.inputTokens || usage.lastUsage.outputTokens)) {
-        meta.previousTotal = usage.cumulativeUsage || usage;
-        return usage.lastUsage;
-      }
-      const previous = meta.previousTotal;
-      const cumulative = usage.cumulativeUsage || usage;
-      let tokenSet = usage;
-      if (previous && cumulative.totalTokens >= previous.totalTokens) {
-        tokenSet = {
-          inputTokens: Math.max(cumulative.inputTokens - previous.inputTokens, 0),
-          cachedInputTokens: Math.max(cumulative.cachedInputTokens - previous.cachedInputTokens, 0),
-          outputTokens: Math.max(cumulative.outputTokens - previous.outputTokens, 0),
-          reasoningOutputTokens: Math.max(cumulative.reasoningOutputTokens - previous.reasoningOutputTokens, 0),
-          totalTokens: Math.max(cumulative.totalTokens - previous.totalTokens, 0)
-        };
-      }
-      meta.previousTotal = cumulative;
-      return tokenSet;
+      meta.accounting ||= CodexUsageAccounting.createTracker();
+      return meta.accounting.select(usage, { sessionId: meta.sessionId, turnId: meta.turnId });
     }
 
     function textFromMessagePayload(payload) {
@@ -4337,7 +4289,7 @@
           model: firstScalar(payload.model, payload.model_name, meta.model),
           provider: firstScalar(payload.model_provider, payload.provider, meta.provider),
           source: firstScalar(payload.source, payload.thread_source, meta.source),
-          requestId: firstScalar(payload.request_id, payload.requestId, payload.id),
+          requestId: firstScalar(payload.response_id, payload.request_id, payload.requestId, payload.id),
           turnId: firstScalar(payload.turn_id, payload.turnId, meta.turnId),
           sessionTitle: meta.title,
           detailText: meta.title,
@@ -4829,7 +4781,7 @@
           loadedBytes += toNumber(file.size);
           continue;
         }
-        const meta = { sessionId: file.name, provider: "", source: "", model: "unknown", timestamp: new Date(file.lastModified || Date.now()).toISOString(), title: "", cwd: "", turnId: "", previousTotal: null };
+        const meta = { sessionId: file.name, provider: "", source: "", model: "unknown", timestamp: new Date(file.lastModified || Date.now()).toISOString(), title: "", cwd: "", turnId: "" };
         const before = records.length;
         let preview = "";
         let fallbackText = "";
@@ -4907,7 +4859,7 @@
       }
       const allowed = await hasDirectoryPermission(state.sessionsDirectoryHandle, !options.silent);
       if (!allowed) {
-        setStatus(`${state.staticPayload?.records?.length ? "已显示上次保存的数据。" : "已记住 sessions 文件夹。"}文件夹读取权限需要确认，请点击“同步数据”授权；若仍未恢复，请重新选择 sessions 文件夹。`, "warning");
+        setStatus(`${state.staticPayload?.records?.length ? "已显示上次保存的数据。" : "已记住 sessions 文件夹。"}${state.staticPayload?.parserStale ? "旧版本缓存尚未重新计算。" : ""}文件夹读取权限需要确认，请点击“同步数据”授权；若仍未恢复，请重新选择 sessions 文件夹。`, "warning");
         return false;
       }
       const started = performance.now();
@@ -5093,6 +5045,7 @@
         sourceEvidence: source.stats?.sourceEvidence
       });
       payload.updatedAt = source.updatedAt;
+      payload.parserStale = Boolean(source.parserStale);
       payload.models = Array.from(new Set(source.records.map(record => record.model || "unknown"))).sort();
       payload.calendarRecords = filteredStaticCalendarRecords(source.records);
       return payload;
@@ -5150,7 +5103,7 @@
     function normalizeCachedStaticPayload(cached) {
       if (!cached) return null;
       cached.parserVersion = Number(cached.parserVersion || 0);
-      cached.parserStale = cached.parserVersion < staticParserVersion;
+      cached.parserStale = ["sessions-folder", "sessions-files"].includes(cached.sourceType) && cached.parserVersion < staticParserVersion;
       return cached;
     }
 
@@ -5234,25 +5187,10 @@
       state.dataMode = "static";
       els.staticPanel.classList.add("show");
       let cached = await loadCachedStaticPayload();
-      if (cached?.records?.length && cached.parserStale) {
-        const staleSourceType = cached.sourceType || "import";
-        if (staleSourceType === "sessions-folder") {
-          await restoreSavedSessionsDirectory({ silent: true });
-          if (state.sessionsDirectoryHandle) {
-            const refreshed = await refreshSessionsDirectoryHandle("", { silent: true });
-            if (refreshed) {
-              setStatus("浏览器缓存来自旧解析器，已自动重新扫描 sessions 文件夹并修正来源归类。");
-              return;
-            }
-          }
-        }
-        await clearCachedStaticPayload();
-        cached = null;
-        setStatus("浏览器缓存来自旧解析器，已清除旧数据。请重新导入 sessions 文件夹以修正中转站归类。", "error");
-      }
       if (cached && Array.isArray(cached.records)) {
         state.staticPayload = makeStaticPayload(cached.records, { sourceLabel: cached.sessionsDir || "浏览器缓存", sourceType: cached.sourceType || "import", readOnly: true, updatedAt: cached.updatedAt, ...cached.stats });
         state.staticPayload.sessionFileManifest = cached.sessionFileManifest;
+        state.staticPayload.parserStale = cached.parserStale;
         state.staticSourceType = state.staticPayload.sourceType;
         if (state.staticSourceType === "sessions-folder") await restoreSavedSessionsDirectory({ silent: true });
         fitDateRangeToRecords(state.staticPayload.records, { preservePreset: true });
@@ -5290,7 +5228,11 @@
       pruneSelection();
       renderModelOptions(payload.models || []);
       render(payload);
-      setStatus(message || `浏览器本地数据已更新：${formatInt(state.records.length)} 条记录。`);
+      if (payload.parserStale) {
+        setStatus("正在显示旧版本缓存，Token 统计尚未重新计算。请点击“同步数据”授权读取，或重新导入 sessions 文件夹；完成前这些数值可能包含重复统计。", "warning");
+      } else {
+        setStatus(message || `浏览器本地数据已更新：${formatInt(state.records.length)} 条记录。`);
+      }
     }
 
     async function loadUsage(options = {}) {
@@ -5329,7 +5271,9 @@
           return;
         }
         renderStaticUsage();
-        if (state.staticSourceType === "sessions-folder" && !state.sessionsDirectoryHandle) {
+        if (state.staticPayload?.parserStale) {
+          // Keep the cache migration warning visible until the user rebuilds the imported data.
+        } else if (state.staticSourceType === "sessions-folder" && !state.sessionsDirectoryHandle) {
           setStatus("当前浏览器没有恢复 sessions 文件夹权限；请重新选择一次，或使用本地 Node 模式实现完全自动扫描。");
         } else if (state.staticSourceType === "sessions-files") {
           setStatus("当前数据来自一次性文件夹导入，浏览器不能自动重新读取新文件；请重新选择 sessions 文件夹，或使用本地 Node 模式。");
@@ -6412,7 +6356,7 @@
                 <h2>设置 / 关于</h2>
                 <p class="muted">检查当前运行方式、隐私边界、版本和公开部署状态。</p>
               </div>
-              <span class="badge">版本 0.8.7</span>
+              <span class="badge">版本 0.8.8</span>
             </div>
             <div class="settings-grid">
               <div class="settings-card">
@@ -6827,7 +6771,7 @@
       const summary = summarize(safeRecords.map(record => ({ ...record, activeTokens: activeTokens(record), uncachedInputTokens: uncachedInputTokens(record), hitRate: cacheHitRateOf(record) })));
       return {
         snapshotVersion: 1,
-        appVersion: "0.8.7",
+        appVersion: "0.8.8",
         generatedAt: new Date().toISOString(),
         privacy: {
           anonymized: true,

@@ -3,10 +3,15 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const { chromium } = require("playwright");
+const { fixtures } = require("../tests/fixtures/accounting");
+const { parseSessionFile } = require("../server");
+const os = require("node:os");
 
 const root = path.resolve(__dirname, "..");
 const site = "https://xiaoqi8553.github.io/codex-token-dashboard/";
 const executablePath = [process.env.PLAYWRIGHT_CHROMIUM_PATH,
+  require("playwright").chromium.executablePath(),
+  "C:\\Users\\10242\\AppData\\Local\\ms-playwright\\chromium-1223\\chrome-win64\\chrome.exe",
   "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
   "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe"
 ].find(candidate => candidate && fs.existsSync(candidate));
@@ -14,28 +19,30 @@ const executablePath = [process.env.PLAYWRIGHT_CHROMIUM_PATH,
 async function main() {
   const browser = await chromium.launch(executablePath ? { executablePath } : {});
   const context = await browser.newContext();
+  context.setDefaultTimeout(20000);
+  await context.newPage(); // Keep OPFS alive while testing close/reopen.
   const errors = [];
   let apiRequests = 0;
   await context.route("**/*", route => {
     const url = new URL(route.request().url());
     if (url.pathname.startsWith("/api/")) apiRequests += 1;
-    const file = url.pathname.endsWith("demo-usage-index.json")
+    const file = url.pathname.endsWith("usage-accounting.js") ? "usage-accounting.js" : url.pathname.endsWith("demo-usage-index.json")
       ? "sample-data/demo-usage-index.json" : "index.html";
-    return route.fulfill({ status: 200, contentType: file.endsWith("json") ? "application/json" : "text/html", body: fs.readFileSync(path.join(root, file)) });
+    return route.fulfill({ status: 200, contentType: file.endsWith("js") ? "text/javascript" : file.endsWith("json") ? "application/json" : "text/html", body: fs.readFileSync(path.join(root, file)) });
   });
   await context.addInitScript(() => {
     window.syncReads = 0;
     const stream = File.prototype.stream;
     File.prototype.stream = function () { window.syncReads += 1; return stream.call(this); };
-    const query = FileSystemDirectoryHandle.prototype.queryPermission;
-    const request = FileSystemDirectoryHandle.prototype.requestPermission;
-    FileSystemDirectoryHandle.prototype.queryPermission = function (options) {
-      return localStorage.getItem("testPermission") === "prompt" ? Promise.resolve("prompt") : query.call(this, options);
+    // OPFS has no external-directory permission prompt; simulate permission state only.
+    // Native queryPermission on restored OPFS handles crashes Chrome 153 on Windows.
+    FileSystemDirectoryHandle.prototype.queryPermission = function () {
+      return Promise.resolve(localStorage.getItem("testPermission") === "prompt" ? "prompt" : "granted");
     };
-    FileSystemDirectoryHandle.prototype.requestPermission = function (options) {
+    FileSystemDirectoryHandle.prototype.requestPermission = function () {
       window.permissionRequests = (window.permissionRequests || 0) + 1;
       localStorage.removeItem("testPermission");
-      return request.call(this, options);
+      return Promise.resolve("granted");
     };
   });
   const openPage = async () => {
@@ -48,6 +55,23 @@ async function main() {
   let page;
   try {
     page = await openPage();
+    for (const fixture of fixtures) {
+      const directory = fs.mkdtempSync(path.join(os.tmpdir(), "codex-browser-accounting-"));
+      try {
+        const file = path.join(directory, "rollout-test.jsonl");
+        fs.writeFileSync(file, fixture.text);
+        const nodeRecords = parseSessionFile(file).records;
+        const browserRecords = await page.evaluate(async fixture => (await parseSessionFiles([
+          new File([fixture.text], "rollout-test.jsonl", { lastModified: Date.parse("2026-09-09T08:00:00Z") })
+        ])).records, fixture);
+        const metrics = records => Object.fromEntries(["inputTokens", "cachedInputTokens", "outputTokens", "totalTokens", "reasoningOutputTokens"].map(key => [key, records.reduce((s, r) => s + (r[key] || 0), 0)]));
+        assert.equal(metrics(browserRecords).totalTokens, fixture.expected, fixture.name);
+        assert.equal(browserRecords.some(r => r.estimated), false, fixture.name);
+        assert.deepEqual(metrics(browserRecords), metrics(nodeRecords), fixture.name);
+      } finally {
+        fs.rmSync(directory, { recursive: true, force: true });
+      }
+    }
     const benchmark = await page.evaluate(async () => {
       const directory = await (await navigator.storage.getDirectory()).getDirectoryHandle("sessions", { create: true });
       const oldDate = "2025-01-02T08:00:00.000Z";
@@ -97,8 +121,8 @@ async function main() {
     assert.deepEqual(mutation, { parsed: 2, reused: 158, equal: true });
 
     // Close and reopen the page: use the actual stored handle and parsed payload.
-    await page.close();
-    page = await openPage();
+    await page.reload();
+    await page.waitForFunction(() => state.initialized && !state.loading);
     assert.deepEqual(await page.evaluate(() => ({ type: state.staticSourceType, records: state.records.length,
       reads: window.syncReads, refreshed: state.lastRefreshAt > 0, from: els.fromDate.value })),
     { type: "sessions-folder", records: 160, reads: 0, refreshed: true, from: "2025-01-02" });
@@ -141,6 +165,31 @@ async function main() {
       return { reads: window.syncReads - reads, parsed: state.staticPayload.stats.parsedFiles };
     });
     assert.deepEqual(final, { reads: 160, parsed: 160 });
+
+    // Upgrade must preserve stale data while access is denied, then rebuild on consent.
+    await page.evaluate(async () => {
+      const db = await openHandleDatabase();
+      const cached = staticPayloadCacheValue(state.staticPayload);
+      cached.parserVersion = 10;
+      cached.sessionFileManifest.parserVersion = 10;
+      await new Promise((resolve, reject) => {
+        const tx = db.transaction(handleDb.store, "readwrite");
+        tx.objectStore(handleDb.store).put(cached, handleDb.staticPayloadKey);
+        tx.oncomplete = resolve;
+        tx.onerror = () => reject(tx.error);
+      });
+      localStorage.setItem("testPermission", "prompt");
+    });
+    await page.reload();
+    await page.waitForFunction(() => state.initialized && !state.loading);
+    assert.equal(await page.evaluate(() => state.staticPayload.records.length), 160);
+    assert.equal(await page.evaluate(() => state.staticPayload.parserStale), true);
+    assert.equal(await page.evaluate(() => els.statusNotice.textContent.includes("尚未重新计算")), true);
+    assert.equal(await page.evaluate(() => window.syncReads), 0);
+    await page.getByRole("button", { name: "同步数据", exact: true }).click();
+    await page.waitForFunction(() => !state.loading && !state.staticPayload.parserStale);
+    assert.equal(await page.evaluate(() => state.staticPayload.stats.parsedFiles), 160);
+    assert.equal(await page.evaluate(async () => (await loadCachedStaticPayload()).parserStale), false);
 
     // A stale cached date range must not hide newly synced current-day usage.
     await page.evaluate(async () => {

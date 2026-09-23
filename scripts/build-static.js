@@ -5,6 +5,7 @@ const root = path.resolve(__dirname, "..");
 const dist = path.join(root, "dist");
 const required = [
   "index.html",
+  "usage-accounting.js",
   "sites-worker.js",
   "sample-data/demo-usage-index.json",
   "sample-data/usage-index.sample.json",
@@ -25,6 +26,8 @@ if (!process.exitCode) {
   fs.mkdirSync(path.join(dist, "sample-data"), { recursive: true });
   fs.mkdirSync(path.join(dist, "client", "sample-data"), { recursive: true });
   fs.mkdirSync(path.join(dist, "server"), { recursive: true });
+  fs.copyFileSync(path.join(root, "usage-accounting.js"), path.join(dist, "usage-accounting.js"));
+  fs.copyFileSync(path.join(root, "usage-accounting.js"), path.join(dist, "client", "usage-accounting.js"));
   fs.copyFileSync(path.join(root, "index.html"), path.join(dist, "index.html"));
   fs.copyFileSync(path.join(root, "sample-data", "demo-usage-index.json"), path.join(dist, "sample-data", "demo-usage-index.json"));
   fs.copyFileSync(path.join(root, "sample-data", "usage-index.sample.json"), path.join(dist, "sample-data", "usage-index.sample.json"));
