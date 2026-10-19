@@ -11,6 +11,7 @@ const DATA_DIR = path.join(ROOT, "data");
 const IMPORT_DIR = path.join(DATA_DIR, "imports");
 const INDEX_PATH = path.join(DATA_DIR, "usage-index.json");
 const UsageAccounting = require("./usage-accounting");
+const OutputSpeed = require("./output-speed");
 const INDEX_VERSION = UsageAccounting.version;
 const SUPPORTED_SESSION_EXTENSIONS = new Set([".jsonl", ".json", ".log", ".txt"]);
 
@@ -799,7 +800,8 @@ function createRecord(raw) {
     detailText: raw.detailText || "",
     imported: Boolean(raw.imported),
     importBatch: raw.importBatch || "",
-    sourceRule: firstScalar(raw.sourceRule)
+    sourceRule: firstScalar(raw.sourceRule),
+    ...OutputSpeed.timingFields(raw)
   };
   return applyAutomaticSourceEvidence(record);
 }
@@ -822,6 +824,7 @@ function parseSessionFile(filePath) {
   const seen = new Set();
   let parseErrors = 0;
   const accounting = UsageAccounting.createTracker();
+  const outputTiming = OutputSpeed.createCollector();
   function addUsage(usage, item, lineNumber, fallbackText = "") {
     const payload = getPayloadObject(item);
     const timestamp = item?.timestamp || payload.timestamp || meta.timestamp || "";
@@ -893,6 +896,7 @@ function parseSessionFile(filePath) {
       considerSessionTitle(meta, textFromMessagePayload(payload) || textFromMessagePayload(item));
     }
 
+    outputTiming.observe(item, meta);
     const usage = usageFromObject(item);
     if (usage) {
       addUsage(usage, item, lineNumber, meta.title);
@@ -956,6 +960,7 @@ function parseSessionFile(filePath) {
     }
   }
 
+  outputTiming.apply(records);
   return {
     signature: statSignature(filePath),
     path: filePath,

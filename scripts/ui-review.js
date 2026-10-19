@@ -22,7 +22,10 @@ const pages = [
   { key: "settings", name: "设置 / 关于", view: "settings", screenshot: "settings", url: baseUrl },
   { key: "settings-bridge", name: "GitHub Pages 账号桥接", view: "settings", screenshot: "settings-bridge", url: `${baseUrl}?accountBridge=1`, staticMode: true },
   { key: "overview-permission", name: "旧统计缓存 / 待授权", view: "overview", screenshot: "overview-permission", url: baseUrl, staticMode: true },
-  { key: "overview-dark", name: "深色总览页", view: "overview", screenshot: "overview-dark", url: baseUrl, theme: "dark" }
+  { key: "overview-dark", name: "深色总览页", view: "overview", screenshot: "overview-dark", url: baseUrl, theme: "dark" },
+  { key: "overview-speed", name: "输出速度监控", view: "overview", screenshot: "overview-speed", url: baseUrl, staticMode: true, speed: true },
+  { key: "overview-speed-dark", name: "深色输出速度监控", view: "overview", screenshot: "overview-speed-dark", url: baseUrl, staticMode: true, speed: true, theme: "dark" },
+  { key: "overview-speed-empty", name: "缺少计时数据", view: "overview", screenshot: "overview-speed-empty", url: baseUrl, staticMode: true, speed: true, emptySpeed: true }
 ];
 
 const viewports = [
@@ -107,9 +110,7 @@ async function ensureServer() {
 
 async function openPage(page, pageInfo) {
   let bridgeRequestBody = null;
-  if (pageInfo.theme) {
-    await page.addInitScript(theme => localStorage.setItem("codexTokenTheme", theme), pageInfo.theme);
-  }
+  await page.addInitScript(theme => localStorage.setItem("codexTokenTheme", theme), pageInfo.theme || "light");
   if (pageInfo.staticMode) {
     await page.route("**/api/usage**", route => route.fulfill({
       status: 200,
@@ -151,6 +152,22 @@ async function openPage(page, pageInfo) {
     });
   }
   await page.goto(pageInfo.url || baseUrl, { waitUntil: "networkidle" });
+  if (pageInfo.speed) {
+    await page.waitForFunction(() => state.initialized && !state.loading);
+    if (pageInfo.emptySpeed) await page.evaluate(() => { state.records = state.records.map(record => ({ ...record, turnDurationMs: 0 })); });
+    await page.locator('[data-performance="speed"]').click();
+    if (pageInfo.emptySpeed) {
+      await page.locator(".speed-empty").waitFor();
+    } else {
+      await page.locator(".speed-stat").first().waitFor();
+      await page.evaluate(() => render(state.data));
+      if (!(await page.locator("#outputSpeedPanel").isVisible())) throw new Error("速度页签在数据刷新后丢失");
+      await page.locator(".speed-point").first().click();
+      if (!(await page.locator("#chartTooltip").textContent()).includes("Token/s")) throw new Error("速度图缺少回合明细");
+    }
+    await page.evaluate(() => { hideChartTooltip(); window.scrollTo(0, 0); });
+    await page.waitForFunction(() => !document.querySelector("#toast").classList.contains("show"));
+  }
   if (pageInfo.key === "overview-permission") {
     await page.waitForFunction(() => state.initialized && !state.loading);
     await page.evaluate(async () => {
@@ -303,7 +320,7 @@ async function collectAudit(page, pageInfo, viewport, screenshot) {
       text: text(element),
       rect: rect(element)
     }));
-    const chartSelectors = ["#trendChart", "#ratioChart", "#cacheTrendChart", ".calendar-heatmap", ".task-layout"];
+    const chartSelectors = ["#trendChart", "#ratioChart", "#cacheTrendChart", "#outputSpeedPanel", ".calendar-heatmap", ".task-layout"];
     const charts = chartSelectors.map(selector => {
       const element = document.querySelector(selector);
       const hasGraphic = Boolean(element?.querySelector("canvas,svg,.bar,.bars,.bar-row,.day,.stack,.stack-outer,.donut,.donut-row,.ratio-row,.track,.fill,.trend-bar,.cache-point,.calendar-cell,.task-type-card"));
@@ -317,7 +334,7 @@ async function collectAudit(page, pageInfo, viewport, screenshot) {
       return { tag: element.tagName.toLowerCase(), className: String(element.className || ""), fontSize: parseFloat(styles.fontSize) || 0, compact, text: content.slice(0, 80) };
     }).filter(item => item.text);
     const smallTextCount = textNodes.filter(item => item.fontSize && item.fontSize < 12 && !item.compact).length;
-    const keyNumbers = Array.from(document.querySelectorAll(".metric.hero .metric-value,.stat-card.hero-stat strong,.today-time,.metric-value")).filter(visible).map(element => ({
+    const keyNumbers = Array.from(document.querySelectorAll(".metric.hero .metric-value,.stat-card.hero-stat strong,.today-time,.metric-value,.speed-stat strong")).filter(visible).map(element => ({
       text: text(element),
       fontSize: parseFloat(getComputedStyle(element).fontSize) || 0
     }));
@@ -325,10 +342,11 @@ async function collectAudit(page, pageInfo, viewport, screenshot) {
       ...Array.from(document.querySelectorAll(".metric-value")),
       ...Array.from(document.querySelectorAll(".trend-total-value")),
       ...Array.from(document.querySelectorAll(".trend-total-row strong")),
-      ...Array.from(document.querySelectorAll(".ratio-legend-row"))
+      ...Array.from(document.querySelectorAll(".ratio-legend-row")),
+      ...Array.from(document.querySelectorAll(".speed-stat strong"))
     ].filter(visible).map(element => {
       const bounds = element.getBoundingClientRect();
-      const owner = element.closest(".metric,.trend-total-card,.ratio-panel");
+      const owner = element.closest(".metric,.trend-total-card,.ratio-panel,.speed-stat");
       const ownerBounds = owner?.getBoundingClientRect();
       const outsideOwner = ownerBounds && (
         bounds.left < ownerBounds.left - 1 ||

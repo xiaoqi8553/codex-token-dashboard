@@ -4,6 +4,8 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { chromium } = require("playwright");
 const { fixtures } = require("../tests/fixtures/accounting");
+const { speedFixture } = require("../tests/fixtures/output-speed");
+const OutputSpeed = require("../output-speed");
 const { parseSessionFile } = require("../server");
 const os = require("node:os");
 
@@ -26,7 +28,7 @@ async function main() {
   await context.route("**/*", route => {
     const url = new URL(route.request().url());
     if (url.pathname.startsWith("/api/")) apiRequests += 1;
-    const file = url.pathname.endsWith("usage-accounting.js") ? "usage-accounting.js" : url.pathname.endsWith("demo-usage-index.json")
+    const file = url.pathname.endsWith("output-speed.js") ? "output-speed.js" : url.pathname.endsWith("usage-accounting.js") ? "usage-accounting.js" : url.pathname.endsWith("demo-usage-index.json")
       ? "sample-data/demo-usage-index.json" : "index.html";
     return route.fulfill({ status: 200, contentType: file.endsWith("js") ? "text/javascript" : file.endsWith("json") ? "application/json" : "text/html", body: fs.readFileSync(path.join(root, file)) });
   });
@@ -55,7 +57,9 @@ async function main() {
   let page;
   try {
     page = await openPage();
-    for (const fixture of fixtures) {
+    const coldDemo = await page.evaluate(() => ({ records: state.records.length, samples: CodexOutputSpeed.summarize(state.records).samples.length }));
+    assert.ok(coldDemo.records > 0 && coldDemo.samples > 0, "a fresh Pages visit must show demo usage and speed without requiring a sync click");
+    for (const fixture of [...fixtures, speedFixture]) {
       const directory = fs.mkdtempSync(path.join(os.tmpdir(), "codex-browser-accounting-"));
       try {
         const file = path.join(directory, "rollout-test.jsonl");
@@ -68,6 +72,7 @@ async function main() {
         assert.equal(metrics(browserRecords).totalTokens, fixture.expected, fixture.name);
         assert.equal(browserRecords.some(r => r.estimated), false, fixture.name);
         assert.deepEqual(metrics(browserRecords), metrics(nodeRecords), fixture.name);
+        assert.deepEqual(browserRecords.map(OutputSpeed.timingFields), nodeRecords.map(OutputSpeed.timingFields), `${fixture.name}: browser/Node timing parity`);
       } finally {
         fs.rmSync(directory, { recursive: true, force: true });
       }

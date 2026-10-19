@@ -5,7 +5,7 @@
   else root.CodexUsageAccounting = api;
 })(typeof globalThis === "object" ? globalThis : this, function () {
   "use strict";
-  const version = 19;
+  const version = 20;
   const fields = ["inputTokens", "cachedInputTokens", "outputTokens", "totalTokens", "reasoningOutputTokens"];
   const number = value => Number.isFinite(Number(value)) ? Math.max(0, Number(value)) : 0;
   const scalar = value => typeof value === "string" || typeof value === "number" ? String(value) : "";

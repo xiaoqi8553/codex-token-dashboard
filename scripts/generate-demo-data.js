@@ -61,6 +61,14 @@ for (let day = 0; day < 30; day += 1) {
       estimated,
       estimateReason: estimated ? "demo_missing_usage_fields_text_length" : "",
       requestId: "",
+      turnId: `turn-${sessionId}`,
+      ...(!estimated ? {
+        turnOutputTokens: outputTokens,
+        turnDurationMs: Math.round(outputTokens / (22 + (day + index * 7) % 65) * 1000),
+        timeToFirstTokenMs: 800 + ((day + index) % 9) * 230,
+        turnCompletedAt: timestamp.toISOString(),
+        turnModel: model
+      } : {}),
       filePath: "",
       relativePath: source === "relay" ? `sample-data/imports/demo-relay-${scenario.type}.csv` : `${scenario.path.replace("sample-sessions/", `sample-sessions/${isoDate}/`)}`,
       projectName: scenario.project,

@@ -33,6 +33,15 @@
 - docs/screenshots/current/overview-dark-1920.png
 - docs/screenshots/current/overview-dark-1366.png
 - docs/screenshots/current/overview-dark-mobile.png
+- docs/screenshots/current/overview-speed-1920.png
+- docs/screenshots/current/overview-speed-1366.png
+- docs/screenshots/current/overview-speed-mobile.png
+- docs/screenshots/current/overview-speed-dark-1920.png
+- docs/screenshots/current/overview-speed-dark-1366.png
+- docs/screenshots/current/overview-speed-dark-mobile.png
+- docs/screenshots/current/overview-speed-empty-1920.png
+- docs/screenshots/current/overview-speed-empty-1366.png
+- docs/screenshots/current/overview-speed-empty-mobile.png
 
 ## 页面逐项检查
 
@@ -100,6 +109,33 @@
   - 保持当前结构，人工复核截图中的视觉观感。
 
 ### 深色总览页
+- 1920：通过
+- 1366：通过
+- mobile：通过
+- 发现的问题：
+  - 未发现自动化规则命中的明显问题。
+- 修复建议：
+  - 保持当前结构，人工复核截图中的视觉观感。
+
+### 输出速度监控
+- 1920：通过
+- 1366：通过
+- mobile：通过
+- 发现的问题：
+  - 未发现自动化规则命中的明显问题。
+- 修复建议：
+  - 保持当前结构，人工复核截图中的视觉观感。
+
+### 深色输出速度监控
+- 1920：通过
+- 1366：通过
+- mobile：通过
+- 发现的问题：
+  - 未发现自动化规则命中的明显问题。
+- 修复建议：
+  - 保持当前结构，人工复核截图中的视觉观感。
+
+### 缺少计时数据
 - 1920：通过
 - 1366：通过
 - mobile：通过

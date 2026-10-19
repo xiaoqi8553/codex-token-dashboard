@@ -7,7 +7,7 @@
 ![Codex Token Dashboard cover](screenshots/project-cover.svg)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-0f766e.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.8.8-17202e.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.9.0-17202e.svg)](CHANGELOG.md)
 [![OpenAI Sites](https://img.shields.io/badge/deploy-OpenAI%20Sites-275dcc.svg)](https://codex-token-dashboard.hazel-saepemx.chatgpt.site)
 [![Netlify Demo](https://img.shields.io/badge/demo-codetoken.netlify.app-2f6fed.svg)](https://codetoken.netlify.app/)
 [![GitHub Pages](https://img.shields.io/badge/pages-github.io-111827.svg)](https://xiaoqi8553.github.io/codex-token-dashboard/)
@@ -35,6 +35,7 @@ OpenAI Sites 生产站与仓库中已经推送的版本保持同步；默认采�
 - 缺少精确 usage 时按文本长度估算，并明确标记 `estimated: true`。
 - 支持中转站 CSV / JSON 导入。
 - 支持总览卡片、今日状态卡、每日趋势、输入/输出/缓存占比、缓存命中率趋势、Top 会话、按模型统计。
+- “用量与输出速度”支持完成回合的 Token/s、加权平均速度、首 Token 等待和模型对比；使用日志提供的回合耗时（含思考与工具等待），不将其称为纯流式生成速度，缺少有效计时的记录不参与计算。
 - 支持 AI 使用日历，用热力图查看每日 Token、active tokens、输出、缓存命中率和记录数。
 - 支持任务复盘，用本地规则识别写代码、调试、前端 UI、文档、部署、数据分析、重构、项目规划等任务类型。
 - 今日状态卡支持手动授权定位后查询 Open-Meteo 天气；不会自动读取位置。

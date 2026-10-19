@@ -3260,6 +3260,46 @@
       .account-sync-check { min-height: 32px; }
     }
   </style>
+  <style id="output-speed-design">
+    #cacheTrendPanel > .panel-head { flex-wrap: wrap; gap: 12px; }
+    #performanceTabs { flex-shrink: 0; }
+    #performanceTabs button.active { background: var(--control-active-bg); color: var(--control-active-ink); }
+    .speed-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 22px; }
+    .speed-stat { min-width: 0; background: var(--panel-2); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+    .speed-stat > span { color: var(--muted); font-size: 12px; }
+    .speed-stat > div { display: flex; align-items: baseline; gap: 8px; margin: 8px 0; }
+    .speed-stat strong { font-size: 30px; line-height: 1.1; font-variant-numeric: tabular-nums; }
+    .speed-stat small, .speed-model small { color: var(--muted); font-size: 12px; font-weight: 500; }
+    .speed-stat p { color: var(--muted); margin: 0; font-size: 12px; overflow-wrap: anywhere; }
+    .speed-shortcut { padding: 0; min-height: 0; border: 0; background: none; color: var(--accent); font: inherit; cursor: pointer; text-align: left; }
+    .speed-chart-head, .speed-chart-dates { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; }
+    .speed-chart { background: var(--panel-2); border: 1px solid var(--line); border-radius: 12px; margin-top: 12px; padding: 12px 16px; }
+    .speed-plot { position: relative; height: 160px; margin: 0 8px; background: repeating-linear-gradient(to top, transparent 0, transparent calc(25% - 1px), var(--line) calc(25% - 1px), var(--line) 25%); }
+    .speed-plot svg { position: absolute; width: 100%; height: 100%; overflow: visible; }
+    .speed-point { position: absolute; padding: 0; min-height: 0; width: 24px; height: 24px; border-radius: 50%; transform: translate(-50%, 50%); border: 0; background: transparent; cursor: help; }
+    .speed-point::before { content: ""; position: absolute; left: 50%; top: 50%; width: 8px; height: 8px; transform: translate(-50%, -50%); border: 2px solid var(--panel); border-radius: 50%; background: var(--active); }
+    .speed-point:hover, .speed-point:focus-visible { outline: 3px solid var(--active); outline-offset: 3px; }
+    .speed-chart-dates { color: var(--muted); margin-top: 12px; font-variant-numeric: tabular-nums; }
+    .speed-models { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 16px; }
+    .speed-model { display: flex; align-items: center; gap: 12px; min-width: 0; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font-size: 12px; }
+    .speed-model > strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 1; }
+    .speed-model > span { color: var(--muted); white-space: nowrap; }
+    .speed-model > b { white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .speed-method { font-size: 12px; line-height: 1.7; margin: 14px 0 0; }
+    .speed-empty { min-height: 240px; padding: 24px; border: 1px dashed var(--line); border-radius: 12px; background: var(--panel-2); }
+    .speed-empty p { color: var(--muted); font-size: 13px; line-height: 1.7; }
+    .speed-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    @media (max-width: 760px) {
+      .speed-summary { grid-template-columns: 1fr; gap: 8px; }
+      .speed-stat { padding: 12px; }
+      .speed-stat > div { margin: 5px 0; }
+      .speed-stat strong { font-size: 28px; }
+      .speed-models { grid-template-columns: 1fr; }
+      .speed-chart-head { flex-wrap: wrap; }
+      .speed-chart-dates { flex-direction: column; gap: 4px; }
+      .speed-empty { padding: 16px; }
+    }
+  </style>
 </head>
 <body>
   <main class="app">
@@ -3293,7 +3333,7 @@
         </div>
         <div class="rail-version">
           <span>LOCAL-FIRST</span>
-          <strong>v0.8.8</strong>
+          <strong>v0.9.0</strong>
         </div>
       </div>
     </aside>
@@ -3474,11 +3514,16 @@
     <section class="panel overview-only" id="cacheTrendPanel">
       <div class="panel-head">
         <div>
-          <h2>使用趋势</h2>
-          <p class="muted">输入 / 输出 / 缓存创建 / 缓存命中 / active tokens</p>
+          <h2>用量与输出速度</h2>
+          <p class="muted" id="performanceHint">输入 / 输出 / 缓存创建 / 缓存命中 / active tokens</p>
+        </div>
+        <div class="segmented" id="performanceTabs" role="group" aria-label="监控指标">
+          <button type="button" data-performance="usage" aria-pressed="true">用量趋势</button>
+          <button type="button" data-performance="speed" aria-pressed="false">输出速度</button>
         </div>
       </div>
       <div id="cacheTrendChart"></div>
+      <div id="outputSpeedPanel" hidden></div>
     </section>
 
       <section id="viewPanel"></section>
@@ -3500,6 +3545,7 @@
   <div class="chart-tooltip" id="chartTooltip"></div>
 
   <script src="usage-accounting.js"></script>
+  <script src="output-speed.js"></script>
   <script>
     const startupSearchParams = new URLSearchParams(window.location.search);
     const startupHashParams = new URLSearchParams(window.location.hash.slice(1));
@@ -3514,6 +3560,7 @@
       range: "7d",
       view: startupAccountBridge ? "settings" : "overview",
       trendMode: "source",
+      performanceTab: "usage",
       calendarMetric: "totalTokens",
       taskMetric: "totalTokens",
       taskSort: "totalTokens",
@@ -4181,7 +4228,8 @@
         providedTaskType: normalizeProvidedTaskType(raw),
         detailText: raw.detailText || "",
         imported: Boolean(raw.imported || fallback.imported),
-        importBatch: raw.importBatch || fallback.importBatch || ""
+        importBatch: raw.importBatch || fallback.importBatch || "",
+        ...CodexOutputSpeed.timingFields(raw)
       };
     }
 
@@ -4278,6 +4326,8 @@
       if (payload.role === "user" || item.role === "user") {
         considerSessionTitle(meta, textFromMessagePayload(payload) || textFromMessagePayload(item));
       }
+      meta.outputTiming ||= CodexOutputSpeed.createCollector();
+      meta.outputTiming.observe(item, meta);
       const usage = usageFromObject(item);
       if (usage) {
         const tokenSet = selectUsageTokens(usage, meta);
@@ -4657,7 +4707,7 @@
       const usagePattern = /total_token_usage|last_token_usage|token_usage|input_tokens|prompt_tokens|cached_input_tokens|cache_read_input_tokens|output_tokens|completion_tokens|total_tokens/;
 
       if (recordType === "session_meta" || recordType === "turn_context") return true;
-      if (recordType === "event_msg") return usagePattern.test(prefix);
+      if (recordType === "event_msg") return usagePattern.test(prefix) || /"type"\s*:\s*"task_complete"/.test(prefix);
       if (recordType === "response_item") {
         return /"role"\s*:\s*"user"/.test(prefix);
       }
@@ -4832,6 +4882,7 @@
             }
           }
         }
+        meta.outputTiming?.apply(records.slice(before));
         parsedFiles += 1;
         nextFiles.push({ ...signature, count: records.length - before });
         loadedBytes += toNumber(file.size);
@@ -5178,7 +5229,8 @@
       const payload = await loadDemoPayload();
       state.staticPayload = payload;
       state.staticSourceType = "demo";
-      if (!els.fromDate.value && !els.toDate.value) fitDateRangeToRecords(payload.records);
+      const rangeHasDemoData = payload.records.some(record => record.date >= els.fromDate.value && record.date <= els.toDate.value);
+      if (!rangeHasDemoData) fitDateRangeToRecords(payload.records);
       await cacheStaticPayload(payload);
       renderStaticUsage(message);
     }
@@ -5229,7 +5281,7 @@
       renderModelOptions(payload.models || []);
       render(payload);
       if (payload.parserStale) {
-        setStatus("正在显示旧版本缓存，Token 统计尚未重新计算。请点击“同步数据”授权读取，或重新导入 sessions 文件夹；完成前这些数值可能包含重复统计。", "warning");
+        setStatus("正在显示旧版本缓存，统计尚未按当前版本重新计算，输出速度等新增指标可能缺失。请点击“同步数据”授权读取，或重新导入 sessions 文件夹。", "warning");
       } else {
         setStatus(message || `浏览器本地数据已更新：${formatInt(state.records.length)} 条记录。`);
       }
@@ -5499,6 +5551,7 @@
         renderTrend(summary.byDay);
         renderRatio(summary);
         renderCacheTrend(summary.byDay);
+        renderOutputSpeed();
       }
       renderView(summary);
     }
@@ -5531,9 +5584,10 @@
     }
 
     function renderMetrics(summary, updated) {
+      const latestSpeed = CodexOutputSpeed.summarize(state.records).latest;
       els.metrics.innerHTML = [
         metricCard({ title: "缓存输入 Token", value: summary.cachedInputTokens, summary, updated, icon: "C", colorClass: "cache", note: `缓存命中率 ${percent(summary.cachedInputTokens, summary.inputTokens, 1)}%` }),
-        metricCard({ title: "输出 Token", value: summary.outputTokens, summary, updated, icon: "O", colorClass: "output", note: `占总量 ${percent(summary.outputTokens, summary.totalTokens)}%` }),
+        metricCard({ title: "输出 Token", value: summary.outputTokens, summary, updated, icon: "O", colorClass: "output", note: `占总量 ${percent(summary.outputTokens, summary.totalTokens)}% · <button type="button" class="speed-shortcut" data-show-speed>${latestSpeed ? `最近 ${speedNumber(latestSpeed.tps)} Token/s` : "查看输出速度"} ↗</button>` }),
         metricCard({ title: "active tokens", value: summary.activeTokens, summary, updated, icon: "A", colorClass: "active", note: "未缓存输入 + 输出" }),
         metricCard({ title: "缓存命中率", value: percent(summary.cachedInputTokens, summary.inputTokens, 1), displayValue: `${percent(summary.cachedInputTokens, summary.inputTokens, 1)}%`, summary, updated, icon: "%", colorClass: "cache", note: `${formatToken(summary.cachedInputTokens)} / ${formatToken(summary.inputTokens)}` })
       ].join("");
@@ -5950,6 +6004,90 @@
       `;
     }
 
+    function speedNumber(value) {
+      return value === null || value === undefined ? "—" : Number(value) >= 10000 ? Number(value).toExponential(1) : Number(value).toLocaleString("zh-CN", { maximumFractionDigits: 1 });
+    }
+
+    function renderOutputSpeed() {
+      const speed = CodexOutputSpeed.summarize(state.records);
+      const selected = state.performanceTab === "speed";
+      document.querySelector("#cacheTrendChart").hidden = selected;
+      const panel = document.querySelector("#outputSpeedPanel");
+      panel.hidden = !selected;
+      document.querySelector("#performanceHint").textContent = selected
+        ? "回合平均输出 Token/s · 含思考与工具等待 · 完成回合后随同步更新"
+        : "输入 / 输出 / 缓存创建 / 缓存命中 / active tokens";
+      document.querySelectorAll("[data-performance]").forEach(button => {
+        const active = button.dataset.performance === state.performanceTab;
+        button.classList.toggle("active", active);
+        button.setAttribute("aria-pressed", String(active));
+      });
+      if (!selected) return;
+      const demo = state.staticSourceType === "demo" ? `<span class="badge unknown">示例速度</span>` : "";
+      if (!speed.samples.length) {
+        panel.innerHTML = `<div class="speed-empty"><strong>暂无可计算的输出速度</strong><p>需要同一回合的真实输出 Token 和 task_complete 耗时。旧日志、未完成回合及估算 Token 不参与速度统计。</p><p>已导入数据可点击同步更新；GitHub Pages 请导入最新 sessions 文件夹。</p><div class="speed-actions"><button class="btn primary" type="button" data-speed-sync>同步数据</button><button class="btn" type="button" data-speed-import>导入 sessions 文件夹</button></div></div>`;
+        return;
+      }
+      const recent = speed.samples.slice(-16);
+      const max = Math.max(...recent.map(row => row.tps), 1);
+      const x = index => recent.length === 1 ? 50 : index / (recent.length - 1) * 100;
+      const y = row => 8 + row.tps / max * 82;
+      const points = recent.map((row, index) => `${x(index)},${100 - y(row)}`).join(" ");
+      const models = new Map();
+      for (const sample of speed.samples) {
+        const name = sample.turnModel || "unknown";
+        if (!models.has(name)) models.set(name, { output: 0, duration: 0, count: 0 });
+        const model = models.get(name);
+        model.output += sample.turnOutputTokens; model.duration += sample.turnDurationMs; model.count += 1;
+      }
+      const stat = (label, value, unit, note) => `<div class="speed-stat"><span>${label}</span><div><strong>${value}</strong><small>${unit}</small></div><p>${note}</p></div>`;
+      panel.innerHTML = `
+        <div class="speed-summary">
+          ${stat("最近完成回合", speedNumber(speed.latest.tps), "Token/s", escapeHtml(formatDateTime(speed.latest.turnCompletedAt)))}
+          ${stat("加权平均速度", speedNumber(speed.weightedTps), "Token/s", `${formatInt(speed.samples.length)} 个回合 · 总输出 ÷ 总耗时`)}
+          ${stat("首 Token 等待中位数", speedNumber(speed.medianFirstTokenMs === null ? null : speed.medianFirstTokenMs / 1000), "秒", "仅使用日志提供的等待时间")}
+        </div>
+        <div class="speed-chart-head"><strong>最近 ${recent.length} 个已完成回合</strong><span class="muted">0 – ${speedNumber(max)} Token/s ${demo}</span></div>
+        <div class="speed-chart"><div class="speed-plot">
+          <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><polyline points="${points}" fill="none" stroke="var(--active)" stroke-width="2" vector-effect="non-scaling-stroke" /></svg>
+          ${recent.map((row, index) => {
+            const title = `${formatDateTime(row.turnCompletedAt)} · ${row.turnModel}\n回合速度 ${speedNumber(row.tps)} Token/s\n输出 ${formatInt(row.turnOutputTokens)} Token / 耗时 ${speedNumber(row.turnDurationMs / 1000)} 秒`;
+            return `<button type="button" class="speed-point" style="left:${x(index)}%;bottom:${y(row)}%" data-speed-detail="${escapeHtml(title)}" aria-label="${escapeHtml(title)}"></button>`;
+          }).join("")}
+        </div><div class="speed-chart-dates"><span>${escapeHtml(formatDateTime(recent[0].turnCompletedAt))}</span><span>${escapeHtml(formatDateTime(speed.latest.turnCompletedAt))}</span></div></div>
+        <div class="speed-models">${[...models].sort((a, b) => b[1].count - a[1].count).slice(0, 4).map(([name, model]) => `<div class="speed-model"><strong title="${escapeHtml(name)}">${escapeHtml(name)}</strong><span>${model.count} 回合</span><b>${speedNumber(model.output * 1000 / model.duration)} <small>Token/s</small></b></div>`).join("")}</div>
+        <p class="speed-method muted">按当前筛选命中的完整回合计算，每回合只计一次；这是端到端回合吞吐，不是纯流式生成速度。${formatInt(speed.missingRecords)} 条输出记录缺少有效计时或属于估算，未纳入。${state.dataMode === "static" && state.staticSourceType === "sessions-files" ? "一次性导入需重新选择文件夹才会更新。" : ""}</p>`;
+    }
+
+    document.querySelector("#performanceTabs").addEventListener("click", event => {
+      const button = event.target.closest("[data-performance]");
+      if (!button) return;
+      state.performanceTab = button.dataset.performance;
+      renderOutputSpeed();
+    });
+    document.querySelector("#metrics").addEventListener("click", event => {
+      if (!event.target.closest("[data-show-speed]")) return;
+      state.performanceTab = "speed";
+      renderOutputSpeed();
+      document.querySelector("#cacheTrendPanel").scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    document.querySelector("#outputSpeedPanel").addEventListener("click", event => {
+      if (event.target.closest("[data-speed-sync]")) loadUsage();
+      if (event.target.closest("[data-speed-import]")) chooseSessionsDirectory();
+      showSpeedSample(event);
+    });
+    function showSpeedSample(event) {
+      const point = event.target.closest("[data-speed-detail]");
+      if (!point) return;
+      const bounds = point.getBoundingClientRect();
+      const lines = point.dataset.speedDetail.split("\n");
+      showChartTooltip({ clientX: event.clientX || bounds.left + bounds.width / 2, clientY: event.clientY || bounds.top }, `<strong>${escapeHtml(lines[0])}</strong>${lines.slice(1).map(line => `<div>${escapeHtml(line)}</div>`).join("")}`);
+    }
+    document.querySelector("#outputSpeedPanel").addEventListener("mousemove", showSpeedSample);
+    document.querySelector("#outputSpeedPanel").addEventListener("focusin", showSpeedSample);
+    document.querySelector("#outputSpeedPanel").addEventListener("mouseleave", hideChartTooltip);
+    document.querySelector("#outputSpeedPanel").addEventListener("focusout", hideChartTooltip);
+
     function renderCacheTrend(days) {
       if (!days.length) {
         els.cacheTrendChart.innerHTML = emptyState("暂无使用趋势数据。");
@@ -6356,7 +6494,7 @@
                 <h2>设置 / 关于</h2>
                 <p class="muted">检查当前运行方式、隐私边界、版本和公开部署状态。</p>
               </div>
-              <span class="badge">版本 0.8.8</span>
+              <span class="badge">版本 0.9.0</span>
             </div>
             <div class="settings-grid">
               <div class="settings-card">
@@ -6771,7 +6909,7 @@
       const summary = summarize(safeRecords.map(record => ({ ...record, activeTokens: activeTokens(record), uncachedInputTokens: uncachedInputTokens(record), hitRate: cacheHitRateOf(record) })));
       return {
         snapshotVersion: 1,
-        appVersion: "0.8.8",
+        appVersion: "0.9.0",
         generatedAt: new Date().toISOString(),
         privacy: {
           anonymized: true,
