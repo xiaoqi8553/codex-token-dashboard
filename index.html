@@ -3333,7 +3333,7 @@
         </div>
         <div class="rail-version">
           <span>LOCAL-FIRST</span>
-          <strong>v0.9.0</strong>
+          <strong>v0.9.1</strong>
         </div>
       </div>
     </aside>
@@ -3367,8 +3367,8 @@
             </button>
             <button class="btn import-option" id="importFolderBtn" type="button" role="menuitem">
               <span>
-                <strong>选择 sessions 文件夹</strong>
-                <span>直接选择本机 .codex/sessions，浏览器本地解析</span>
+                <strong>选择 .codex / sessions 文件夹</strong>
+                <span>推荐 .codex，包含 sessions、归档和 .jsonl.zst 压缩历史</span>
               </span>
             </button>
           </div>
@@ -3399,7 +3399,7 @@
       <div class="welcome-actions">
         <button class="btn primary" id="welcomeSampleBtn" type="button">查看示例数据</button>
         <button class="btn" id="welcomeImportBtn" type="button">导入 usage-index / 脱敏快照</button>
-        <button class="btn" id="welcomeSessionsBtn" type="button">选择本机 sessions 文件夹</button>
+        <button class="btn" id="welcomeSessionsBtn" type="button">选择 .codex / sessions 文件夹</button>
         <a class="btn" href="https://github.com/xiaoqi8553/codex-token-dashboard#readme" target="_blank" rel="noreferrer">查看本地部署说明</a>
       </div>
     </section>
@@ -3411,7 +3411,7 @@
         <div class="toolbar" style="justify-content:start">
           <button class="btn primary" id="sampleBtn" type="button">加载示例数据</button>
           <button class="btn" id="importIndexBtn" type="button">导入 usage-index / 快照</button>
-          <button class="btn" id="importSessionsBtn" type="button">选择 sessions 文件夹</button>
+          <button class="btn" id="importSessionsBtn" type="button">选择 .codex / sessions 文件夹</button>
           <button class="btn" id="clearBrowserDataBtn" type="button">清除浏览器缓存</button>
         </div>
       </article>
@@ -3546,6 +3546,8 @@
 
   <script src="usage-accounting.js"></script>
   <script src="output-speed.js"></script>
+  <script src="vendor/fzstd/fzstd.js"></script>
+  <script src="session-files.js"></script>
   <script>
     const startupSearchParams = new URLSearchParams(window.location.search);
     const startupHashParams = new URLSearchParams(window.location.hash.slice(1));
@@ -4356,9 +4358,9 @@
     function isSessionImportEntry(entry) {
       const fileName = entry?.file?.name || "";
       const relativePath = String(entry?.relativePath || entry?.file?.webkitRelativePath || fileName || "").replace(/\\/g, "/");
-      if (!/\.(jsonl|json|log|txt)$/i.test(fileName)) return false;
+      if (!CodexSessionFiles.supported(fileName)) return false;
       return /^rollout-/i.test(fileName) ||
-        /(^|\/)sessions\//i.test(relativePath) ||
+        /(^|\/)(sessions|archived_sessions)\//i.test(relativePath) ||
         /^\d{4}\//.test(relativePath);
     }
 
@@ -4594,13 +4596,14 @@
     }
 
     async function collectDirectoryFiles(directoryHandle, prefix = "") {
+      if (!prefix && directoryHandle.name === "archived_sessions") prefix = "archived_sessions";
       const files = [];
       const skippedDirs = new Set(["cache", "plugins", ".tmp", "tmp", "node_repl", "generated_images", "attachments", "memories", "computer-use", "browser", "pets"]);
       for await (const [name, handle] of directoryHandle.entries()) {
         const relativePath = prefix ? `${prefix}/${name}` : name;
         if (handle.kind === "directory") {
           if (!prefix && skippedDirs.has(name)) continue;
-          if (!prefix && name !== "sessions" && !/^\d{4}$/.test(name)) continue;
+          if (!prefix && name !== "sessions" && name !== "archived_sessions" && !/^\d{4}$/.test(name)) continue;
           files.push(...await collectDirectoryFiles(handle, relativePath));
         } else {
           const entry = { file: await handle.getFile(), relativePath };
@@ -4762,20 +4765,28 @@
         lastYieldAt = performance.now();
       };
 
+      const compressed = CodexSessionFiles.compressed(file.name);
+      const unpack = compressed ? new fzstd.Decompress(chunk => consumeChunk(decoder.decode(chunk, { stream: true }))) : null;
+      try {
       if (file.stream) {
         const reader = file.stream().getReader();
         while (true) {
           const { value, done } = await reader.read();
           if (done) break;
           bytesRead += value?.byteLength || 0;
-          consumeChunk(decoder.decode(value, { stream: true }));
+          if (unpack) unpack.push(value);
+          else consumeChunk(decoder.decode(value, { stream: true }));
           await maybeYield(false);
         }
+        if (unpack) unpack.push(new Uint8Array(0), true);
         consumeChunk(decoder.decode());
       } else {
-        const text = await file.text();
+        const text = compressed ? decoder.decode(fzstd.decompress(new Uint8Array(await file.arrayBuffer()))) : await file.text();
         bytesRead = file.size || text.length;
         consumeChunk(text);
+      }
+      } catch (error) {
+        throw new Error(`读取${compressed ? "压缩" : ""}会话失败：${file.name}（${error.message}）。上次缓存仍保留。`);
       }
 
       if (lineParts.length) completeLine("");
@@ -4796,7 +4807,7 @@
       const evidence = browserSourceAttributionMode === "evidence"
         ? await extractBrowserEndpointEvidence(allEntries)
         : createSourceEvidence();
-      const files = allEntries.filter(isSessionImportEntry);
+      const files = CodexSessionFiles.select(allEntries.filter(isSessionImportEntry), entry => entry.relativePath || entry.file.webkitRelativePath || entry.file.name);
       // Reuse whole-file results; changed files always run through the existing parser.
       // Evidence mode continues to reclassify using all current endpoint logs.
       const previous = options.previousPayload;
@@ -4850,6 +4861,11 @@
           preview = scan.preview;
         }
         if (records.length === before && file.size > 0) {
+          if (!fallbackText && CodexSessionFiles.compressed(file.name)) {
+            const lines = [];
+            await readSessionFileLines(file, line => lines.push(line));
+            fallbackText = lines.join("\n");
+          }
           fallbackText = fallbackText || await file.text();
           const estimated = estimateTokens(fallbackText);
           records.push(normalizeRecord({
@@ -4894,6 +4910,7 @@
         sourceLabel: "浏览器 sessions 导入",
         sourceType: state.sessionsDirectoryHandle ? "sessions-folder" : "sessions-files",
         sessionFiles: files.length,
+        ...CodexSessionFiles.stats(files, entry => entry.relativePath || entry.file.webkitRelativePath || entry.file.name),
         parsedFiles,
         reusedFiles,
         sourceEvidence: evidence.stats
@@ -5017,6 +5034,8 @@
         sourceLabel: parsed.sessionsDir || file.name,
         sourceType: "import",
         sessionFiles: parsed.stats?.sessionFiles || 0,
+        compressedFiles: parsed.stats?.compressedFiles || 0,
+        archivedFiles: parsed.stats?.archivedFiles || 0,
         importFiles: parsed.stats?.importFiles || 0
       });
       if (Array.isArray(parsed.data)) return makeStaticPayload(parseRelayRows(parsed.data, file.name), { sourceLabel: `中转站导入：${file.name}`, sourceType: "import", importFiles: 1 });
@@ -5040,6 +5059,8 @@
         config: { publicAccess: false, anonymizeData: true, defaultDateRange: state.range, staticBrowser: true },
         stats: {
           sessionFiles: options.sessionFiles || 0,
+          compressedFiles: options.compressedFiles || 0,
+          archivedFiles: options.archivedFiles || 0,
           importFiles: options.importFiles || 0,
           reusedFiles: options.reusedFiles || 0,
           parsedFiles: options.parsedFiles || 0,
@@ -5090,6 +5111,8 @@
         updatedAt: source.updatedAt,
         generatedAt: source.generatedAt,
         sessionFiles: source.stats?.sessionFiles,
+        compressedFiles: source.stats?.compressedFiles,
+        archivedFiles: source.stats?.archivedFiles,
         importFiles: source.stats?.importFiles,
         parsedFiles: source.stats?.parsedFiles,
         reusedFiles: source.stats?.reusedFiles,
@@ -5281,7 +5304,7 @@
       renderModelOptions(payload.models || []);
       render(payload);
       if (payload.parserStale) {
-        setStatus("正在显示旧版本缓存，统计尚未按当前版本重新计算，输出速度等新增指标可能缺失。请点击“同步数据”授权读取，或重新导入 sessions 文件夹。", "warning");
+        setStatus("正在显示旧版本缓存，压缩历史可能尚未计入。请点击“同步数据”授权重算；如需同时统计归档，请重新选择 .codex 根目录。", "warning");
       } else {
         setStatus(message || `浏览器本地数据已更新：${formatInt(state.records.length)} 条记录。`);
       }
@@ -5316,7 +5339,7 @@
             await refreshSessionsDirectoryHandle(silent ? "" : "sessions 文件夹已刷新：", { silent, startupRange: options.startupRange, fitRange: Boolean(options.startupRange) });
             refreshWeatherFromSavedLocation({ silent: true, force: true });
           } catch (error) {
-            if (!silent) setStatus(error.message || "sessions 文件夹刷新失败，请重新选择文件夹。", "error");
+            setStatus(error.message || "sessions 文件夹刷新失败，请重新选择文件夹。", "error");
           } finally {
             setBusy(false);
           }
@@ -5532,7 +5555,7 @@
         els.scanMeta.textContent = isDemo ? "隐私状态：不会自动读取本机文件" : "隐私状态：数据只在浏览器本地处理";
       } else {
         els.modeMeta.textContent = payload.config?.publicAccess ? "当前模式：公开访问模式" : "当前模式：本地私有模式";
-        els.pathMeta.textContent = "数据来源：本机 .codex/sessions";
+        els.pathMeta.textContent = "数据来源：本机 sessions + 归档";
         els.updateMeta.textContent = `最后更新：${updated}`;
         els.scanMeta.textContent = `扫描：${payload.scanMs ?? "-"} ms`;
         els.fileMeta.textContent = `文件：${payload.stats?.sessionFiles ?? "-"} / 记录：${formatInt(state.records.length)}`;
@@ -6475,7 +6498,7 @@
           ? "公开静态演示版"
           : "浏览器导入模式";
       const sourceLabel = state.dataMode === "server"
-        ? "本机 .codex/sessions + data/imports"
+        ? "本机 sessions + archived_sessions + data/imports"
         : state.staticSourceType === "demo"
           ? "sample-data/demo-usage-index.json"
           : state.staticPayload?.sessionsDir || "用户手动导入";
@@ -6494,7 +6517,7 @@
                 <h2>设置 / 关于</h2>
                 <p class="muted">检查当前运行方式、隐私边界、版本和公开部署状态。</p>
               </div>
-              <span class="badge">版本 0.9.0</span>
+              <span class="badge">版本 0.9.1</span>
             </div>
             <div class="settings-grid">
               <div class="settings-card">
@@ -6503,6 +6526,8 @@
                 <div class="privacy-list">
                   <span>数据来源：${escapeHtml(sourceLabel)}</span>
                   <span>当前记录：${formatInt(state.records.length)} 条 / ${formatInt(summary.sessionCount)} 个会话</span>
+                  <span>读取文件：${formatInt(state.data?.stats?.sessionFiles || 0)} 个（压缩 ${formatInt(state.data?.stats?.compressedFiles || 0)} / 归档 ${formatInt(state.data?.stats?.archivedFiles || 0)}）</span>
+                  <span>浏览器若只选 sessions，不含同级归档；全年统计推荐选择 .codex 文件夹。</span>
                   <span>最后更新：${escapeHtml(formatDateTime(state.data?.updatedAt))}</span>
                 </div>
               </div>
@@ -6909,7 +6934,7 @@
       const summary = summarize(safeRecords.map(record => ({ ...record, activeTokens: activeTokens(record), uncachedInputTokens: uncachedInputTokens(record), hitRate: cacheHitRateOf(record) })));
       return {
         snapshotVersion: 1,
-        appVersion: "0.9.0",
+        appVersion: "0.9.1",
         generatedAt: new Date().toISOString(),
         privacy: {
           anonymized: true,

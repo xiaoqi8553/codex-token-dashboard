@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-19T02:13:38.705Z",
+  "generatedAt": "2026-10-19T07:21:46.433Z",
   "baseUrl": "http://127.0.0.1:8787",
   "screenshotsDir": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current",
   "pages": [
@@ -46,6 +46,52 @@
         "kpiTextInsetDrift": 0,
         "regularBarMinFont": 13,
         "trendValueCenterDrift": 0.015625,
+        "trendValueOverflowCount": 0
+      }
+    },
+    {
+      "page": "overview-year",
+      "name": "全年累计（含压缩历史）",
+      "viewport": "1920",
+      "width": 1920,
+      "height": 1080,
+      "screenshot": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current\\overview-year-1920.png",
+      "warnings": [],
+      "failures": [],
+      "metrics": {
+        "scrollWidth": 1905,
+        "clientWidth": 1920,
+        "headerHeight": 113.390625,
+        "occupiedHeight": 211.390625,
+        "viewportHeight": 1080,
+        "filtersVisible": true,
+        "charts": [
+          {
+            "selector": "#trendChart",
+            "height": 320,
+            "hasGraphic": true,
+            "hasEmpty": false
+          },
+          {
+            "selector": "#ratioChart",
+            "height": 408,
+            "hasGraphic": true,
+            "hasEmpty": false
+          },
+          {
+            "selector": "#cacheTrendChart",
+            "height": 340,
+            "hasGraphic": true,
+            "hasEmpty": false
+          }
+        ],
+        "cards": 17,
+        "h1Count": 1,
+        "activeNav": "01运行总览",
+        "kpiBaselineDrift": 0,
+        "kpiTextInsetDrift": 0,
+        "regularBarMinFont": 0,
+        "trendValueCenterDrift": 0.0078125,
         "trendValueOverflowCount": 0
       }
     },
@@ -107,7 +153,7 @@
             "hasEmpty": true
           }
         ],
-        "cards": 14,
+        "cards": 15,
         "h1Count": 1,
         "activeNav": "03任务复盘",
         "kpiBaselineDrift": 0,
@@ -475,6 +521,52 @@
       }
     },
     {
+      "page": "overview-year",
+      "name": "全年累计（含压缩历史）",
+      "viewport": "1366",
+      "width": 1366,
+      "height": 768,
+      "screenshot": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current\\overview-year-1366.png",
+      "warnings": [],
+      "failures": [],
+      "metrics": {
+        "scrollWidth": 1351,
+        "clientWidth": 1366,
+        "headerHeight": 113.390625,
+        "occupiedHeight": 211.390625,
+        "viewportHeight": 768,
+        "filtersVisible": true,
+        "charts": [
+          {
+            "selector": "#trendChart",
+            "height": 320,
+            "hasGraphic": true,
+            "hasEmpty": false
+          },
+          {
+            "selector": "#ratioChart",
+            "height": 320,
+            "hasGraphic": true,
+            "hasEmpty": false
+          },
+          {
+            "selector": "#cacheTrendChart",
+            "height": 340,
+            "hasGraphic": true,
+            "hasEmpty": false
+          }
+        ],
+        "cards": 17,
+        "h1Count": 1,
+        "activeNav": "01运行总览",
+        "kpiBaselineDrift": 0,
+        "kpiTextInsetDrift": 0,
+        "regularBarMinFont": 0,
+        "trendValueCenterDrift": 0.0078125,
+        "trendValueOverflowCount": 0
+      }
+    },
+    {
       "page": "calendar",
       "name": "AI 使用日历",
       "viewport": "1366",
@@ -532,7 +624,7 @@
             "hasEmpty": true
           }
         ],
-        "cards": 14,
+        "cards": 15,
         "h1Count": 1,
         "activeNav": "03任务复盘",
         "kpiBaselineDrift": 0,
@@ -900,6 +992,52 @@
       }
     },
     {
+      "page": "overview-year",
+      "name": "全年累计（含压缩历史）",
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "screenshot": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current\\overview-year-mobile.png",
+      "warnings": [],
+      "failures": [],
+      "metrics": {
+        "scrollWidth": 390,
+        "clientWidth": 390,
+        "headerHeight": 111,
+        "occupiedHeight": 189,
+        "viewportHeight": 844,
+        "filtersVisible": true,
+        "charts": [
+          {
+            "selector": "#trendChart",
+            "height": 320,
+            "hasGraphic": true,
+            "hasEmpty": false
+          },
+          {
+            "selector": "#ratioChart",
+            "height": 394,
+            "hasGraphic": true,
+            "hasEmpty": false
+          },
+          {
+            "selector": "#cacheTrendChart",
+            "height": 342,
+            "hasGraphic": true,
+            "hasEmpty": false
+          }
+        ],
+        "cards": 17,
+        "h1Count": 1,
+        "activeNav": "01运行总览",
+        "kpiBaselineDrift": 0,
+        "kpiTextInsetDrift": 0,
+        "regularBarMinFont": 0,
+        "trendValueCenterDrift": 0.0078125,
+        "trendValueOverflowCount": 0
+      }
+    },
+    {
       "page": "calendar",
       "name": "AI 使用日历",
       "viewport": "mobile",
@@ -952,12 +1090,12 @@
         "charts": [
           {
             "selector": ".task-layout",
-            "height": 1267.875,
+            "height": 1352.5625,
             "hasGraphic": true,
             "hasEmpty": true
           }
         ],
-        "cards": 14,
+        "cards": 15,
         "h1Count": 1,
         "activeNav": "03任务复盘",
         "kpiBaselineDrift": 0,

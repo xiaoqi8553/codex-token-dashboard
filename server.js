@@ -12,8 +12,10 @@ const IMPORT_DIR = path.join(DATA_DIR, "imports");
 const INDEX_PATH = path.join(DATA_DIR, "usage-index.json");
 const UsageAccounting = require("./usage-accounting");
 const OutputSpeed = require("./output-speed");
+const SessionFiles = require("./session-files");
+const zlib = require("node:zlib");
 const INDEX_VERSION = UsageAccounting.version;
-const SUPPORTED_SESSION_EXTENSIONS = new Set([".jsonl", ".json", ".log", ".txt"]);
+const SUPPORTED_SESSION_EXTENSIONS = new Set([".jsonl", ".json", ".log", ".txt", ".zst"]);
 
 loadDotEnv();
 
@@ -751,6 +753,15 @@ function applySessionMetaLine(line, meta) {
 }
 
 function readTextFile(filePath) {
+  if (SessionFiles.compressed(filePath)) {
+    try {
+      const bytes = fs.readFileSync(filePath);
+      const decoded = zlib.zstdDecompressSync ? zlib.zstdDecompressSync(bytes) : require("./vendor/fzstd/fzstd").decompress(bytes);
+      return Buffer.from(decoded.buffer, decoded.byteOffset, decoded.byteLength).toString("utf8");
+    } catch (error) {
+      throw new Error(`压缩会话解压失败：${path.basename(filePath)}（${error.message}）`);
+    }
+  }
   try {
     return fs.readFileSync(filePath, "utf8");
   } catch {
@@ -808,7 +819,7 @@ function createRecord(raw) {
 
 function parseSessionFile(filePath) {
   const text = readTextFile(filePath);
-  const ext = path.extname(filePath).toLowerCase();
+  const ext = path.extname(filePath.replace(/\.zst$/i, "")).toLowerCase();
   const relativePath = path.relative(SESSIONS_DIR, filePath);
   const meta = {
     sessionId: "",
@@ -877,6 +888,9 @@ function parseSessionFile(filePath) {
 
   function visitJson(item, lineNumber) {
     if (!item || typeof item !== "object") return;
+    // Compaction embeds prior conversation/usage snapshots, not new requests.
+    // Browser import already skips these replay containers.
+    if (item.type === "compacted") return;
     const payload = getPayloadObject(item);
 
     if (item.type === "session_meta" || item.type === "turn_context" || payload.model_provider || payload.thread_source || payload.model) {
@@ -1080,12 +1094,20 @@ function parseRelayImportFile(filePath) {
   });
 }
 
+function listSessionFiles(sessionsDir = SESSIONS_DIR) {
+  const archiveDir = path.basename(sessionsDir).toLowerCase() === "sessions" ? path.join(path.dirname(sessionsDir), "archived_sessions") : "";
+  return SessionFiles.select([
+    ...listFiles(sessionsDir, SUPPORTED_SESSION_EXTENSIONS),
+    ...(archiveDir ? listFiles(archiveDir, SUPPORTED_SESSION_EXTENSIONS) : [])
+  ], file => file);
+}
+
 function buildIndex() {
   ensureDirs();
   endpointEvidenceCache = null;
   const previous = loadIndex();
   const nextFiles = {};
-  const sessionFiles = listFiles(SESSIONS_DIR, SUPPORTED_SESSION_EXTENSIONS);
+  const sessionFiles = listSessionFiles();
   const allRecords = [];
   let reusedFiles = 0;
   let parsedFiles = 0;
@@ -1128,6 +1150,7 @@ function buildIndex() {
     updatedAt: new Date().toISOString(),
     stats: {
       sessionFiles: sessionFiles.length,
+      ...SessionFiles.stats(sessionFiles, file => file),
       importFiles: importFiles.length,
       reusedFiles,
       parsedFiles,
@@ -1535,5 +1558,5 @@ try {
 }
 
 } else {
-  module.exports = { parseSessionFile };
+  module.exports = { parseSessionFile, listSessionFiles };
 }

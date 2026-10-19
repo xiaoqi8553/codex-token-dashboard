@@ -6,6 +6,7 @@ const { chromium } = require("playwright");
 const { fixtures } = require("../tests/fixtures/accounting");
 const { speedFixture } = require("../tests/fixtures/output-speed");
 const OutputSpeed = require("../output-speed");
+const compressedFixtures = require("../tests/fixtures/compressed-sessions.json");
 const { parseSessionFile } = require("../server");
 const os = require("node:os");
 
@@ -28,7 +29,7 @@ async function main() {
   await context.route("**/*", route => {
     const url = new URL(route.request().url());
     if (url.pathname.startsWith("/api/")) apiRequests += 1;
-    const file = url.pathname.endsWith("output-speed.js") ? "output-speed.js" : url.pathname.endsWith("usage-accounting.js") ? "usage-accounting.js" : url.pathname.endsWith("demo-usage-index.json")
+    const file = url.pathname.endsWith("vendor/fzstd/fzstd.js") ? "vendor/fzstd/fzstd.js" : url.pathname.endsWith("session-files.js") ? "session-files.js" : url.pathname.endsWith("output-speed.js") ? "output-speed.js" : url.pathname.endsWith("usage-accounting.js") ? "usage-accounting.js" : url.pathname.endsWith("demo-usage-index.json")
       ? "sample-data/demo-usage-index.json" : "index.html";
     return route.fulfill({ status: 200, contentType: file.endsWith("js") ? "text/javascript" : file.endsWith("json") ? "application/json" : "text/html", body: fs.readFileSync(path.join(root, file)) });
   });
@@ -77,6 +78,58 @@ async function main() {
         fs.rmSync(directory, { recursive: true, force: true });
       }
     }
+    for (const fixture of compressedFixtures) {
+      const result = await page.evaluate(async fixture => {
+        const bytes = Uint8Array.from(atob(fixture.compressedBase64), char => char.charCodeAt(0));
+        const file = new File([bytes], "rollout-compressed.jsonl.zst");
+        // Tiny chunks cross zstd headers, blocks, JSON lines and multibyte UTF-8.
+        Object.defineProperty(file, "stream", { value: () => new ReadableStream({ start(controller) {
+          for (let i = 0; i < bytes.length; i += 3) controller.enqueue(bytes.slice(i, i + 3));
+          controller.close();
+        } }) });
+        const compressed = await parseSessionFiles([file]);
+        const plain = await parseSessionFiles([new File([fixture.text], "rollout-compressed.jsonl")]);
+        const fields = rows => rows.map(row => [row.totalTokens, row.inputTokens, row.outputTokens, row.cachedInputTokens, row.model, row.estimated, row.turnDurationMs || 0]);
+        return { compressed: fields(compressed.records), plain: fields(plain.records), count: compressed.stats.compressedFiles };
+      }, fixture);
+      assert.deepEqual(result.compressed, result.plain, `${fixture.name}: streaming compressed import matches plain logs`);
+      assert.equal(result.count, 1);
+    }
+    const compression = await page.evaluate(async fixtures => {
+      const root = await (await navigator.storage.getDirectory()).getDirectoryHandle("codex-root", { create: true });
+      const sessions = await root.getDirectoryHandle("sessions", { create: true });
+      const archives = await root.getDirectoryHandle("archived_sessions", { create: true });
+      const bytes = fixture => Uint8Array.from(atob(fixture.compressedBase64), char => char.charCodeAt(0));
+      const write = async (dir, name, data) => { const writer = await (await dir.getFileHandle(name, { create: true })).createWritable(); await writer.write(data); await writer.close(); };
+      await write(sessions, "rollout-active.jsonl.zst", bytes(fixtures[0]));
+      await write(archives, "rollout-archive.jsonl.zst", bytes(fixtures[1]));
+      await write(root, "auth.json", '{"fake":"must not become usage"}');
+      const selected = await collectDirectoryFiles(root);
+      const first = await parseSessionFiles(selected);
+      const archiveOnly = await parseSessionFiles(await collectDirectoryFiles(archives));
+      const warm = await parseSessionFiles(await collectDirectoryFiles(root), { previousPayload: first });
+      await write(sessions, "rollout-active.jsonl", fixtures[0].text);
+      const duplicate = await parseSessionFiles(await collectDirectoryFiles(root), { previousPayload: warm });
+      const total = payload => payload.records.reduce((sum, row) => sum + row.totalTokens, 0);
+      state.sessionsDirectoryHandle = root; state.sessionsDirectoryName = ".codex";
+      state.dataMode = "static"; state.staticSourceType = "sessions-folder"; state.staticPayload = duplicate;
+      await write(archives, "rollout-archive.jsonl.zst", "broken compressed data");
+      await loadUsage({ silent: true });
+      return { first: first.stats, archiveOnly: archiveOnly.stats, warm: warm.stats, duplicate: duplicate.stats, totals: [total(first), total(warm), total(duplicate)], preserved: state.staticPayload === duplicate, error: document.querySelector("#statusNotice").textContent };
+    }, compressedFixtures);
+    assert.equal(compression.first.sessionFiles, 2);
+    assert.equal(compression.first.compressedFiles, 2);
+    assert.equal(compression.first.archivedFiles, 1);
+    assert.equal(compression.archiveOnly.archivedFiles, 1);
+    assert.equal(compression.warm.parsedFiles, 0);
+    assert.equal(compression.warm.reusedFiles, 2);
+    assert.equal(compression.duplicate.sessionFiles, 2);
+    assert.equal(compression.duplicate.compressedFiles, 1);
+    assert.equal(compression.duplicate.parsedFiles, 1);
+    assert.ok(compression.totals.every(total => total === compression.totals[0]));
+    assert.equal(compression.preserved, true);
+    assert.match(compression.error, /压缩.*失败/);
+
     const benchmark = await page.evaluate(async () => {
       const directory = await (await navigator.storage.getDirectory()).getDirectoryHandle("sessions", { create: true });
       const oldDate = "2025-01-02T08:00:00.000Z";

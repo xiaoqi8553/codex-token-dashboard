@@ -67,6 +67,8 @@
 - 2026-09-05: Calling a two-step launcher-plus-button flow “one click” optimized the form but missed the user's actual interaction count. For browser-to-local actions, separate unavoidable one-time installation from repeated use, then make the normal path a single in-page action with a short-lived, validated local capability.
 - 2026-09-05: The first protocol-launch button was tested with a mocked programmatic anchor click while production had duplicate delegated click handlers and periodic rerenders that reset progress. Interaction tests must use the same native activation path as production, assert one dispatch per click, and verify async status survives background data refreshes.
 
+- 2026-10-19: 全年总量骤减时只检查已解析记录会漏掉文件覆盖问题。Codex 历史可能转为 `.jsonl.zst` 或移入 `archived_sessions`；必须核对扩展名和目录分布，并用压缩历史验证 Node/浏览器统计一致。目录导入、缓存复用及物理副本去重测试都需包含压缩和归档文件。
+
 ## Before Finishing
 
 - Run build.

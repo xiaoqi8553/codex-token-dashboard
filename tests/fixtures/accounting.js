@@ -24,6 +24,7 @@ const cases = [
   { name: "cumulative reset", expected: 310, events: [count(total), count(usage(60), usage(60))] },
   { name: "request counters do not change legacy baseline", expected: 250, events: [count(a), request(b, "two"), count(total)] },
   { name: "generic usage remains supported", expected: 250, events: [{ usage: a }, { usage: b }] },
+  { name: "compaction history is not new usage", expected: 100, events: [request(a, "one"), { type: "compacted", payload: { replacement_history: [{ usage: a }], latest_token_usage_record: null } }] },
   { name: "last usage without cumulative", expected: 250, events: [count(null, a), count(null, b)] },
   { name: "cached and reasoning fields agree", expected: 100, events: [request({ ...a, cached_input_tokens: 50, reasoning_output_tokens: 10 }, "one"), count({ ...a, cached_input_tokens: 50, reasoning_output_tokens: 10 }, { ...a, cached_input_tokens: 50, reasoning_output_tokens: 10 })] }
 ];

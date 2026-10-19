@@ -7,7 +7,7 @@
 ![Codex Token Dashboard cover](screenshots/project-cover.svg)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-0f766e.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.9.0-17202e.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.9.1-17202e.svg)](CHANGELOG.md)
 [![OpenAI Sites](https://img.shields.io/badge/deploy-OpenAI%20Sites-275dcc.svg)](https://codex-token-dashboard.hazel-saepemx.chatgpt.site)
 [![Netlify Demo](https://img.shields.io/badge/demo-codetoken.netlify.app-2f6fed.svg)](https://codetoken.netlify.app/)
 [![GitHub Pages](https://img.shields.io/badge/pages-github.io-111827.svg)](https://xiaoqi8553.github.io/codex-token-dashboard/)
@@ -29,7 +29,7 @@ OpenAI Sites 生产站与仓库中已经推送的版本保持同步；默认采�
 
 ## 主要功能
 
-- 自动扫描本地 `.codex/sessions`，支持 JSON / JSONL / log / txt。
+- 自动扫描本地 `.codex/sessions` 与 `archived_sessions`，支持 JSON / JSONL / log / txt 和 `.jsonl.zst` 压缩历史。网页推荐选择 `.codex` 根目录以包含归档，解压与统计均在本机完成。
 - 识别 `usage`、`token_usage`、`last_token_usage`、`total_token_usage` 等 token 字段。
 - 支持官方 Plus、中转站、unknown 来源分开统计。
 - 缺少精确 usage 时按文本长度估算，并明确标记 `estimated: true`。

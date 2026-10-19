@@ -16,6 +16,7 @@ const mode = process.argv.includes("--report") ? "report" : process.argv.include
 
 const pages = [
   { key: "overview", name: "总览页", view: "overview", screenshot: "overview", url: baseUrl },
+  { key: "overview-year", name: "全年累计（含压缩历史）", view: "overview", screenshot: "overview-year", url: baseUrl, range: "1y" },
   { key: "calendar", name: "AI 使用日历", view: "calendar", screenshot: "calendar", url: baseUrl },
   { key: "tasks", name: "任务复盘", view: "tasks", screenshot: "tasks", url: baseUrl },
   { key: "details", name: "明细表", view: "details", screenshot: "details", url: baseUrl },
@@ -152,6 +153,15 @@ async function openPage(page, pageInfo) {
     });
   }
   await page.goto(pageInfo.url || baseUrl, { waitUntil: "networkidle" });
+  if (pageInfo.range) {
+    await page.waitForFunction(() => state.initialized && !state.loading);
+    const range = page.locator(`[data-range="${pageInfo.range}"]`);
+    const collapsed = !await range.isVisible();
+    if (collapsed) await page.locator("#mobileFilterToggle").click();
+    await range.click();
+    await page.waitForFunction(() => !state.loading);
+    if (collapsed) await page.locator("#mobileFilterToggle").click();
+  }
   if (pageInfo.speed) {
     await page.waitForFunction(() => state.initialized && !state.loading);
     if (pageInfo.emptySpeed) await page.evaluate(() => { state.records = state.records.map(record => ({ ...record, turnDurationMs: 0 })); });

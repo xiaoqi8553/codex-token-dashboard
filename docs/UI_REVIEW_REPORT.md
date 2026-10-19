@@ -12,6 +12,9 @@
 - docs/screenshots/current/overview-1920.png
 - docs/screenshots/current/overview-1366.png
 - docs/screenshots/current/overview-mobile.png
+- docs/screenshots/current/overview-year-1920.png
+- docs/screenshots/current/overview-year-1366.png
+- docs/screenshots/current/overview-year-mobile.png
 - docs/screenshots/current/calendar-1920.png
 - docs/screenshots/current/calendar-1366.png
 - docs/screenshots/current/calendar-mobile.png
@@ -46,6 +49,15 @@
 ## 页面逐项检查
 
 ### 总览页
+- 1920：通过
+- 1366：通过
+- mobile：通过
+- 发现的问题：
+  - 未发现自动化规则命中的明显问题。
+- 修复建议：
+  - 保持当前结构，人工复核截图中的视觉观感。
+
+### 全年累计（含压缩历史）
 - 1920：通过
 - 1366：通过
 - mobile：通过

@@ -7,6 +7,9 @@ const required = [
   "index.html",
   "usage-accounting.js",
   "output-speed.js",
+  "session-files.js",
+  "vendor/fzstd/fzstd.js",
+  "vendor/fzstd/LICENSE",
   "sites-worker.js",
   "sample-data/demo-usage-index.json",
   "sample-data/usage-index.sample.json",
@@ -27,6 +30,13 @@ if (!process.exitCode) {
   fs.mkdirSync(path.join(dist, "sample-data"), { recursive: true });
   fs.mkdirSync(path.join(dist, "client", "sample-data"), { recursive: true });
   fs.mkdirSync(path.join(dist, "server"), { recursive: true });
+  for (const asset of ["session-files.js", "vendor/fzstd/fzstd.js", "vendor/fzstd/LICENSE"]) {
+    for (const folder of [dist, path.join(dist, "client")]) {
+      const target = path.join(folder, asset);
+      fs.mkdirSync(path.dirname(target), { recursive: true });
+      fs.copyFileSync(path.join(root, asset), target);
+    }
+  }
   fs.copyFileSync(path.join(root, "usage-accounting.js"), path.join(dist, "usage-accounting.js"));
   fs.copyFileSync(path.join(root, "usage-accounting.js"), path.join(dist, "client", "usage-accounting.js"));
   fs.copyFileSync(path.join(root, "output-speed.js"), path.join(dist, "output-speed.js"));
