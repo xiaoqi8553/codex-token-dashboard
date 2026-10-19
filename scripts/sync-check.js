@@ -277,8 +277,94 @@ async function main() {
     assert.equal(await page.evaluate(() => state.staticSourceType), "sessions-files");
     assert.equal(await page.evaluate(() => window.syncReads), 0);
     assert.equal(apiRequests, 0);
+
+    // Use real pointer clicks; parsing tests alone miss a swallowed import click.
+    const retained = await page.evaluate(() => state.staticPayload.records.length);
+    await page.evaluate(() => {
+      window.pickerCalls = 0;
+      window.showDirectoryPicker = () => {
+        window.pickerCalls += 1;
+        window.pickerActivation = navigator.userActivation.isActive;
+        return Promise.reject(new DOMException("Picker aborted", "AbortError"));
+      };
+      state.loading = true; // A silent background refresh does not disable import.
+    });
+    await page.locator("#importBtn").click();
+    await page.locator("#importFolderBtn").click();
+    await page.waitForFunction(() => !state.directoryPickerOpen);
+    assert.deepEqual(await page.evaluate(() => ({ calls: window.pickerCalls, active: window.pickerActivation, loading: state.loading })),
+      { calls: 1, active: true, loading: true }, "background sync must not swallow the click or lose its busy lock on picker cancellation");
+    assert.match(await page.locator("#statusNotice").innerText(), /兼容方式选择文件夹/);
+    assert.equal(await page.evaluate(() => state.staticPayload.records.length), retained);
+    await page.evaluate(() => { state.loading = false; window.showDirectoryPicker = () => Promise.reject(new DOMException("Not allowed", "SecurityError")); });
+    await page.locator("#importBtn").click();
+    await page.locator("#importFolderBtn").click();
+    await page.waitForFunction(() => !state.directoryPickerOpen);
+    assert.match(await page.locator("#statusNotice").innerText(), /Not allowed.*兼容方式/);
+
+    // A successful selection made during a refresh waits before swapping handles.
+    await page.evaluate(async () => {
+      const root = await navigator.storage.getDirectory();
+      window.selectedDirectory = await root.getDirectoryHandle("picker-selection", { create: true });
+      const file = await window.selectedDirectory.getFileHandle("rollout-picker.jsonl", { create: true });
+      const writer = await file.createWritable();
+      await writer.write(JSON.stringify({ timestamp: new Date().toISOString(), input_tokens: 100, output_tokens: 25, total_tokens: 125 }));
+      await writer.close();
+      window.previousDirectory = state.sessionsDirectoryHandle;
+      window.showDirectoryPicker = () => Promise.resolve(window.selectedDirectory);
+      state.loading = true;
+    });
+    await page.locator("#importBtn").click();
+    await page.locator("#importFolderBtn").click();
+    assert.equal(await page.evaluate(() => state.sessionsDirectoryHandle === window.previousDirectory), true);
+    await page.evaluate(() => { state.loading = false; });
+    await page.waitForFunction(() => !state.directoryPickerOpen && !state.loading);
+    assert.equal(await page.evaluate(() => state.staticPayload.records.reduce((sum, row) => sum + row.totalTokens, 0)), 125);
+
+    const pickerDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "codex-picker-"));
+    try {
+      const codexRoot = path.join(pickerDirectory, ".codex");
+      fs.mkdirSync(path.join(codexRoot, "sessions"), { recursive: true });
+      fs.mkdirSync(path.join(codexRoot, "archived_sessions"));
+      fs.writeFileSync(path.join(codexRoot, "sessions", "rollout-picker.jsonl"), JSON.stringify({ timestamp: new Date().toISOString(), input_tokens: 50, output_tokens: 10, total_tokens: 60 }));
+      fs.writeFileSync(path.join(codexRoot, "archived_sessions", "rollout-archive.jsonl.zst"), Buffer.from(compressedFixtures[0].compressedBase64, "base64"));
+      fs.writeFileSync(path.join(codexRoot, "auth.json"), "{\"unrelated\":true}");
+      for (const width of [1920, 1366, 390]) {
+        await page.setViewportSize({ width, height: 920 });
+        // Keep a native promise pending, then use the independently clickable fallback.
+        await page.evaluate(() => { window.showDirectoryPicker = () => new Promise(resolve => { window.latePicker = resolve; }); });
+        await page.locator("#importBtn").click();
+        await page.locator("#importFolderBtn").click();
+        assert.equal(await page.evaluate(() => state.directoryPickerOpen), true);
+        await page.locator("#importBtn").click();
+        const chooserEvent = page.waitForEvent("filechooser");
+        await page.locator("#importFolderCompatBtn").click();
+        const chooser = await chooserEvent;
+        assert.equal(chooser.isMultiple(), true);
+        await chooser.setFiles(codexRoot);
+        await page.waitForFunction(() => !state.loading && !state.directoryPickerOpen);
+        assert.deepEqual(await page.evaluate(() => ({ type: state.staticSourceType, files: state.staticPayload.stats.sessionFiles,
+          compressed: state.staticPayload.stats.compressedFiles, archived: state.staticPayload.stats.archivedFiles,
+          total: state.staticPayload.records.reduce((sum, row) => sum + row.totalTokens, 0) })),
+        { type: "sessions-files", files: 2, compressed: 1, archived: 1, total: 310 });
+        await page.evaluate(() => window.latePicker(window.selectedDirectory));
+        assert.equal(await page.evaluate(() => state.sessionsDirectoryHandle), null, "a late native result cannot replace compatibility import");
+        assert.match(await page.locator("#toast").innerText(), /一次性导入/);
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+      }
+      // Browsers without File System Access use the same native input event path.
+      await page.evaluate(() => { window.showDirectoryPicker = undefined; });
+      await page.locator("#importBtn").click();
+      const chooserEvent = page.waitForEvent("filechooser");
+      await page.locator("#importFolderBtn").click();
+      await (await chooserEvent).setFiles(codexRoot);
+      await page.waitForFunction(() => !state.loading && !state.directoryPickerOpen);
+      assert.equal(await page.evaluate(() => state.staticSourceType), "sessions-files");
+    } finally {
+      fs.rmSync(pickerDirectory, { recursive: true, force: true });
+    }
     assert.deepEqual(errors, []);
-    console.log(JSON.stringify({ ok: true, benchmark, mutation, checks: ["unchanged reuse", "add/change/delete equality", "reopen IndexedDB", "startup autosync", "permission retry", "handle-only recovery", "parser invalidation", "sync lock", "new current-day data", "evidence mode", "one-shot import recovery", "no Pages API request"] }, null, 2));
+    console.log(JSON.stringify({ ok: true, benchmark, mutation, checks: ["unchanged reuse", "add/change/delete equality", "reopen IndexedDB", "startup autosync", "permission retry", "handle-only recovery", "parser invalidation", "sync lock", "new current-day data", "evidence mode", "one-shot import recovery", "no Pages API request", "picker click during sync", "picker abort and security feedback", "native picker selection waits for sync", "compatibility filechooser at 1920/1366/mobile", "late native result ignored", "unsupported native picker fallback"] }, null, 2));
   } finally {
     await context.close();
     await browser.close();

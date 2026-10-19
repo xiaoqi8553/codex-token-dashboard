@@ -2440,7 +2440,7 @@
       font-size: 10px;
     }
 
-    .command-bar { align-self: center; }
+    .command-bar { align-self: center; overflow: visible; }
     .header .data-actions { gap: 7px; flex-wrap: nowrap; }
     .header .btn,
     .header .action-menu summary {
@@ -3023,7 +3023,7 @@
       .welcome-actions { justify-content: flex-start; }
       .header { min-height: 0; padding: 14px; gap: 13px; }
       .status-drawer { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .header .data-actions { width: 100%; overflow-x: auto; padding-bottom: 2px; }
+      .header .data-actions { width: 100%; overflow: visible; padding-bottom: 2px; }
       .header .data-actions > * { flex: 0 0 auto; }
       .filters { margin: 0; }
       .content-grid,
@@ -3333,7 +3333,7 @@
         </div>
         <div class="rail-version">
           <span>LOCAL-FIRST</span>
-          <strong>v0.9.1</strong>
+          <strong>v0.9.2</strong>
         </div>
       </div>
     </aside>
@@ -3369,6 +3369,12 @@
               <span>
                 <strong>选择 .codex / sessions 文件夹</strong>
                 <span>推荐 .codex，包含 sessions、归档和 .jsonl.zst 压缩历史</span>
+              </span>
+            </button>
+            <button class="btn import-option" id="importFolderCompatBtn" type="button" role="menuitem">
+              <span>
+                <strong>兼容方式选择文件夹</strong>
+                <span>上方未弹窗时使用；一次性导入，更新需重新选择</span>
               </span>
             </button>
           </div>
@@ -3585,6 +3591,8 @@
       page: 1,
       pageSize: 50,
       loading: false,
+      directoryPickerOpen: false,
+      directoryPickerRequest: 0,
       authSecret: localStorage.getItem("codexTokenDashboardSecret") || "",
       dataMode: "server",
       staticPayload: null,
@@ -4003,6 +4011,15 @@
     function chooseImportSessionsFolder() {
       closeImportMenu();
       chooseSessionsDirectory();
+    }
+
+    function chooseCompatibleSessionsFolder() {
+      closeImportMenu();
+      // A stalled native picker must not overwrite a later compatibility import.
+      state.directoryPickerRequest += 1;
+      state.directoryPickerOpen = true;
+      setStatus("请选择 .codex 根目录；兼容方式仅在浏览器本地读取，后续更新需要重新选择文件夹。");
+      els.sessionsFolderInput.click();
     }
 
     function emptyState(message, detail = "") {
@@ -4956,26 +4973,53 @@
       return true;
     }
 
+    async function waitForFolderImportIdle() {
+      if (!state.loading) return;
+      setStatus("文件夹已选择，正在等待当前同步完成后导入...");
+      const started = Date.now();
+      while (state.loading) {
+        if (Date.now() - started > 30000) throw new Error("当前同步尚未完成，已保留原有数据。请稍后重新选择文件夹。");
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+    }
+
     async function chooseSessionsDirectory() {
-      if (state.loading) return;
-      if ("showDirectoryPicker" in window) {
+      if (state.directoryPickerOpen) {
+        setStatus("正在等待文件夹选择窗口；若窗口未出现，请从“导入数据”使用“兼容方式选择文件夹”。", "warning");
+        return;
+      }
+      if (typeof window.showDirectoryPicker === "function") {
+        const request = ++state.directoryPickerRequest;
+        state.directoryPickerOpen = true;
+        let ownsLoading = false;
         try {
+          setStatus("正在打开文件夹选择窗口，请选择 .codex 根目录；若未弹窗，可从“导入数据”使用“兼容方式选择文件夹”。", "warning");
+          // Keep this call in the click's activation, even during background sync.
           const handle = await window.showDirectoryPicker({ mode: "read" });
+          if (request !== state.directoryPickerRequest) return;
+          await waitForFolderImportIdle();
+          if (request !== state.directoryPickerRequest) return;
           setLoading(true);
+          ownsLoading = true;
           state.sessionsDirectoryHandle = handle;
           state.sessionsDirectoryName = handle.name || "sessions";
           await saveSessionsDirectoryHandle(handle);
           // A newly selected directory may contain identical relative names.
           await refreshSessionsDirectoryHandle("sessions 文件夹解析完成：", { fitRange: true, resetCache: true });
         } catch (error) {
-          if (error?.name !== "AbortError") setStatus(error.message || "选择 sessions 文件夹失败", "error");
+          if (request !== state.directoryPickerRequest) return;
+          if (error?.name === "AbortError") {
+            setStatus("未选择文件夹，原有数据已保留。如果 Chrome 没有弹出窗口，请从“导入数据”使用“兼容方式选择文件夹”。", "warning");
+          } else {
+            setStatus(`文件夹选择或读取失败：${error.message || "未知错误"}。若未弹窗，请从“导入数据”使用“兼容方式选择文件夹”。`, "error");
+          }
         } finally {
-          setLoading(false);
+          if (ownsLoading) setLoading(false);
+          if (request === state.directoryPickerRequest) state.directoryPickerOpen = false;
         }
         return;
       }
-      setStatus("当前浏览器不支持持续读取文件夹，导入后刷新不能自动重新扫描；如需更新，请重新选择 sessions 文件夹。");
-      els.sessionsFolderInput.click();
+      chooseCompatibleSessionsFolder();
     }
 
     function parseCsv(text) {
@@ -5311,7 +5355,7 @@
     }
 
     async function loadUsage(options = {}) {
-      if (state.loading) return;
+      if (state.loading || state.directoryPickerOpen) return;
       const silent = Boolean(options.silent || options.auto);
       const setBusy = value => {
         if (silent) state.loading = value;
@@ -6517,7 +6561,7 @@
                 <h2>设置 / 关于</h2>
                 <p class="muted">检查当前运行方式、隐私边界、版本和公开部署状态。</p>
               </div>
-              <span class="badge">版本 0.9.1</span>
+              <span class="badge">版本 0.9.2</span>
             </div>
             <div class="settings-grid">
               <div class="settings-card">
@@ -6934,7 +6978,7 @@
       const summary = summarize(safeRecords.map(record => ({ ...record, activeTokens: activeTokens(record), uncachedInputTokens: uncachedInputTokens(record), hitRate: cacheHitRateOf(record) })));
       return {
         snapshotVersion: 1,
-        appVersion: "0.9.1",
+        appVersion: "0.9.2",
         generatedAt: new Date().toISOString(),
         privacy: {
           anonymized: true,
@@ -7116,6 +7160,7 @@
     });
     document.querySelector("#importFileBtn").addEventListener("click", chooseImportFile);
     document.querySelector("#importFolderBtn").addEventListener("click", chooseImportSessionsFolder);
+    document.querySelector("#importFolderCompatBtn").addEventListener("click", chooseCompatibleSessionsFolder);
     document.querySelector("#importIndexBtn").addEventListener("click", chooseImportFile);
     document.querySelector("#importSessionsBtn").addEventListener("click", chooseImportSessionsFolder);
     document.querySelector("#sampleBtn").addEventListener("click", async () => {
@@ -7665,9 +7710,13 @@
       }
     });
     els.sessionsFolderInput.addEventListener("change", async () => {
+      let ownsLoading = false;
       try {
-        const files = els.sessionsFolderInput.files;
+        const files = Array.from(els.sessionsFolderInput.files || []);
         if (!files?.length) return;
+        await waitForFolderImportIdle();
+        setLoading(true);
+        ownsLoading = true;
         state.sessionsDirectoryHandle = null;
         state.sessionsDirectoryName = "";
         setStatus(`正在浏览器本地解析 ${formatInt(files.length)} 个文件...`);
@@ -7677,11 +7726,18 @@
         state.staticSourceType = payload.sourceType || "sessions-files";
         fitDateRangeToRecords(payload.records, { preservePreset: true });
         await cacheStaticPayload(payload);
-        renderStaticUsage(`sessions 文件夹解析完成：${formatInt(payload.records.length)} 条记录。当前浏览器不支持持续读取，后续更新需要重新选择文件夹。`);
-        els.sessionsFolderInput.value = "";
+        renderStaticUsage(`sessions 文件夹解析完成：${formatInt(payload.records.length)} 条记录。当前使用一次性导入，后续更新需要重新选择文件夹。`);
       } catch (error) {
         setStatus(error.message || "sessions 解析失败", "error");
+      } finally {
+        els.sessionsFolderInput.value = "";
+        state.directoryPickerOpen = false;
+        if (ownsLoading) setLoading(false);
       }
+    });
+    els.sessionsFolderInput.addEventListener("cancel", () => {
+      state.directoryPickerOpen = false;
+      setStatus("已取消文件夹选择，原有数据已保留。");
     });
 
     window.addEventListener("error", event => setStatus(event.message, "error"));

@@ -7,7 +7,7 @@
 ![Codex Token Dashboard cover](screenshots/project-cover.svg)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-0f766e.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.9.1-17202e.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.9.2-17202e.svg)](CHANGELOG.md)
 [![OpenAI Sites](https://img.shields.io/badge/deploy-OpenAI%20Sites-275dcc.svg)](https://codex-token-dashboard.hazel-saepemx.chatgpt.site)
 [![Netlify Demo](https://img.shields.io/badge/demo-codetoken.netlify.app-2f6fed.svg)](https://codetoken.netlify.app/)
 [![GitHub Pages](https://img.shields.io/badge/pages-github.io-111827.svg)](https://xiaoqi8553.github.io/codex-token-dashboard/)
@@ -21,7 +21,7 @@
 
 OpenAI Sites 生产站与仓库中已经推送的版本保持同步；默认采用仅所有者可访问的私有发布方式。
 
-公开演示站默认加载模拟数据，不会读取访问者电脑。用户可以通过顶部“导入数据”菜单选择自己的 `usage-index.json`、脱敏快照、中转站 CSV/JSON，也可以直接选择整个 `.codex/sessions` 文件夹。所有解析都发生在浏览器本地，解析结果会保存在当前浏览器的 IndexedDB 中，重新打开同一网址时自动恢复。
+公开演示站默认加载模拟数据，不会读取访问者电脑。用户可以通过顶部“导入数据”菜单选择自己的 `usage-index.json`、脱敏快照、中转站 CSV/JSON，也可以选择 `.codex` 根目录，同时统计 `sessions` 和 `archived_sessions`。所有解析都发生在浏览器本地，解析结果会保存在当前浏览器的 IndexedDB 中，重新打开同一网址时自动恢复。
 
 ## 界面预览
 
@@ -120,7 +120,9 @@ npm run visual:test  # 生成截图并自动检查明显视觉问题
 
 文件通过浏览器 File API 在本地解析，不会自动上传。
 
-在 Chrome / Edge 等支持 File System Access API 的浏览器里，打开托管站点后，点击顶部“导入数据” -> “选择 sessions 文件夹”，选择你的 `.codex/sessions`。页面会把完整解析结果和文件夹授权句柄保存在浏览器 IndexedDB 中。下次打开同一个网址时会直接恢复上次数据；如果文件夹权限仍有效，页面会立即自动同步最新日志，回到前台也会检查更新，无需每次点击。浏览器仍可能要求再次授予文件夹权限，但这不会影响已缓存数据的显示。重复同步会复用未变化文件的解析结果，只重新解析新增或修改的文件；升级前的旧缓存首次同步需要完整扫描一次以建立文件索引。
+在 Chrome / Edge 等支持 File System Access API 的浏览器里，打开托管站点后，点击顶部“导入数据” -> “选择 .codex / sessions 文件夹”，推荐选择 `.codex` 根目录以包含归档。页面会把完整解析结果和文件夹授权句柄保存在浏览器 IndexedDB 中。下次打开同一个网址时会直接恢复上次数据；如果文件夹权限仍有效，页面会立即自动同步最新日志，回到前台也会检查更新，无需每次点击。浏览器仍可能要求再次授予文件夹权限，但这不会影响已缓存数据的显示。重复同步会复用未变化文件的解析结果，只重新解析新增或修改的文件；升级前的旧缓存首次同步需要完整扫描一次以建立文件索引。
+
+如果 Chrome 点击后不弹出窗口，可从同一菜单选择“兼容方式选择文件夹”。它使用标准文件夹输入框，支持压缩历史和归档，解析结果同样会保存在浏览器中；此方式不能持续读取文件夹，后续更新需要重新选择。
 
 ## 页面模块
 

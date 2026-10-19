@@ -23,6 +23,7 @@ const pages = [
   { key: "settings", name: "设置 / 关于", view: "settings", screenshot: "settings", url: baseUrl },
   { key: "settings-bridge", name: "GitHub Pages 账号桥接", view: "settings", screenshot: "settings-bridge", url: `${baseUrl}?accountBridge=1`, staticMode: true },
   { key: "overview-permission", name: "旧统计缓存 / 待授权", view: "overview", screenshot: "overview-permission", url: baseUrl, staticMode: true },
+  { key: "overview-import", name: "文件夹导入与 Chrome 兼容入口", view: "overview", screenshot: "overview-import", url: baseUrl, staticMode: true },
   { key: "overview-dark", name: "深色总览页", view: "overview", screenshot: "overview-dark", url: baseUrl, theme: "dark" },
   { key: "overview-speed", name: "输出速度监控", view: "overview", screenshot: "overview-speed", url: baseUrl, staticMode: true, speed: true },
   { key: "overview-speed-dark", name: "深色输出速度监控", view: "overview", screenshot: "overview-speed-dark", url: baseUrl, staticMode: true, speed: true, theme: "dark" },
@@ -153,6 +154,17 @@ async function openPage(page, pageInfo) {
     });
   }
   await page.goto(pageInfo.url || baseUrl, { waitUntil: "networkidle" });
+  if (pageInfo.key === "overview-import") {
+    await page.waitForFunction(() => state.initialized && !state.loading);
+    await page.evaluate(() => setStatus("未选择文件夹，原有数据已保留。如果 Chrome 没有弹出窗口，请从“导入数据”使用“兼容方式选择文件夹”。", "warning"));
+    await page.locator("#importBtn").click();
+    const fallback = page.locator("#importFolderCompatBtn");
+    const box = await fallback.boundingBox();
+    if (!box || !await fallback.evaluate(element => {
+      const r = element.getBoundingClientRect();
+      return element.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2));
+    })) throw new Error("兼容文件夹按钮被裁切或遮挡");
+  }
   if (pageInfo.range) {
     await page.waitForFunction(() => state.initialized && !state.loading);
     const range = page.locator(`[data-range="${pageInfo.range}"]`);

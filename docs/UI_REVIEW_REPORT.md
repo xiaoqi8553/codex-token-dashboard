@@ -33,6 +33,9 @@
 - docs/screenshots/current/overview-permission-1920.png
 - docs/screenshots/current/overview-permission-1366.png
 - docs/screenshots/current/overview-permission-mobile.png
+- docs/screenshots/current/overview-import-1920.png
+- docs/screenshots/current/overview-import-1366.png
+- docs/screenshots/current/overview-import-mobile.png
 - docs/screenshots/current/overview-dark-1920.png
 - docs/screenshots/current/overview-dark-1366.png
 - docs/screenshots/current/overview-dark-mobile.png
@@ -112,6 +115,15 @@
   - 保持当前结构，人工复核截图中的视觉观感。
 
 ### 旧统计缓存 / 待授权
+- 1920：通过
+- 1366：通过
+- mobile：通过
+- 发现的问题：
+  - 未发现自动化规则命中的明显问题。
+- 修复建议：
+  - 保持当前结构，人工复核截图中的视觉观感。
+
+### 文件夹导入与 Chrome 兼容入口
 - 1920：通过
 - 1366：通过
 - mobile：通过
