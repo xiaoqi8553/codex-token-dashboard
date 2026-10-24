@@ -7,7 +7,7 @@
 ![Codex Token Dashboard cover](screenshots/project-cover.svg)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-0f766e.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.9.2-17202e.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.9.3-17202e.svg)](CHANGELOG.md)
 [![OpenAI Sites](https://img.shields.io/badge/deploy-OpenAI%20Sites-275dcc.svg)](https://codex-token-dashboard.hazel-saepemx.chatgpt.site)
 [![Netlify Demo](https://img.shields.io/badge/demo-codetoken.netlify.app-2f6fed.svg)](https://codetoken.netlify.app/)
 [![GitHub Pages](https://img.shields.io/badge/pages-github.io-111827.svg)](https://xiaoqi8553.github.io/codex-token-dashboard/)
@@ -18,6 +18,8 @@
 - Netlify Demo: https://codetoken.netlify.app/
 - GitHub Pages Demo: https://xiaoqi8553.github.io/codex-token-dashboard/
 - GitHub: https://github.com/xiaoqi8553/codex-token-dashboard
+
+将看板嵌入 Notion 等网页时，点击“选择 .codex / sessions 文件夹”会自动使用浏览器兼容选择器；选择 `.codex` 根目录后，数据保存在该嵌入页面的浏览器存储中。此兼容方式为一次性导入，更新时需重新选择文件夹。
 
 OpenAI Sites 生产站与仓库中已经推送的版本保持同步；默认采用仅所有者可访问的私有发布方式。
 

@@ -28,6 +28,9 @@ async function main() {
   let apiRequests = 0;
   await context.route("**/*", route => {
     const url = new URL(route.request().url());
+    if (url.hostname === "notion.test") {
+      return route.fulfill({ status: 200, contentType: "text/html", body: `<!doctype html><title>Notion embed test</title><iframe title="dashboard" src="${site}" style="width:100%;height:100vh;border:0"></iframe>` });
+    }
     if (url.pathname.startsWith("/api/")) apiRequests += 1;
     const file = url.pathname.endsWith("vendor/fzstd/fzstd.js") ? "vendor/fzstd/fzstd.js" : url.pathname.endsWith("session-files.js") ? "session-files.js" : url.pathname.endsWith("output-speed.js") ? "output-speed.js" : url.pathname.endsWith("usage-accounting.js") ? "usage-accounting.js" : url.pathname.endsWith("demo-usage-index.json")
       ? "sample-data/demo-usage-index.json" : "index.html";
@@ -360,11 +363,31 @@ async function main() {
       await (await chooserEvent).setFiles(codexRoot);
       await page.waitForFunction(() => !state.loading && !state.directoryPickerOpen);
       assert.equal(await page.evaluate(() => state.staticSourceType), "sessions-files");
+
+      // A Notion-like cross-origin iframe cannot open showDirectoryPicker.
+      // The primary folder action must go straight to the compatible input.
+      const embedPage = await context.newPage();
+      embedPage.on("pageerror", error => errors.push(error.message));
+      await embedPage.goto("https://notion.test/");
+      const embedded = embedPage.frameLocator('iframe[title="dashboard"]');
+      await embedded.locator("#importBtn").click();
+      const embeddedChooserEvent = embedPage.waitForEvent("filechooser");
+      await embedded.locator("#importFolderBtn").click();
+      const embeddedChooser = await embeddedChooserEvent;
+      assert.match(await embedded.locator("#statusNotice").innerText(), /Notion 嵌入模式/);
+      await embeddedChooser.setFiles(codexRoot);
+      const dashboardFrame = embedPage.frames().find(frame => frame.url().startsWith(site));
+      assert.ok(dashboardFrame, "Notion-like page must load the dashboard as a separate origin");
+      await dashboardFrame.waitForFunction(() => state.staticSourceType === "sessions-files" && !state.loading);
+      assert.equal(await dashboardFrame.evaluate(() => state.staticPayload.records.reduce((sum, row) => sum + row.totalTokens, 0)), 310);
+      assert.match(await embedded.locator("#toast").innerText(), /一次性导入/);
+      assert.equal(await dashboardFrame.evaluate(() => state.sessionsDirectoryHandle), null, "embedded compatibility import does not claim a persistent directory permission");
+      await embedPage.close();
     } finally {
       fs.rmSync(pickerDirectory, { recursive: true, force: true });
     }
     assert.deepEqual(errors, []);
-    console.log(JSON.stringify({ ok: true, benchmark, mutation, checks: ["unchanged reuse", "add/change/delete equality", "reopen IndexedDB", "startup autosync", "permission retry", "handle-only recovery", "parser invalidation", "sync lock", "new current-day data", "evidence mode", "one-shot import recovery", "no Pages API request", "picker click during sync", "picker abort and security feedback", "native picker selection waits for sync", "compatibility filechooser at 1920/1366/mobile", "late native result ignored", "unsupported native picker fallback"] }, null, 2));
+    console.log(JSON.stringify({ ok: true, benchmark, mutation, checks: ["unchanged reuse", "add/change/delete equality", "reopen IndexedDB", "startup autosync", "permission retry", "handle-only recovery", "parser invalidation", "sync lock", "new current-day data", "evidence mode", "one-shot import recovery", "no Pages API request", "picker click during sync", "picker abort and security feedback", "native picker selection waits for sync", "compatibility filechooser at 1920/1366/mobile", "cross-origin Notion iframe import", "late native result ignored", "unsupported native picker fallback"] }, null, 2));
   } finally {
     await context.close();
     await browser.close();

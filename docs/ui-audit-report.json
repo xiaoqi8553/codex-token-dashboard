@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-19T12:08:10.119Z",
+  "generatedAt": "2026-10-24T03:10:30.803Z",
   "baseUrl": "http://127.0.0.1:8787",
   "screenshotsDir": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current",
   "pages": [
@@ -153,7 +153,7 @@
             "hasEmpty": true
           }
         ],
-        "cards": 15,
+        "cards": 16,
         "h1Count": 1,
         "activeNav": "03任务复盘",
         "kpiBaselineDrift": 0,
@@ -302,6 +302,52 @@
       "metrics": {
         "scrollWidth": 1905,
         "clientWidth": 1920,
+        "headerHeight": 113.390625,
+        "occupiedHeight": 248.390625,
+        "viewportHeight": 1080,
+        "filtersVisible": true,
+        "charts": [
+          {
+            "selector": "#trendChart",
+            "height": 320,
+            "hasGraphic": true,
+            "hasEmpty": false
+          },
+          {
+            "selector": "#ratioChart",
+            "height": 408,
+            "hasGraphic": true,
+            "hasEmpty": false
+          },
+          {
+            "selector": "#cacheTrendChart",
+            "height": 340,
+            "hasGraphic": true,
+            "hasEmpty": false
+          }
+        ],
+        "cards": 17,
+        "h1Count": 1,
+        "activeNav": "01运行总览",
+        "kpiBaselineDrift": 0,
+        "kpiTextInsetDrift": 0,
+        "regularBarMinFont": 0,
+        "trendValueCenterDrift": 0.0078125,
+        "trendValueOverflowCount": 0
+      }
+    },
+    {
+      "page": "overview-import-embedded",
+      "name": "Notion 嵌入文件夹导入",
+      "viewport": "1920",
+      "width": 1920,
+      "height": 1080,
+      "screenshot": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current\\overview-import-embedded-1920.png",
+      "warnings": [],
+      "failures": [],
+      "metrics": {
+        "scrollWidth": 1889,
+        "clientWidth": 1904,
         "headerHeight": 113.390625,
         "occupiedHeight": 248.390625,
         "viewportHeight": 1080,
@@ -670,7 +716,7 @@
             "hasEmpty": true
           }
         ],
-        "cards": 15,
+        "cards": 16,
         "h1Count": 1,
         "activeNav": "03任务复盘",
         "kpiBaselineDrift": 0,
@@ -819,6 +865,52 @@
       "metrics": {
         "scrollWidth": 1351,
         "clientWidth": 1366,
+        "headerHeight": 113.390625,
+        "occupiedHeight": 248.390625,
+        "viewportHeight": 768,
+        "filtersVisible": true,
+        "charts": [
+          {
+            "selector": "#trendChart",
+            "height": 320,
+            "hasGraphic": true,
+            "hasEmpty": false
+          },
+          {
+            "selector": "#ratioChart",
+            "height": 320,
+            "hasGraphic": true,
+            "hasEmpty": false
+          },
+          {
+            "selector": "#cacheTrendChart",
+            "height": 340,
+            "hasGraphic": true,
+            "hasEmpty": false
+          }
+        ],
+        "cards": 17,
+        "h1Count": 1,
+        "activeNav": "01运行总览",
+        "kpiBaselineDrift": 0,
+        "kpiTextInsetDrift": 0,
+        "regularBarMinFont": 0,
+        "trendValueCenterDrift": 0.0078125,
+        "trendValueOverflowCount": 0
+      }
+    },
+    {
+      "page": "overview-import-embedded",
+      "name": "Notion 嵌入文件夹导入",
+      "viewport": "1366",
+      "width": 1366,
+      "height": 768,
+      "screenshot": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current\\overview-import-embedded-1366.png",
+      "warnings": [],
+      "failures": [],
+      "metrics": {
+        "scrollWidth": 1335,
+        "clientWidth": 1350,
         "headerHeight": 113.390625,
         "occupiedHeight": 248.390625,
         "viewportHeight": 768,
@@ -1182,12 +1274,12 @@
         "charts": [
           {
             "selector": ".task-layout",
-            "height": 1352.5625,
+            "height": 1424.5625,
             "hasGraphic": true,
             "hasEmpty": true
           }
         ],
-        "cards": 15,
+        "cards": 16,
         "h1Count": 1,
         "activeNav": "03任务复盘",
         "kpiBaselineDrift": 0,
@@ -1338,6 +1430,52 @@
         "clientWidth": 390,
         "headerHeight": 111,
         "occupiedHeight": 241,
+        "viewportHeight": 844,
+        "filtersVisible": true,
+        "charts": [
+          {
+            "selector": "#trendChart",
+            "height": 320,
+            "hasGraphic": true,
+            "hasEmpty": false
+          },
+          {
+            "selector": "#ratioChart",
+            "height": 394,
+            "hasGraphic": true,
+            "hasEmpty": false
+          },
+          {
+            "selector": "#cacheTrendChart",
+            "height": 342,
+            "hasGraphic": true,
+            "hasEmpty": false
+          }
+        ],
+        "cards": 17,
+        "h1Count": 1,
+        "activeNav": "01运行总览",
+        "kpiBaselineDrift": 0,
+        "kpiTextInsetDrift": 0,
+        "regularBarMinFont": 0,
+        "trendValueCenterDrift": 0.0078125,
+        "trendValueOverflowCount": 1
+      }
+    },
+    {
+      "page": "overview-import-embedded",
+      "name": "Notion 嵌入文件夹导入",
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "screenshot": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current\\overview-import-embedded-mobile.png",
+      "warnings": [],
+      "failures": [],
+      "metrics": {
+        "scrollWidth": 374,
+        "clientWidth": 374,
+        "headerHeight": 111,
+        "occupiedHeight": 256,
         "viewportHeight": 844,
         "filtersVisible": true,
         "charts": [

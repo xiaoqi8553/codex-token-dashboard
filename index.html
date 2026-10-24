@@ -3333,7 +3333,7 @@
         </div>
         <div class="rail-version">
           <span>LOCAL-FIRST</span>
-          <strong>v0.9.2</strong>
+          <strong>v0.9.3</strong>
         </div>
       </div>
     </aside>
@@ -4013,13 +4013,25 @@
       chooseSessionsDirectory();
     }
 
-    function chooseCompatibleSessionsFolder() {
+    function chooseCompatibleSessionsFolder({ embedded = false } = {}) {
       closeImportMenu();
       // A stalled native picker must not overwrite a later compatibility import.
       state.directoryPickerRequest += 1;
       state.directoryPickerOpen = true;
-      setStatus("请选择 .codex 根目录；兼容方式仅在浏览器本地读取，后续更新需要重新选择文件夹。");
+      setStatus(embedded
+        ? "Notion 嵌入模式：请选择 .codex 根目录；数据保存在当前嵌入页面的浏览器存储中，后续更新需要重新选择文件夹。"
+        : "请选择 .codex 根目录；兼容方式仅在浏览器本地读取，后续更新需要重新选择文件夹。", embedded ? "warning" : "info");
       els.sessionsFolderInput.click();
+    }
+
+    function isEmbeddedDashboard() {
+      try {
+        return window.top !== window;
+      } catch {
+        // Cross-origin access to window.top is restricted; being unable to
+        // inspect it still means the native directory picker is unsafe here.
+        return true;
+      }
     }
 
     function emptyState(message, detail = "") {
@@ -4986,6 +4998,11 @@
     async function chooseSessionsDirectory() {
       if (state.directoryPickerOpen) {
         setStatus("正在等待文件夹选择窗口；若窗口未出现，请从“导入数据”使用“兼容方式选择文件夹”。", "warning");
+        return;
+      }
+      if (isEmbeddedDashboard()) {
+        closeImportMenu();
+        chooseCompatibleSessionsFolder({ embedded: true });
         return;
       }
       if (typeof window.showDirectoryPicker === "function") {
@@ -6561,7 +6578,7 @@
                 <h2>设置 / 关于</h2>
                 <p class="muted">检查当前运行方式、隐私边界、版本和公开部署状态。</p>
               </div>
-              <span class="badge">版本 0.9.2</span>
+              <span class="badge">版本 0.9.3</span>
             </div>
             <div class="settings-grid">
               <div class="settings-card">
@@ -6978,7 +6995,7 @@
       const summary = summarize(safeRecords.map(record => ({ ...record, activeTokens: activeTokens(record), uncachedInputTokens: uncachedInputTokens(record), hitRate: cacheHitRateOf(record) })));
       return {
         snapshotVersion: 1,
-        appVersion: "0.9.2",
+        appVersion: "0.9.3",
         generatedAt: new Date().toISOString(),
         privacy: {
           anonymized: true,

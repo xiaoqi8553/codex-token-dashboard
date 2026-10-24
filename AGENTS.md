@@ -68,6 +68,7 @@
 - 2026-09-05: The first protocol-launch button was tested with a mocked programmatic anchor click while production had duplicate delegated click handlers and periodic rerenders that reset progress. Interaction tests must use the same native activation path as production, assert one dispatch per click, and verify async status survives background data refreshes.
 
 - 2026-10-19: 全年总量骤减时只检查已解析记录会漏掉文件覆盖问题。Codex 历史可能转为 `.jsonl.zst` 或移入 `archived_sessions`；必须核对扩展名和目录分布，并用压缩历史验证 Node/浏览器统计一致。目录导入、缓存复用及物理副本去重测试都需包含压缩和归档文件。
+- 2026-10-24: Notion 等跨域 iframe 会阻止 `showDirectoryPicker()`，页面内再提示用户点兼容入口仍然让主流程失败。嵌入页面必须在主入口自动切换到兼容选择器，并用真实跨域 iframe 验证文件夹选择和导入完整路径。
 
 ## Before Finishing
 

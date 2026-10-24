@@ -24,6 +24,7 @@ const pages = [
   { key: "settings-bridge", name: "GitHub Pages 账号桥接", view: "settings", screenshot: "settings-bridge", url: `${baseUrl}?accountBridge=1`, staticMode: true },
   { key: "overview-permission", name: "旧统计缓存 / 待授权", view: "overview", screenshot: "overview-permission", url: baseUrl, staticMode: true },
   { key: "overview-import", name: "文件夹导入与 Chrome 兼容入口", view: "overview", screenshot: "overview-import", url: baseUrl, staticMode: true },
+  { key: "overview-import-embedded", name: "Notion 嵌入文件夹导入", view: "overview", screenshot: "overview-import-embedded", url: baseUrl, staticMode: true, embedded: true },
   { key: "overview-dark", name: "深色总览页", view: "overview", screenshot: "overview-dark", url: baseUrl, theme: "dark" },
   { key: "overview-speed", name: "输出速度监控", view: "overview", screenshot: "overview-speed", url: baseUrl, staticMode: true, speed: true },
   { key: "overview-speed-dark", name: "深色输出速度监控", view: "overview", screenshot: "overview-speed-dark", url: baseUrl, staticMode: true, speed: true, theme: "dark" },
@@ -153,12 +154,49 @@ async function openPage(page, pageInfo) {
       });
     });
   }
-  await page.goto(pageInfo.url || baseUrl, { waitUntil: "networkidle" });
+  let target = page;
+  if (pageInfo.embedded) {
+    await page.route(`${baseUrl}/**`, route => {
+      const url = new URL(route.request().url());
+      if (url.pathname.startsWith("/api/usage")) {
+        return route.fulfill({ status: 200, contentType: "text/plain; charset=utf-8", body: "Static preview" });
+      }
+      const relative = url.pathname.replace(/^\/+/, "");
+      const file = relative.endsWith("vendor/fzstd/fzstd.js") ? "vendor/fzstd/fzstd.js"
+        : relative.endsWith("session-files.js") ? "session-files.js"
+          : relative.endsWith("output-speed.js") ? "output-speed.js"
+            : relative.endsWith("usage-accounting.js") ? "usage-accounting.js"
+              : relative.endsWith("demo-usage-index.json") ? "sample-data/demo-usage-index.json" : "index.html";
+      return route.fulfill({ status: 200, contentType: file.endsWith(".js") ? "text/javascript" : file.endsWith(".json") ? "application/json" : "text/html", body: fs.readFileSync(path.join(root, file)) });
+    });
+    await page.route("http://notion.test/", route => route.fulfill({
+      status: 200,
+      contentType: "text/html",
+      body: `<!doctype html><title>Notion embed preview</title><style>iframe{width:100%;height:100vh;border:0}</style><iframe title="dashboard" src="${pageInfo.url || baseUrl}"></iframe>`
+    }));
+    const iframeNavigation = page.waitForEvent("framenavigated", {
+      timeout: 20000,
+      predicate: frame => frame.url().startsWith(pageInfo.url || baseUrl)
+    });
+    await page.goto("http://notion.test/", { waitUntil: "networkidle" });
+    await iframeNavigation;
+    target = page.frames().find(frame => frame.url().startsWith(pageInfo.url || baseUrl));
+    if (!target) throw new Error("Notion 嵌入预览没有加载看板 iframe");
+    await target.waitForFunction(() => state.initialized && !state.loading);
+    await target.evaluate(() => { document.querySelector("#sessionsFolderInput").click = () => {}; });
+    await target.locator("#importBtn").click();
+    await target.locator("#importFolderBtn").click();
+    if (!(await target.locator("#statusNotice").innerText()).includes("Notion 嵌入模式")) {
+      throw new Error("Notion 嵌入主入口没有显示兼容导入说明");
+    }
+  } else {
+    await page.goto(pageInfo.url || baseUrl, { waitUntil: "networkidle" });
+  }
   if (pageInfo.key === "overview-import") {
-    await page.waitForFunction(() => state.initialized && !state.loading);
-    await page.evaluate(() => setStatus("未选择文件夹，原有数据已保留。如果 Chrome 没有弹出窗口，请从“导入数据”使用“兼容方式选择文件夹”。", "warning"));
-    await page.locator("#importBtn").click();
-    const fallback = page.locator("#importFolderCompatBtn");
+    await target.waitForFunction(() => state.initialized && !state.loading);
+    await target.evaluate(() => setStatus("未选择文件夹，原有数据已保留。如果 Chrome 没有弹出窗口，请从“导入数据”使用“兼容方式选择文件夹”。", "warning"));
+    await target.locator("#importBtn").click();
+    const fallback = target.locator("#importFolderCompatBtn");
     const box = await fallback.boundingBox();
     if (!box || !await fallback.evaluate(element => {
       const r = element.getBoundingClientRect();
@@ -166,33 +204,33 @@ async function openPage(page, pageInfo) {
     })) throw new Error("兼容文件夹按钮被裁切或遮挡");
   }
   if (pageInfo.range) {
-    await page.waitForFunction(() => state.initialized && !state.loading);
-    const range = page.locator(`[data-range="${pageInfo.range}"]`);
+    await target.waitForFunction(() => state.initialized && !state.loading);
+    const range = target.locator(`[data-range="${pageInfo.range}"]`);
     const collapsed = !await range.isVisible();
-    if (collapsed) await page.locator("#mobileFilterToggle").click();
+    if (collapsed) await target.locator("#mobileFilterToggle").click();
     await range.click();
-    await page.waitForFunction(() => !state.loading);
-    if (collapsed) await page.locator("#mobileFilterToggle").click();
+    await target.waitForFunction(() => !state.loading);
+    if (collapsed) await target.locator("#mobileFilterToggle").click();
   }
   if (pageInfo.speed) {
-    await page.waitForFunction(() => state.initialized && !state.loading);
-    if (pageInfo.emptySpeed) await page.evaluate(() => { state.records = state.records.map(record => ({ ...record, turnDurationMs: 0 })); });
-    await page.locator('[data-performance="speed"]').click();
+    await target.waitForFunction(() => state.initialized && !state.loading);
+    if (pageInfo.emptySpeed) await target.evaluate(() => { state.records = state.records.map(record => ({ ...record, turnDurationMs: 0 })); });
+    await target.locator('[data-performance="speed"]').click();
     if (pageInfo.emptySpeed) {
-      await page.locator(".speed-empty").waitFor();
+      await target.locator(".speed-empty").waitFor();
     } else {
-      await page.locator(".speed-stat").first().waitFor();
-      await page.evaluate(() => render(state.data));
-      if (!(await page.locator("#outputSpeedPanel").isVisible())) throw new Error("速度页签在数据刷新后丢失");
-      await page.locator(".speed-point").first().click();
-      if (!(await page.locator("#chartTooltip").textContent()).includes("Token/s")) throw new Error("速度图缺少回合明细");
+      await target.locator(".speed-stat").first().waitFor();
+      await target.evaluate(() => render(state.data));
+      if (!(await target.locator("#outputSpeedPanel").isVisible())) throw new Error("速度页签在数据刷新后丢失");
+      await target.locator(".speed-point").first().click();
+      if (!(await target.locator("#chartTooltip").textContent()).includes("Token/s")) throw new Error("速度图缺少回合明细");
     }
-    await page.evaluate(() => { hideChartTooltip(); window.scrollTo(0, 0); });
-    await page.waitForFunction(() => !document.querySelector("#toast").classList.contains("show"));
+    await target.evaluate(() => { hideChartTooltip(); window.scrollTo(0, 0); });
+    await target.waitForFunction(() => !document.querySelector("#toast").classList.contains("show"));
   }
   if (pageInfo.key === "overview-permission") {
-    await page.waitForFunction(() => state.initialized && !state.loading);
-    await page.evaluate(async () => {
+    await target.waitForFunction(() => state.initialized && !state.loading);
+    await target.evaluate(async () => {
       state.staticSourceType = "sessions-folder";
       state.staticPayload.sourceType = "sessions-folder";
       state.staticPayload.parserStale = true;
@@ -202,14 +240,14 @@ async function openPage(page, pageInfo) {
     });
   }
   if (pageInfo.view !== "overview") {
-    await page.locator(`[data-view="${pageInfo.view}"]`).click();
+    await target.locator(`[data-view="${pageInfo.view}"]`).click();
     await page.waitForTimeout(450);
   }
   if (pageInfo.key === "settings-bridge") {
-    await page.locator('[data-action="sync-account-bridge"]').click();
+    await target.locator('[data-action="sync-account-bridge"]').click();
     await page.waitForFunction(() => document.querySelector("#accountSyncStatus")?.classList.contains("success"));
-    await page.evaluate(() => renderSettings(summarize(state.records)));
-    const state = await page.evaluate(() => ({
+    await target.evaluate(() => renderSettings(summarize(state.records)));
+    const state = await target.evaluate(() => ({
       hash: window.location.hash,
       manualFields: document.querySelectorAll("#accountSnapshotName, #accountBridgeKey").length,
       protocolLaunch: window.__accountProtocolLaunch || "",
@@ -220,6 +258,7 @@ async function openPage(page, pageInfo) {
       throw new Error(`GitHub Pages 一键账号快照验收失败：${JSON.stringify({ state, bridgeRequestBody })}`);
     }
   }
+  return target;
 }
 
 function screenshotName(pageInfo, viewport) {
@@ -255,10 +294,10 @@ async function runBrowser({ takeScreenshots, audit }) {
       page.on("pageerror", error => report.consoleErrors.push({ viewport: viewport.key, text: error.message }));
 
       for (const pageInfo of pages) {
-        await openPage(page, pageInfo);
+        const reviewTarget = await openPage(page, pageInfo);
         const screenshot = path.join(screenshotsDir, screenshotName(pageInfo, viewport));
         if (takeScreenshots) await page.screenshot({ path: screenshot, fullPage: true });
-        const checks = audit ? await collectAudit(page, pageInfo, viewport, screenshot) : { warnings: [], failures: [], metrics: {} };
+        const checks = audit ? await collectAudit(reviewTarget, pageInfo, viewport, screenshot) : { warnings: [], failures: [], metrics: {} };
         report.pages.push({
           page: pageInfo.key,
           name: pageInfo.name,
