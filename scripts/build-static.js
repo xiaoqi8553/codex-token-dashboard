@@ -5,6 +5,7 @@ const root = path.resolve(__dirname, "..");
 const dist = path.join(root, "dist");
 const required = [
   "index.html",
+  "folder-picker.html",
   "usage-accounting.js",
   "output-speed.js",
   "session-files.js",
@@ -42,9 +43,11 @@ if (!process.exitCode) {
   fs.copyFileSync(path.join(root, "output-speed.js"), path.join(dist, "output-speed.js"));
   fs.copyFileSync(path.join(root, "output-speed.js"), path.join(dist, "client", "output-speed.js"));
   fs.copyFileSync(path.join(root, "index.html"), path.join(dist, "index.html"));
+  fs.copyFileSync(path.join(root, "folder-picker.html"), path.join(dist, "folder-picker.html"));
   fs.copyFileSync(path.join(root, "sample-data", "demo-usage-index.json"), path.join(dist, "sample-data", "demo-usage-index.json"));
   fs.copyFileSync(path.join(root, "sample-data", "usage-index.sample.json"), path.join(dist, "sample-data", "usage-index.sample.json"));
   fs.copyFileSync(path.join(root, "index.html"), path.join(dist, "client", "index.html"));
+  fs.copyFileSync(path.join(root, "folder-picker.html"), path.join(dist, "client", "folder-picker.html"));
   fs.copyFileSync(path.join(root, "sample-data", "demo-usage-index.json"), path.join(dist, "client", "sample-data", "demo-usage-index.json"));
   fs.copyFileSync(path.join(root, "sample-data", "usage-index.sample.json"), path.join(dist, "client", "sample-data", "usage-index.sample.json"));
   fs.copyFileSync(path.join(root, "sites-worker.js"), path.join(dist, "server", "index.js"));

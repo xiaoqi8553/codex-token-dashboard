@@ -33,7 +33,7 @@ async function main() {
     }
     if (url.pathname.startsWith("/api/")) apiRequests += 1;
     const file = url.pathname.endsWith("vendor/fzstd/fzstd.js") ? "vendor/fzstd/fzstd.js" : url.pathname.endsWith("session-files.js") ? "session-files.js" : url.pathname.endsWith("output-speed.js") ? "output-speed.js" : url.pathname.endsWith("usage-accounting.js") ? "usage-accounting.js" : url.pathname.endsWith("demo-usage-index.json")
-      ? "sample-data/demo-usage-index.json" : "index.html";
+      ? "sample-data/demo-usage-index.json" : url.pathname.endsWith("folder-picker.html") ? "folder-picker.html" : "index.html";
     return route.fulfill({ status: 200, contentType: file.endsWith("js") ? "text/javascript" : file.endsWith("json") ? "application/json" : "text/html", body: fs.readFileSync(path.join(root, file)) });
   });
   await context.addInitScript(() => {
@@ -297,13 +297,13 @@ async function main() {
     await page.waitForFunction(() => !state.directoryPickerOpen);
     assert.deepEqual(await page.evaluate(() => ({ calls: window.pickerCalls, active: window.pickerActivation, loading: state.loading })),
       { calls: 1, active: true, loading: true }, "background sync must not swallow the click or lose its busy lock on picker cancellation");
-    assert.match(await page.locator("#statusNotice").innerText(), /兼容方式选择文件夹/);
+    assert.match(await page.locator("#statusNotice").innerText(), /一次性兼容导入/);
     assert.equal(await page.evaluate(() => state.staticPayload.records.length), retained);
     await page.evaluate(() => { state.loading = false; window.showDirectoryPicker = () => Promise.reject(new DOMException("Not allowed", "SecurityError")); });
     await page.locator("#importBtn").click();
     await page.locator("#importFolderBtn").click();
     await page.waitForFunction(() => !state.directoryPickerOpen);
-    assert.match(await page.locator("#statusNotice").innerText(), /Not allowed.*兼容方式/);
+    assert.match(await page.locator("#statusNotice").innerText(), /Not allowed.*一次性兼容导入/);
 
     // A successful selection made during a refresh waits before swapping handles.
     await page.evaluate(async () => {
@@ -364,30 +364,65 @@ async function main() {
       await page.waitForFunction(() => !state.loading && !state.directoryPickerOpen);
       assert.equal(await page.evaluate(() => state.staticSourceType), "sessions-files");
 
-      // A Notion-like cross-origin iframe cannot open showDirectoryPicker.
-      // The primary folder action must go straight to the compatible input.
+      // A cross-origin iframe cannot open showDirectoryPicker directly. The
+      // main action opens a same-origin top-level picker and transfers its
+      // directory handle back to the embedded dashboard.
       const embedPage = await context.newPage();
       embedPage.on("pageerror", error => errors.push(error.message));
+      await embedPage.addInitScript(() => {
+        const nativeSetInterval = window.setInterval.bind(window);
+        window.setInterval = (callback, delay, ...args) => nativeSetInterval(callback, delay === 30000 ? 150 : delay, ...args);
+      });
       await embedPage.goto("https://notion.test/");
       const embedded = embedPage.frameLocator('iframe[title="dashboard"]');
-      await embedded.locator("#importBtn").click();
-      const embeddedChooserEvent = embedPage.waitForEvent("filechooser");
-      await embedded.locator("#importFolderBtn").click();
-      const embeddedChooser = await embeddedChooserEvent;
-      assert.match(await embedded.locator("#statusNotice").innerText(), /Notion 嵌入模式/);
-      await embeddedChooser.setFiles(codexRoot);
       const dashboardFrame = embedPage.frames().find(frame => frame.url().startsWith(site));
+      await embedded.locator("#importBtn").click();
       assert.ok(dashboardFrame, "Notion-like page must load the dashboard as a separate origin");
-      await dashboardFrame.waitForFunction(() => state.staticSourceType === "sessions-files" && !state.loading);
-      assert.equal(await dashboardFrame.evaluate(() => state.staticPayload.records.reduce((sum, row) => sum + row.totalTokens, 0)), 310);
-      assert.match(await embedded.locator("#toast").innerText(), /一次性导入/);
-      assert.equal(await dashboardFrame.evaluate(() => state.sessionsDirectoryHandle), null, "embedded compatibility import does not claim a persistent directory permission");
+      await dashboardFrame.evaluate(() => { window.originalOpen = window.open; window.open = () => null; });
+      await embedded.locator("#importFolderBtn").click();
+      assert.match(await embedded.locator("#statusNotice").innerText(), /拦截了授权窗口/);
+      assert.equal(await dashboardFrame.evaluate(() => state.directoryPickerOpen), false, "a blocked popup must not leave folder sync locked");
+      await embedded.locator("#importBtn").click();
+      await dashboardFrame.evaluate(() => { window.open = window.originalOpen; });
+      const popupEvent = embedPage.waitForEvent("popup");
+      await embedded.locator("#importFolderBtn").click();
+      const pickerPopup = await popupEvent;
+      await pickerPopup.waitForLoadState();
+      await pickerPopup.waitForSelector("#chooseFolder");
+      await pickerPopup.evaluate(async text => {
+        const root = await navigator.storage.getDirectory();
+        const selected = await root.getDirectoryHandle("notion-codex", { create: true });
+        const sessions = await selected.getDirectoryHandle("sessions", { create: true });
+        const file = await sessions.getFileHandle("rollout-live.jsonl", { create: true });
+        const writer = await file.createWritable();
+        await writer.write(text);
+        await writer.close();
+        window.showDirectoryPicker = async () => selected;
+      }, fixtures[1].text);
+      await pickerPopup.locator("#chooseFolder").click();
+      await dashboardFrame.waitForFunction(() => state.staticSourceType === "sessions-folder" && !state.loading && state.staticPayload?.records?.length);
+      assert.equal(await dashboardFrame.evaluate(() => state.staticPayload.records.reduce((sum, row) => sum + row.totalTokens, 0)), 250);
+      assert.match(await dashboardFrame.locator("#toast").innerText(), /持续同步/);
+      assert.equal(await dashboardFrame.evaluate(() => Boolean(state.sessionsDirectoryHandle)), true, "embedded persistent import stores the transferred folder handle");
+      await dashboardFrame.evaluate(async text => {
+        const sessions = await state.sessionsDirectoryHandle.getDirectoryHandle("sessions");
+        const file = await sessions.getFileHandle("rollout-live.jsonl");
+        const writer = await file.createWritable();
+        await writer.write(text);
+        await writer.close();
+      }, fixtures[0].text);
+      await dashboardFrame.waitForFunction(() => state.staticPayload?.records?.reduce((sum, row) => sum + row.totalTokens, 0) === 13865, { timeout: 10000 });
+      assert.equal(await dashboardFrame.evaluate(() => state.staticSourceType), "sessions-folder", "embedded folder changes are picked up automatically");
+      await embedPage.reload();
+      const reopened = embedPage.frames().find(frame => frame.url().startsWith(site));
+      await reopened.waitForFunction(() => state.initialized && state.staticSourceType === "sessions-folder" && !state.loading);
+      assert.equal(await reopened.evaluate(() => state.staticPayload.records.reduce((sum, row) => sum + row.totalTokens, 0)), 13865, "embedded page restores cached data and persistent folder authorization");
       await embedPage.close();
     } finally {
       fs.rmSync(pickerDirectory, { recursive: true, force: true });
     }
     assert.deepEqual(errors, []);
-    console.log(JSON.stringify({ ok: true, benchmark, mutation, checks: ["unchanged reuse", "add/change/delete equality", "reopen IndexedDB", "startup autosync", "permission retry", "handle-only recovery", "parser invalidation", "sync lock", "new current-day data", "evidence mode", "one-shot import recovery", "no Pages API request", "picker click during sync", "picker abort and security feedback", "native picker selection waits for sync", "compatibility filechooser at 1920/1366/mobile", "cross-origin Notion iframe import", "late native result ignored", "unsupported native picker fallback"] }, null, 2));
+    console.log(JSON.stringify({ ok: true, benchmark, mutation, checks: ["unchanged reuse", "add/change/delete equality", "reopen IndexedDB", "startup autosync", "permission retry", "handle-only recovery", "parser invalidation", "sync lock", "new current-day data", "evidence mode", "one-shot import recovery", "no Pages API request", "picker click during sync", "picker abort and security feedback", "native picker selection waits for sync", "compatibility filechooser at 1920/1366/mobile", "cross-origin Notion popup blocked fallback", "cross-origin Notion persistent handle transfer", "embedded automatic sync after file mutation", "embedded IndexedDB handle restore", "late native result ignored", "unsupported native picker fallback"] }, null, 2));
   } finally {
     await context.close();
     await browser.close();

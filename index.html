@@ -3333,7 +3333,7 @@
         </div>
         <div class="rail-version">
           <span>LOCAL-FIRST</span>
-          <strong>v0.9.3</strong>
+          <strong>v0.9.4</strong>
         </div>
       </div>
     </aside>
@@ -3367,14 +3367,14 @@
             </button>
             <button class="btn import-option" id="importFolderBtn" type="button" role="menuitem">
               <span>
-                <strong>选择 .codex / sessions 文件夹</strong>
-                <span>推荐 .codex，包含 sessions、归档和 .jsonl.zst 压缩历史</span>
+                <strong>连接并持续同步 .codex 文件夹</strong>
+                <span>推荐 .codex 根目录；授权一次后自动检查更新</span>
               </span>
             </button>
             <button class="btn import-option" id="importFolderCompatBtn" type="button" role="menuitem">
               <span>
-                <strong>兼容方式选择文件夹</strong>
-                <span>上方未弹窗时使用；一次性导入，更新需重新选择</span>
+                <strong>一次性兼容导入</strong>
+                <span>持续同步不可用或弹窗被拦截时使用；更新需重新选择</span>
               </span>
             </button>
           </div>
@@ -3607,6 +3607,7 @@
       initialized: false,
       accountBridgeLaunch: null
     };
+    let pendingEmbeddedDirectoryPicker = null;
 
     const els = {
       pathMeta: document.querySelector("#pathMeta"),
@@ -4019,9 +4020,39 @@
       state.directoryPickerRequest += 1;
       state.directoryPickerOpen = true;
       setStatus(embedded
-        ? "Notion 嵌入模式：请选择 .codex 根目录；数据保存在当前嵌入页面的浏览器存储中，后续更新需要重新选择文件夹。"
+        ? "Notion 嵌入模式：请选择 .codex 根目录；这是一次性导入，后续更新需要重新选择文件夹。"
         : "请选择 .codex 根目录；兼容方式仅在浏览器本地读取，后续更新需要重新选择文件夹。", embedded ? "warning" : "info");
       els.sessionsFolderInput.click();
+    }
+
+    function openEmbeddedFolderPicker() {
+      closeImportMenu();
+      if (state.directoryPickerOpen) {
+        setStatus("文件夹连接窗口已打开；请在新窗口中完成授权，或关闭窗口后重试。", "warning");
+        return;
+      }
+      const nonceBytes = new Uint8Array(24);
+      crypto.getRandomValues(nonceBytes);
+      const nonce = Array.from(nonceBytes, byte => byte.toString(16).padStart(2, "0")).join("");
+      const url = new URL("folder-picker.html", location.href);
+      url.searchParams.set("nonce", nonce);
+      // window.open must happen in this click handler so browsers retain activation.
+      const popup = window.open(url.href, "codex-token-folder-picker", "popup,width=560,height=680,resizable=yes,scrollbars=yes");
+      if (!popup) {
+        setStatus("浏览器或 Notion 拦截了授权窗口。请允许此站点弹窗后重试；也可使用“一次性兼容导入”，但更新时需重新选择文件夹。", "warning");
+        return;
+      }
+      pendingEmbeddedDirectoryPicker = { popup, nonce };
+      state.directoryPickerOpen = true;
+      pendingEmbeddedDirectoryPicker.monitor = window.setInterval(() => {
+        if (!pendingEmbeddedDirectoryPicker || pendingEmbeddedDirectoryPicker.popup !== popup) return;
+        if (!popup.closed) return;
+        window.clearInterval(pendingEmbeddedDirectoryPicker.monitor);
+        pendingEmbeddedDirectoryPicker = null;
+        state.directoryPickerOpen = false;
+        setStatus("授权窗口已关闭，没有连接文件夹。可以重试，或使用一次性兼容导入。", "warning");
+      }, 500);
+      setStatus("授权窗口已打开。请在新窗口点击“选择 .codex 根目录”；授权完成后看板会自动读取并持续同步。", "warning");
     }
 
     function isEmbeddedDashboard() {
@@ -4997,12 +5028,12 @@
 
     async function chooseSessionsDirectory() {
       if (state.directoryPickerOpen) {
-        setStatus("正在等待文件夹选择窗口；若窗口未出现，请从“导入数据”使用“兼容方式选择文件夹”。", "warning");
+        setStatus("正在等待文件夹选择窗口；若窗口未出现，请从“导入数据”使用“一次性兼容导入”。", "warning");
         return;
       }
       if (isEmbeddedDashboard()) {
         closeImportMenu();
-        chooseCompatibleSessionsFolder({ embedded: true });
+        openEmbeddedFolderPicker();
         return;
       }
       if (typeof window.showDirectoryPicker === "function") {
@@ -5010,7 +5041,7 @@
         state.directoryPickerOpen = true;
         let ownsLoading = false;
         try {
-          setStatus("正在打开文件夹选择窗口，请选择 .codex 根目录；若未弹窗，可从“导入数据”使用“兼容方式选择文件夹”。", "warning");
+          setStatus("正在打开文件夹选择窗口，请选择 .codex 根目录；若未弹窗，可从“导入数据”使用“一次性兼容导入”。", "warning");
           // Keep this call in the click's activation, even during background sync.
           const handle = await window.showDirectoryPicker({ mode: "read" });
           if (request !== state.directoryPickerRequest) return;
@@ -5026,9 +5057,9 @@
         } catch (error) {
           if (request !== state.directoryPickerRequest) return;
           if (error?.name === "AbortError") {
-            setStatus("未选择文件夹，原有数据已保留。如果 Chrome 没有弹出窗口，请从“导入数据”使用“兼容方式选择文件夹”。", "warning");
+            setStatus("未选择文件夹，原有数据已保留。如果 Chrome 没有弹出窗口，请从“导入数据”使用“一次性兼容导入”。", "warning");
           } else {
-            setStatus(`文件夹选择或读取失败：${error.message || "未知错误"}。若未弹窗，请从“导入数据”使用“兼容方式选择文件夹”。`, "error");
+            setStatus(`文件夹选择或读取失败：${error.message || "未知错误"}。若未弹窗，请从“导入数据”使用“一次性兼容导入”。`, "error");
           }
         } finally {
           if (ownsLoading) setLoading(false);
@@ -5038,6 +5069,47 @@
       }
       chooseCompatibleSessionsFolder();
     }
+
+    window.addEventListener("message", async event => {
+      const pending = pendingEmbeddedDirectoryPicker;
+      const data = event.data;
+      if (!pending || event.origin !== location.origin || event.source !== pending.popup ||
+          data?.type !== "codex-folder-picker-result" || data.nonce !== pending.nonce) return;
+      window.clearInterval(pending.monitor);
+      pendingEmbeddedDirectoryPicker = null;
+      try { pending.popup.close(); } catch {}
+      if (data.status) {
+        state.directoryPickerOpen = false;
+        const message = data.status === "unsupported"
+          ? "此浏览器不支持持续文件夹授权。请使用“一次性兼容导入”，或在普通浏览器标签页打开看板以启用自动同步。"
+          : data.status === "cancelled"
+            ? "未选择文件夹，原有数据已保留。可以重试，或使用一次性兼容导入。"
+            : `文件夹授权失败：${data.message || "未知错误"}。可以重试，或使用一次性兼容导入。`;
+        setStatus(message, data.status === "cancelled" ? "warning" : "error");
+        return;
+      }
+      let ownsLoading = false;
+      try {
+        if (!data.handle || typeof data.handle.getDirectoryHandle !== "function" || typeof data.handle.values !== "function") {
+          throw new Error("授权窗口没有返回有效的文件夹权限");
+        }
+        await waitForFolderImportIdle();
+        setLoading(true);
+        ownsLoading = true;
+        state.sessionsDirectoryHandle = data.handle;
+        state.sessionsDirectoryName = data.handle.name || data.name || ".codex";
+        state.dataMode = "static";
+        state.staticSourceType = "sessions-folder";
+        if (!await saveSessionsDirectoryHandle(data.handle)) throw new Error("浏览器未能保存文件夹授权，请检查此站点的存储权限");
+        const refreshed = await refreshSessionsDirectoryHandle("已连接文件夹并开启持续同步：", { fitRange: true, resetCache: true });
+        if (!refreshed) throw new Error("文件夹读取未完成，请检查授权后重试");
+      } catch (error) {
+        setStatus(`持续同步连接失败：${error?.message || "未知错误"}。可以重试，或使用一次性兼容导入。`, "error");
+      } finally {
+        if (ownsLoading) setLoading(false);
+        state.directoryPickerOpen = false;
+      }
+    });
 
     function parseCsv(text) {
       const rows = [];
@@ -6578,7 +6650,7 @@
                 <h2>设置 / 关于</h2>
                 <p class="muted">检查当前运行方式、隐私边界、版本和公开部署状态。</p>
               </div>
-              <span class="badge">版本 0.9.3</span>
+              <span class="badge">版本 0.9.4</span>
             </div>
             <div class="settings-grid">
               <div class="settings-card">
@@ -6995,7 +7067,7 @@
       const summary = summarize(safeRecords.map(record => ({ ...record, activeTokens: activeTokens(record), uncachedInputTokens: uncachedInputTokens(record), hitRate: cacheHitRateOf(record) })));
       return {
         snapshotVersion: 1,
-        appVersion: "0.9.3",
+        appVersion: "0.9.4",
         generatedAt: new Date().toISOString(),
         privacy: {
           anonymized: true,

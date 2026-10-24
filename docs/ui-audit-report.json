@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-24T03:10:30.803Z",
+  "generatedAt": "2026-10-24T03:33:14.221Z",
   "baseUrl": "http://127.0.0.1:8787",
   "screenshotsDir": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current",
   "pages": [
@@ -1475,7 +1475,7 @@
         "scrollWidth": 374,
         "clientWidth": 374,
         "headerHeight": 111,
-        "occupiedHeight": 256,
+        "occupiedHeight": 241,
         "viewportHeight": 844,
         "filtersVisible": true,
         "charts": [

@@ -183,18 +183,20 @@ async function openPage(page, pageInfo) {
     target = page.frames().find(frame => frame.url().startsWith(pageInfo.url || baseUrl));
     if (!target) throw new Error("Notion 嵌入预览没有加载看板 iframe");
     await target.waitForFunction(() => state.initialized && !state.loading);
-    await target.evaluate(() => { document.querySelector("#sessionsFolderInput").click = () => {}; });
+    await target.evaluate(() => { window.open = () => ({ closed: false, close() {} }); });
     await target.locator("#importBtn").click();
     await target.locator("#importFolderBtn").click();
-    if (!(await target.locator("#statusNotice").innerText()).includes("Notion 嵌入模式")) {
-      throw new Error("Notion 嵌入主入口没有显示兼容导入说明");
+    await target.waitForFunction(() => state.directoryPickerOpen || document.querySelector("#statusNotice").textContent.includes("授权窗口已打开"));
+    const embeddedStatus = await target.locator("#statusNotice").innerText();
+    if (!embeddedStatus.includes("授权窗口已打开")) {
+      throw new Error(`Notion 嵌入主入口没有显示持续同步授权说明：${embeddedStatus}`);
     }
   } else {
     await page.goto(pageInfo.url || baseUrl, { waitUntil: "networkidle" });
   }
   if (pageInfo.key === "overview-import") {
     await target.waitForFunction(() => state.initialized && !state.loading);
-    await target.evaluate(() => setStatus("未选择文件夹，原有数据已保留。如果 Chrome 没有弹出窗口，请从“导入数据”使用“兼容方式选择文件夹”。", "warning"));
+    await target.evaluate(() => setStatus("未选择文件夹，原有数据已保留。如果 Chrome 没有弹出窗口，请从“导入数据”使用“一次性兼容导入”。", "warning"));
     await target.locator("#importBtn").click();
     const fallback = target.locator("#importFolderCompatBtn");
     const box = await fallback.boundingBox();

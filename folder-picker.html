@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>连接 Codex 文件夹</title>
+  <style>
+    :root { color-scheme: light dark; font: 15px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; }
+    body { min-height: 100vh; margin: 0; display: grid; place-items: center; padding: 24px; box-sizing: border-box; background: #f3f6fa; color: #17202e; }
+    main { width: min(100%, 520px); padding: 28px; border: 1px solid #d7e0ea; border-radius: 16px; background: white; box-shadow: 0 14px 40px #17202e14; }
+    h1 { margin: 0 0 8px; font-size: 24px; line-height: 1.25; }
+    p { color: #52647c; }
+    button { min-height: 46px; padding: 10px 18px; border: 0; border-radius: 9px; background: #275dcc; color: white; font: inherit; font-weight: 700; cursor: pointer; }
+    button:disabled { opacity: .55; cursor: not-allowed; }
+    #message { min-height: 26px; margin: 16px 0 0; }
+    .privacy { padding: 12px 14px; border-radius: 9px; background: #f3f6fa; font-size: 13px; }
+    @media (prefers-color-scheme: dark) {
+      body { background: #101820; color: #edf3fb; }
+      main { background: #17212b; border-color: #2a3a4b; }
+      p { color: #a8b8cb; }
+      .privacy { background: #202d39; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>连接 Codex 文件夹</h1>
+    <p>选择一次 `.codex` 根目录后，看板会在 Notion 嵌入页面中自动重新扫描更新。</p>
+    <button id="chooseFolder" type="button">选择 .codex 根目录</button>
+    <p class="privacy">仅将文件夹读取权限句柄交回看板；会话内容留在本机浏览器，不会上传。权限由 Chrome 管理，可随时在网站设置中撤销。</p>
+    <p id="message" role="status" aria-live="polite"></p>
+  </main>
+  <script>
+    const params = new URLSearchParams(location.search);
+    const nonce = params.get("nonce") || "";
+    const message = document.querySelector("#message");
+    const button = document.querySelector("#chooseFolder");
+    const sendStatus = (details = {}) => {
+      if (window.opener && nonce) window.opener.postMessage({ type: "codex-folder-picker-result", nonce, ...details }, location.origin);
+    };
+
+    if (!nonce || !window.opener) {
+      message.textContent = "请从 Notion 看板的文件夹同步入口打开此页面。";
+      button.disabled = true;
+    } else if (typeof window.showDirectoryPicker !== "function") {
+      message.textContent = "当前浏览器不支持持续文件夹授权，请关闭此页并使用看板中的一次性兼容导入。";
+      button.disabled = true;
+      sendStatus({ status: "unsupported" });
+    }
+
+    button.addEventListener("click", async () => {
+      if (!nonce || !window.opener || typeof window.showDirectoryPicker !== "function") return;
+      button.disabled = true;
+      message.textContent = "正在等待文件夹选择...";
+      try {
+        const handle = await window.showDirectoryPicker({ mode: "read" });
+        window.opener.postMessage({ type: "codex-folder-picker-result", nonce, handle, name: handle.name || "sessions" }, location.origin);
+        message.textContent = "授权已交回看板，正在读取并开始自动同步。此窗口即将关闭。";
+        setTimeout(() => window.close(), 500);
+      } catch (error) {
+        button.disabled = false;
+        if (error?.name === "AbortError") {
+          message.textContent = "未选择文件夹。可以重试，或关闭此页后使用一次性兼容导入。";
+          sendStatus({ status: "cancelled" });
+        } else {
+          message.textContent = `授权失败：${error?.message || "未知错误"}。请重试或使用一次性兼容导入。`;
+          sendStatus({ status: "error", message: error?.message || "文件夹授权失败" });
+        }
+      }
+    });
+  </script>
+</body>
+</html>
