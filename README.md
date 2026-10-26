@@ -7,7 +7,7 @@
 ![Codex Token Dashboard cover](screenshots/project-cover.svg)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-0f766e.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.9.4-17202e.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.9.6-17202e.svg)](CHANGELOG.md)
 [![OpenAI Sites](https://img.shields.io/badge/deploy-OpenAI%20Sites-275dcc.svg)](https://codex-token-dashboard.hazel-saepemx.chatgpt.site)
 [![Netlify Demo](https://img.shields.io/badge/demo-codetoken.netlify.app-2f6fed.svg)](https://codetoken.netlify.app/)
 [![GitHub Pages](https://img.shields.io/badge/pages-github.io-111827.svg)](https://xiaoqi8553.github.io/codex-token-dashboard/)
@@ -19,7 +19,7 @@
 - GitHub Pages Demo: https://xiaoqi8553.github.io/codex-token-dashboard/
 - GitHub: https://github.com/xiaoqi8553/codex-token-dashboard
 
-将看板嵌入 Notion 等网页时，点击“连接并持续同步 .codex 文件夹”，授权窗口选择一次 `.codex` 根目录，目录权限会交回嵌入页并保存在当前浏览器分区。看板约每 30 秒检查变更，页面重新打开时会恢复缓存与权限；若 Notion 或浏览器拦截授权窗口，可改用一次性兼容导入。
+Notion 中可嵌入看板并持续显示本机数据。安装仓库的 extension Chrome 扩展、启动本机 Node 服务并重新加载 Notion 后，扩展会每 5 秒从本机只读用量接口刷新统计；会话数据不会经过 Notion，也不会上传。安装步骤见 extension/README.md。
 
 OpenAI Sites 生产站与仓库中已经推送的版本保持同步；默认采用仅所有者可访问的私有发布方式。
 
@@ -109,6 +109,10 @@ npm run visual:test  # 生成截图并自动检查明显视觉问题
 - 可以导入中转站 CSV / JSON。
 - 默认只监听 `127.0.0.1`，不公开到公网。
 
+#### 在 Notion 中使用
+
+Notion 中的持续同步需要本机 Chrome 扩展与 start-dashboard.bat 同时运行。扩展只在看板 iframe 中启用，只允许读取 127.0.0.1 的用量接口；目录扫描、索引和会话数据均由原有本机 Node 服务处理。完整安装和故障排查见 extension/README.md。
+
 ### 2. 浏览器导入模式
 
 适合不启动 Node 服务，直接在网页里本地解析。
@@ -122,9 +126,9 @@ npm run visual:test  # 生成截图并自动检查明显视觉问题
 
 文件通过浏览器 File API 在本地解析，不会自动上传。
 
-在 Chrome / Edge 等支持 File System Access API 的浏览器里，打开托管站点后，点击顶部“导入数据” -> “连接并持续同步 .codex 文件夹”，推荐选择 `.codex` 根目录以包含归档。页面会把完整解析结果和文件夹授权句柄保存在浏览器 IndexedDB 中。下次打开同一个网址时会直接恢复上次数据；如果文件夹权限仍有效，页面会立即自动同步最新日志，回到前台也会检查更新，无需每次点击。浏览器仍可能要求再次授予文件夹权限，但这不会影响已缓存数据的显示。重复同步会复用未变化文件的解析结果，只重新解析新增或修改的文件；升级前的旧缓存首次同步需要完整扫描一次以建立文件索引。
+在 Chrome / Edge 等支持 File System Access API 的浏览器里，普通标签页打开托管站点后，点击顶部“导入数据” -> “连接并持续同步 .codex 文件夹”，推荐选择 `.codex` 根目录以包含归档。页面会把完整解析结果和文件夹授权句柄保存在浏览器 IndexedDB 中。下次打开同一个网址时会直接恢复上次数据；如果文件夹权限仍有效，页面会立即自动同步最新日志，回到前台也会检查更新，无需每次点击。Notion 嵌入页可通过本机 Chrome 扩展复用本地 Node 扫描。
 
-如果 Notion 或 Chrome 阻止授权弹窗，可从同一菜单选择“一次性兼容导入”。它使用标准文件夹输入框，支持压缩历史和归档，解析结果同样会保存在浏览器中；此方式不能持续读取文件夹，后续更新需要重新选择。后台页面可能被浏览器节流，回到 Notion 页面时会立即检查更新。
+未安装扩展时，Notion 嵌入页仍可选择“一次性兼容导入”；安装并启用扩展后，Notion 页面会优先从本机 Node 服务读取数据并自动更新。
 
 ## 页面模块
 

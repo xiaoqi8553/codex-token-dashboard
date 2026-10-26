@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-24T03:33:14.221Z",
+  "generatedAt": "2026-10-26T02:01:02.373Z",
   "baseUrl": "http://127.0.0.1:8787",
   "screenshotsDir": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current",
   "pages": [
@@ -207,7 +207,7 @@
         "viewportHeight": 1080,
         "filtersVisible": false,
         "charts": [],
-        "cards": 8,
+        "cards": 9,
         "h1Count": 1,
         "activeNav": "05系统设置",
         "kpiBaselineDrift": 0,
@@ -234,7 +234,7 @@
         "viewportHeight": 1080,
         "filtersVisible": false,
         "charts": [],
-        "cards": 8,
+        "cards": 9,
         "h1Count": 1,
         "activeNav": "05系统设置",
         "kpiBaselineDrift": 0,
@@ -379,6 +379,33 @@
         "kpiTextInsetDrift": 0,
         "regularBarMinFont": 0,
         "trendValueCenterDrift": 0.0078125,
+        "trendValueOverflowCount": 0
+      }
+    },
+    {
+      "page": "settings-notion-embed",
+      "name": "Notion 本机持续同步说明",
+      "viewport": "1920",
+      "width": 1920,
+      "height": 1080,
+      "screenshot": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current\\settings-notion-embed-1920.png",
+      "warnings": [],
+      "failures": [],
+      "metrics": {
+        "scrollWidth": 1889,
+        "clientWidth": 1904,
+        "headerHeight": 113.390625,
+        "occupiedHeight": 113.390625,
+        "viewportHeight": 1080,
+        "filtersVisible": false,
+        "charts": [],
+        "cards": 9,
+        "h1Count": 1,
+        "activeNav": "05系统设置",
+        "kpiBaselineDrift": 0,
+        "kpiTextInsetDrift": 0,
+        "regularBarMinFont": 0,
+        "trendValueCenterDrift": 0,
         "trendValueOverflowCount": 0
       }
     },
@@ -770,7 +797,7 @@
         "viewportHeight": 768,
         "filtersVisible": false,
         "charts": [],
-        "cards": 8,
+        "cards": 9,
         "h1Count": 1,
         "activeNav": "05系统设置",
         "kpiBaselineDrift": 0,
@@ -797,7 +824,7 @@
         "viewportHeight": 768,
         "filtersVisible": false,
         "charts": [],
-        "cards": 8,
+        "cards": 9,
         "h1Count": 1,
         "activeNav": "05系统设置",
         "kpiBaselineDrift": 0,
@@ -942,6 +969,33 @@
         "kpiTextInsetDrift": 0,
         "regularBarMinFont": 0,
         "trendValueCenterDrift": 0.0078125,
+        "trendValueOverflowCount": 0
+      }
+    },
+    {
+      "page": "settings-notion-embed",
+      "name": "Notion 本机持续同步说明",
+      "viewport": "1366",
+      "width": 1366,
+      "height": 768,
+      "screenshot": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current\\settings-notion-embed-1366.png",
+      "warnings": [],
+      "failures": [],
+      "metrics": {
+        "scrollWidth": 1335,
+        "clientWidth": 1350,
+        "headerHeight": 113.390625,
+        "occupiedHeight": 113.390625,
+        "viewportHeight": 768,
+        "filtersVisible": false,
+        "charts": [],
+        "cards": 9,
+        "h1Count": 1,
+        "activeNav": "05系统设置",
+        "kpiBaselineDrift": 0,
+        "kpiTextInsetDrift": 0,
+        "regularBarMinFont": 0,
+        "trendValueCenterDrift": 0,
         "trendValueOverflowCount": 0
       }
     },
@@ -1274,7 +1328,7 @@
         "charts": [
           {
             "selector": ".task-layout",
-            "height": 1424.5625,
+            "height": 1437.25,
             "hasGraphic": true,
             "hasEmpty": true
           }
@@ -1333,7 +1387,7 @@
         "viewportHeight": 844,
         "filtersVisible": false,
         "charts": [],
-        "cards": 8,
+        "cards": 9,
         "h1Count": 1,
         "activeNav": "05系统设置",
         "kpiBaselineDrift": 0,
@@ -1360,7 +1414,7 @@
         "viewportHeight": 844,
         "filtersVisible": false,
         "charts": [],
-        "cards": 8,
+        "cards": 9,
         "h1Count": 1,
         "activeNav": "05系统设置",
         "kpiBaselineDrift": 0,
@@ -1475,7 +1529,7 @@
         "scrollWidth": 374,
         "clientWidth": 374,
         "headerHeight": 111,
-        "occupiedHeight": 241,
+        "occupiedHeight": 256,
         "viewportHeight": 844,
         "filtersVisible": true,
         "charts": [
@@ -1506,6 +1560,33 @@
         "regularBarMinFont": 0,
         "trendValueCenterDrift": 0.0078125,
         "trendValueOverflowCount": 1
+      }
+    },
+    {
+      "page": "settings-notion-embed",
+      "name": "Notion 本机持续同步说明",
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "screenshot": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current\\settings-notion-embed-mobile.png",
+      "warnings": [],
+      "failures": [],
+      "metrics": {
+        "scrollWidth": 374,
+        "clientWidth": 374,
+        "headerHeight": 111,
+        "occupiedHeight": 111,
+        "viewportHeight": 844,
+        "filtersVisible": false,
+        "charts": [],
+        "cards": 9,
+        "h1Count": 1,
+        "activeNav": "05系统设置",
+        "kpiBaselineDrift": 0,
+        "kpiTextInsetDrift": 0,
+        "regularBarMinFont": 0,
+        "trendValueCenterDrift": 0,
+        "trendValueOverflowCount": 0
       }
     },
     {

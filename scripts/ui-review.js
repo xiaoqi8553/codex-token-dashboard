@@ -25,6 +25,7 @@ const pages = [
   { key: "overview-permission", name: "旧统计缓存 / 待授权", view: "overview", screenshot: "overview-permission", url: baseUrl, staticMode: true },
   { key: "overview-import", name: "文件夹导入与 Chrome 兼容入口", view: "overview", screenshot: "overview-import", url: baseUrl, staticMode: true },
   { key: "overview-import-embedded", name: "Notion 嵌入文件夹导入", view: "overview", screenshot: "overview-import-embedded", url: baseUrl, staticMode: true, embedded: true },
+  { key: "settings-notion-embed", name: "Notion 本机持续同步说明", view: "settings", screenshot: "settings-notion-embed", url: baseUrl, staticMode: true, embedded: true },
   { key: "overview-dark", name: "深色总览页", view: "overview", screenshot: "overview-dark", url: baseUrl, theme: "dark" },
   { key: "overview-speed", name: "输出速度监控", view: "overview", screenshot: "overview-speed", url: baseUrl, staticMode: true, speed: true },
   { key: "overview-speed-dark", name: "深色输出速度监控", view: "overview", screenshot: "overview-speed-dark", url: baseUrl, staticMode: true, speed: true, theme: "dark" },
@@ -183,13 +184,14 @@ async function openPage(page, pageInfo) {
     target = page.frames().find(frame => frame.url().startsWith(pageInfo.url || baseUrl));
     if (!target) throw new Error("Notion 嵌入预览没有加载看板 iframe");
     await target.waitForFunction(() => state.initialized && !state.loading);
-    await target.evaluate(() => { window.open = () => ({ closed: false, close() {} }); });
-    await target.locator("#importBtn").click();
-    await target.locator("#importFolderBtn").click();
-    await target.waitForFunction(() => state.directoryPickerOpen || document.querySelector("#statusNotice").textContent.includes("授权窗口已打开"));
-    const embeddedStatus = await target.locator("#statusNotice").innerText();
-    if (!embeddedStatus.includes("授权窗口已打开")) {
-      throw new Error(`Notion 嵌入主入口没有显示持续同步授权说明：${embeddedStatus}`);
+    if (pageInfo.key === "overview-import-embedded") {
+      await target.evaluate(() => { window.popupCalls = 0; window.open = () => { window.popupCalls += 1; return null; }; });
+      await target.locator("#importBtn").click();
+      await target.locator("#importFolderBtn").click();
+      const embeddedStatus = await target.locator("#statusNotice").innerText();
+      if (!embeddedStatus.includes("普通 Chrome 标签页") || await target.evaluate(() => window.popupCalls !== 0 || state.directoryPickerOpen)) {
+        throw new Error(`Notion 嵌入主入口没有说明一次性导入限制或仍尝试弹窗：${embeddedStatus}`);
+      }
     }
   } else {
     await page.goto(pageInfo.url || baseUrl, { waitUntil: "networkidle" });
@@ -258,6 +260,13 @@ async function openPage(page, pageInfo) {
     }));
     if (state.hash || state.manualFields || !state.protocolLaunch.startsWith("codex-token-dashboard://snapshot") || state.protocolLaunchCount !== 1 || bridgeRequestBody?.accountName || !state.status.includes("current.account@example.com")) {
       throw new Error(`GitHub Pages 一键账号快照验收失败：${JSON.stringify({ state, bridgeRequestBody })}`);
+    }
+  }
+  if (pageInfo.key === "settings-notion-embed") {
+    const extensionLink = target.locator('.notion-sync-card a[href*="github.com"]');
+    if (!(await extensionLink.getAttribute("href")) || !(await extensionLink.getAttribute("target")) ||
+        !(await target.locator(".notion-sync-card").innerText()).includes("本机 Chrome 扩展")) {
+      throw new Error("Notion 使用说明没有提供扩展安装入口或明确的数据边界");
     }
   }
   return target;

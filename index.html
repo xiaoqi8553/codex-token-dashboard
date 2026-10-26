@@ -3333,7 +3333,7 @@
         </div>
         <div class="rail-version">
           <span>LOCAL-FIRST</span>
-          <strong>v0.9.4</strong>
+          <strong>v0.9.6</strong>
         </div>
       </div>
     </aside>
@@ -3595,6 +3595,7 @@
       directoryPickerRequest: 0,
       authSecret: localStorage.getItem("codexTokenDashboardSecret") || "",
       dataMode: "server",
+      extensionBridgeStatus: null,
       staticPayload: null,
       staticCacheDirty: false,
       staticReadOnly: false,
@@ -3607,7 +3608,6 @@
       initialized: false,
       accountBridgeLaunch: null
     };
-    let pendingEmbeddedDirectoryPicker = null;
 
     const els = {
       pathMeta: document.querySelector("#pathMeta"),
@@ -3640,6 +3640,7 @@
       cacheTrendChart: document.querySelector("#cacheTrendChart"),
       viewPanel: document.querySelector("#viewPanel"),
       importBtn: document.querySelector("#importBtn"),
+      importFolderBtn: document.querySelector("#importFolderBtn"),
       importMenu: document.querySelector("#importMenu"),
       importFile: document.querySelector("#importFile"),
       detailDialog: document.querySelector("#detailDialog"),
@@ -3990,7 +3991,7 @@
       state.loading = isLoading;
       els.refreshBtn.disabled = isLoading;
       const idleLabel = state.dataMode === "static" && state.staticSourceType === "demo" ? "重新载入示例" : "同步数据";
-      els.refreshBtn.textContent = isLoading ? (state.dataMode === "server" ? "正在扫描" : "正在加载") : idleLabel;
+      els.refreshBtn.textContent = isLoading ? (state.dataMode === "server" || state.dataMode === "extension" ? "正在扫描" : "正在加载") : idleLabel;
     }
 
     function closeImportMenu() {
@@ -4014,6 +4015,15 @@
       chooseSessionsDirectory();
     }
 
+    function updateEmbeddedFolderAction() {
+      if (!isEmbeddedDashboard() || state.dataMode !== "extension") return;
+      const action = els.importFolderBtn;
+      const title = action?.querySelector("strong");
+      const detail = action?.querySelector("span span");
+      if (title) title.textContent = "扩展已持续同步本机数据";
+      if (detail) detail.textContent = "无需选择文件夹；点击“同步数据”可立即刷新";
+    }
+
     function chooseCompatibleSessionsFolder({ embedded = false } = {}) {
       closeImportMenu();
       // A stalled native picker must not overwrite a later compatibility import.
@@ -4023,36 +4033,6 @@
         ? "Notion 嵌入模式：请选择 .codex 根目录；这是一次性导入，后续更新需要重新选择文件夹。"
         : "请选择 .codex 根目录；兼容方式仅在浏览器本地读取，后续更新需要重新选择文件夹。", embedded ? "warning" : "info");
       els.sessionsFolderInput.click();
-    }
-
-    function openEmbeddedFolderPicker() {
-      closeImportMenu();
-      if (state.directoryPickerOpen) {
-        setStatus("文件夹连接窗口已打开；请在新窗口中完成授权，或关闭窗口后重试。", "warning");
-        return;
-      }
-      const nonceBytes = new Uint8Array(24);
-      crypto.getRandomValues(nonceBytes);
-      const nonce = Array.from(nonceBytes, byte => byte.toString(16).padStart(2, "0")).join("");
-      const url = new URL("folder-picker.html", location.href);
-      url.searchParams.set("nonce", nonce);
-      // window.open must happen in this click handler so browsers retain activation.
-      const popup = window.open(url.href, "codex-token-folder-picker", "popup,width=560,height=680,resizable=yes,scrollbars=yes");
-      if (!popup) {
-        setStatus("浏览器或 Notion 拦截了授权窗口。请允许此站点弹窗后重试；也可使用“一次性兼容导入”，但更新时需重新选择文件夹。", "warning");
-        return;
-      }
-      pendingEmbeddedDirectoryPicker = { popup, nonce };
-      state.directoryPickerOpen = true;
-      pendingEmbeddedDirectoryPicker.monitor = window.setInterval(() => {
-        if (!pendingEmbeddedDirectoryPicker || pendingEmbeddedDirectoryPicker.popup !== popup) return;
-        if (!popup.closed) return;
-        window.clearInterval(pendingEmbeddedDirectoryPicker.monitor);
-        pendingEmbeddedDirectoryPicker = null;
-        state.directoryPickerOpen = false;
-        setStatus("授权窗口已关闭，没有连接文件夹。可以重试，或使用一次性兼容导入。", "warning");
-      }, 500);
-      setStatus("授权窗口已打开。请在新窗口点击“选择 .codex 根目录”；授权完成后看板会自动读取并持续同步。", "warning");
     }
 
     function isEmbeddedDashboard() {
@@ -4138,6 +4118,39 @@
       headers.set("x-dashboard-password", secret);
       headers.set("authorization", `Bearer ${secret}`);
       return fetchWithTimeout(url, { ...options, headers });
+    }
+
+    const extensionBridgeChannel = "codex-token-dashboard-page-bridge";
+    const extensionBridgeRequests = new Map();
+    let extensionBridgeRequestId = 0;
+    window.addEventListener("message", event => {
+      if (event.source !== window || event.origin !== window.location.origin) return;
+      const message = event.data;
+      if (message?.channel !== extensionBridgeChannel || message.type !== "response") return;
+      const pending = extensionBridgeRequests.get(message.requestId);
+      if (!pending) return;
+      clearTimeout(pending.timeout);
+      extensionBridgeRequests.delete(message.requestId);
+      pending.resolve(message.result || { ok: false, error: "扩展没有返回结果。" });
+    });
+
+    function requestExtensionBridge(type, path = "", timeoutMs = 1500) {
+      if (window.location.hostname !== "xiaoqi8553.github.io") return Promise.resolve({ ok: false, error: "仅支持 GitHub Pages 看板。" });
+      const requestId = "ctd-" + Date.now() + "-" + (++extensionBridgeRequestId);
+      return new Promise(resolve => {
+        const timeout = setTimeout(() => {
+          extensionBridgeRequests.delete(requestId);
+          resolve({ ok: false, error: "未检测到本机同步扩展。" });
+        }, timeoutMs);
+        extensionBridgeRequests.set(requestId, { resolve, timeout });
+        window.postMessage({ channel: extensionBridgeChannel, type, requestId, path }, window.location.origin);
+      });
+    }
+
+    async function extensionUsageRequest(path) {
+      const result = await requestExtensionBridge("usage", path, 25000);
+      if (!result.ok) throw new Error(result.error || "本机扩展同步失败。");
+      return result.payload;
     }
 
     function simpleHash(text) {
@@ -5027,13 +5040,18 @@
     }
 
     async function chooseSessionsDirectory() {
+      if (isEmbeddedDashboard() && state.dataMode === "extension") {
+        closeImportMenu();
+        setStatus("Chrome 扩展已自动同步本机数据，无需再次选择文件夹。", "info");
+        return;
+      }
       if (state.directoryPickerOpen) {
         setStatus("正在等待文件夹选择窗口；若窗口未出现，请从“导入数据”使用“一次性兼容导入”。", "warning");
         return;
       }
       if (isEmbeddedDashboard()) {
         closeImportMenu();
-        openEmbeddedFolderPicker();
+        setStatus("Notion 嵌入页不能保留本机文件夹授权；此处导入仅生效一次。要持续同步，请在普通 Chrome 标签页打开看板并重新选择 .codex 根目录。", "warning");
         return;
       }
       if (typeof window.showDirectoryPicker === "function") {
@@ -5069,47 +5087,6 @@
       }
       chooseCompatibleSessionsFolder();
     }
-
-    window.addEventListener("message", async event => {
-      const pending = pendingEmbeddedDirectoryPicker;
-      const data = event.data;
-      if (!pending || event.origin !== location.origin || event.source !== pending.popup ||
-          data?.type !== "codex-folder-picker-result" || data.nonce !== pending.nonce) return;
-      window.clearInterval(pending.monitor);
-      pendingEmbeddedDirectoryPicker = null;
-      try { pending.popup.close(); } catch {}
-      if (data.status) {
-        state.directoryPickerOpen = false;
-        const message = data.status === "unsupported"
-          ? "此浏览器不支持持续文件夹授权。请使用“一次性兼容导入”，或在普通浏览器标签页打开看板以启用自动同步。"
-          : data.status === "cancelled"
-            ? "未选择文件夹，原有数据已保留。可以重试，或使用一次性兼容导入。"
-            : `文件夹授权失败：${data.message || "未知错误"}。可以重试，或使用一次性兼容导入。`;
-        setStatus(message, data.status === "cancelled" ? "warning" : "error");
-        return;
-      }
-      let ownsLoading = false;
-      try {
-        if (!data.handle || typeof data.handle.getDirectoryHandle !== "function" || typeof data.handle.values !== "function") {
-          throw new Error("授权窗口没有返回有效的文件夹权限");
-        }
-        await waitForFolderImportIdle();
-        setLoading(true);
-        ownsLoading = true;
-        state.sessionsDirectoryHandle = data.handle;
-        state.sessionsDirectoryName = data.handle.name || data.name || ".codex";
-        state.dataMode = "static";
-        state.staticSourceType = "sessions-folder";
-        if (!await saveSessionsDirectoryHandle(data.handle)) throw new Error("浏览器未能保存文件夹授权，请检查此站点的存储权限");
-        const refreshed = await refreshSessionsDirectoryHandle("已连接文件夹并开启持续同步：", { fitRange: true, resetCache: true });
-        if (!refreshed) throw new Error("文件夹读取未完成，请检查授权后重试");
-      } catch (error) {
-        setStatus(`持续同步连接失败：${error?.message || "未知错误"}。可以重试，或使用一次性兼容导入。`, "error");
-      } finally {
-        if (ownsLoading) setLoading(false);
-        state.directoryPickerOpen = false;
-      }
-    });
 
     function parseCsv(text) {
       const rows = [];
@@ -5450,6 +5427,15 @@
         if (silent) state.loading = value;
         else setLoading(value);
       };
+      if (state.dataMode === "static" && state.extensionBridgeStatus === null &&
+          window.location.hostname === "xiaoqi8553.github.io") {
+        const probe = await requestExtensionBridge("probe");
+        state.extensionBridgeStatus = Boolean(probe.ok);
+        if (state.extensionBridgeStatus) {
+          state.dataMode = "extension";
+          updateEmbeddedFolderAction();
+        }
+      }
       if (state.dataMode === "static") {
         if (state.staticSourceType === "demo") {
           try {
@@ -5493,12 +5479,18 @@
       }
       setBusy(true);
       try {
-        const response = await apiFetch(`/api/usage?${buildQuery(options).toString()}`, { retries: options.auto ? 1 : 2, timeoutMs: options.auto ? 9000 : 14000 });
-        const contentType = response.headers.get("content-type") || "";
-        if (!contentType.includes("application/json")) throw new Error("未发现本地 API，切换到静态浏览器模式");
-        const payload = await response.json();
-        if (!response.ok || !payload.ok) throw new Error(payload.error || `请求失败：${response.status}`);
-        state.dataMode = "server";
+        const usagePath = `/api/usage?${buildQuery(options).toString()}`;
+        let payload;
+        if (state.dataMode === "extension") {
+          payload = await extensionUsageRequest(usagePath);
+        } else {
+          const response = await apiFetch(usagePath, { retries: options.auto ? 1 : 2, timeoutMs: options.auto ? 9000 : 14000 });
+          const contentType = response.headers.get("content-type") || "";
+          if (!contentType.includes("application/json")) throw new Error("未发现本地 API，切换到静态浏览器模式");
+          payload = await response.json();
+          if (!response.ok || !payload.ok) throw new Error(payload.error || `请求失败：${response.status}`);
+          state.dataMode = "server";
+        }
         state.refreshFailures = 0;
         state.lastRefreshAt = Date.now();
         els.staticPanel.classList.remove("show");
@@ -5509,7 +5501,7 @@
         pruneSelection();
         renderModelOptions(payload.models || []);
         render(payload);
-        if (options.manual) setStatus(`扫描完成：${payload.scanMs ?? 0} ms，更新于 ${formatDateTime(payload.updatedAt)}。`);
+        if (options.manual) setStatus(`${state.dataMode === "extension" ? "本机同步" : "扫描完成"}：${payload.scanMs ?? 0} ms，更新于 ${formatDateTime(payload.updatedAt)}。`);
         refreshWeatherFromSavedLocation({ silent: true, force: true });
       } catch (error) {
         state.refreshFailures += 1;
@@ -6625,18 +6617,22 @@
     }
 
     function renderSettings(summary) {
-      const modeLabel = state.dataMode === "server"
-        ? "本地 Node 模式"
+      const embeddedDashboard = isEmbeddedDashboard();
+      const standaloneDashboardUrl = `${location.origin}${location.pathname}`;
+      const modeLabel = state.dataMode === "extension"
+        ? "Chrome 扩展本机同步"
+        : state.dataMode === "server"
+          ? "本地 Node 模式"
         : state.staticSourceType === "demo"
           ? "公开静态演示版"
           : "浏览器导入模式";
-      const sourceLabel = state.dataMode === "server"
+      const sourceLabel = state.dataMode === "extension" || state.dataMode === "server"
         ? "本机 sessions + archived_sessions + data/imports"
         : state.staticSourceType === "demo"
           ? "sample-data/demo-usage-index.json"
           : state.staticPayload?.sessionsDir || "用户手动导入";
       const accountSyncAvailable = !startupAccountBridge && state.dataMode === "server" && state.data?.config?.accountSyncAvailable;
-      const accountBridgeAvailable = startupAccountBridge || (!accountSyncAvailable && state.dataMode === "static" && window.location.hostname === "xiaoqi8553.github.io");
+      const accountBridgeAvailable = startupAccountBridge || (!accountSyncAvailable && ["static", "extension"].includes(state.dataMode) && window.location.hostname === "xiaoqi8553.github.io");
       const accountBridgeLaunch = accountBridgeAvailable && !startupAccountBridgeKey
         ? (state.accountBridgeLaunch || (state.accountBridgeLaunch = createAccountBridgeLaunch()))
         : null;
@@ -6650,7 +6646,7 @@
                 <h2>设置 / 关于</h2>
                 <p class="muted">检查当前运行方式、隐私边界、版本和公开部署状态。</p>
               </div>
-              <span class="badge">版本 0.9.4</span>
+              <span class="badge">版本 0.9.6</span>
             </div>
             <div class="settings-grid">
               <div class="settings-card">
@@ -6671,6 +6667,19 @@
                   <span>不会自动上传 sessions 或原始对话内容。</span>
                   <span>本地 Node 模式只监听本机或你配置的地址。</span>
                   <span>脱敏快照隐藏完整路径和 session id。</span>
+                </div>
+              </div>
+              <div class="settings-card notion-sync-card">
+                <strong>Notion 嵌入与持续同步</strong>
+                <p>安装本机 Chrome 扩展并启动看板服务后，Notion 嵌入页会每 5 秒读取本机统计；会话内容不会上传。</p>
+                <div class="privacy-list">
+                  <span>${state.dataMode === "extension" ? "扩展已连接本机服务，数据按当前筛选自动刷新。" : "首次设置：在 Chrome 加载 extension 文件夹，并启动本机 start-dashboard.bat。"}</span>
+                  <span>扩展仅读取本机用量 API，不读写 Notion，不上传原始会话内容。</span>
+                </div>
+                <div class="table-actions">
+                  <a class="btn compact" href="${escapeHtml(standaloneDashboardUrl)}" target="_blank" rel="noopener">在独立标签页打开看板</a>
+                  <a class="btn compact" href="https://github.com/xiaoqi8553/codex-token-dashboard/tree/main/extension" target="_blank" rel="noopener">扩展安装说明</a>
+                  ${embeddedDashboard ? "<span class=\"badge\">当前为 Notion 嵌入</span>" : ""}
                 </div>
               </div>
               <div class="settings-card">
@@ -7067,7 +7076,7 @@
       const summary = summarize(safeRecords.map(record => ({ ...record, activeTokens: activeTokens(record), uncachedInputTokens: uncachedInputTokens(record), hitRate: cacheHitRateOf(record) })));
       return {
         snapshotVersion: 1,
-        appVersion: "0.9.4",
+        appVersion: "0.9.6",
         generatedAt: new Date().toISOString(),
         privacy: {
           anonymized: true,
@@ -7848,6 +7857,16 @@
         } finally {
           setLoading(false);
         }
+        if (window.location.hostname === "xiaoqi8553.github.io") {
+          const probe = await requestExtensionBridge("probe");
+          state.extensionBridgeStatus = Boolean(probe.ok);
+          if (state.extensionBridgeStatus) {
+            state.dataMode = "extension";
+            updateEmbeddedFolderAction();
+            await loadUsage({ silent: true, auto: true, startupRange: "7d" });
+            setStatus("已连接本机 Chrome 扩展；统计每 5 秒自动更新。");
+          }
+        }
       } else {
         await loadUsage();
       }
@@ -7860,13 +7879,13 @@
     const serverAutoRefreshMs = 5000;
     function refreshServerInBackground(options = {}) {
       if (!state.initialized) return;
-      if (state.dataMode === "server" && !state.loading) {
+      if ((state.dataMode === "server" || state.dataMode === "extension") && !state.loading) {
         loadUsage({ silent: true, auto: true, ...options });
       }
     }
     function refreshServerNow() {
       if (!state.initialized) return;
-      if (state.dataMode === "server" && !state.loading) {
+      if ((state.dataMode === "server" || state.dataMode === "extension") && !state.loading) {
         loadUsage({ silent: true, auto: true, force: true });
       } else if (state.staticSourceType === "sessions-folder" && !state.loading && Date.now() - state.lastRefreshAt > 5000) {
         loadUsage({ silent: true, auto: true });

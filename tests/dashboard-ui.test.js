@@ -15,6 +15,7 @@ const bridgeSource = fs.readFileSync(path.join(root, "scripts", "account-bridge.
 const auditSource = fs.readFileSync(path.join(root, "scripts", "ui-review.js"), "utf8");
 const visualSource = fs.readFileSync(path.join(root, "scripts", "visual-check.js"), "utf8");
 const serverSource = fs.readFileSync(path.join(root, "server.js"), "utf8");
+const readmeSource = fs.readFileSync(path.join(root, "README.md"), "utf8");
 const { buildBridgeSiteUrl, createBridge } = require(path.join(root, "scripts", "account-bridge.js"));
 const { deriveAccountName, safeAccountName } = require(path.join(root, "scripts", "account-snapshot-process.js"));
 const packageJson = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
@@ -303,14 +304,23 @@ test("usage trend has no persistent numeric overlays or summaries", () => {
   assert.doesNotMatch(cacheSource, /峰值 active|缓存 \$\{formatToken|命中率 \$\{avgHit\}% \/ active/);
 });
 
-test("0.9.4 uses the engineering workspace shell and removes Work Replay", () => {
-  assert.equal(packageJson.version, "0.9.4");
+test("0.9.6 uses the engineering workspace shell and removes Work Replay", () => {
+  assert.equal(packageJson.version, "0.9.6");
   assert.match(indexSource, /class="side-rail shell"/);
   assert.match(indexSource, /id="viewTitle"/);
-  assert.match(indexSource, /v0\.9\.4/);
+  assert.match(indexSource, /v0\.9\.6/);
   assert.doesNotMatch(indexSource, /replayBtn|replay\.html|工作回放/);
   assert.doesNotMatch(buildSource, /replay\.html/);
   assert.equal(fs.existsSync(path.join(root, "replay.html")), false);
+});
+
+test("Notion embed connects through the local Chrome extension without uploading session data", () => {
+  assert.match(indexSource, /Chrome 扩展本机同步/);
+  assert.match(indexSource, /扩展仅读取本机用量 API/);
+  assert.match(indexSource, /本机同步/);
+  assert.match(indexSource, /在独立标签页打开看板/);
+  assert.doesNotMatch(indexSource, /openEmbeddedFolderPicker|codex-folder-picker-result/);
+  assert.match(readmeSource, /在 Notion 中使用/);
 });
 
 test("UI review captures and audits the current dark overview", () => {
