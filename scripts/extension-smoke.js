@@ -106,10 +106,25 @@ async function main() {
     ];
     const extensionContext = await chromium.launchPersistentContext(profilePath, {
       channel: "chromium",
-      args
+      args,
+      permissions: ["local-network-access"]
     });
     try {
       await registerDashboardRoutes(extensionContext);
+      await extensionContext.route("http://127.0.0.1:**/api/usage*", async route => {
+        const url = new URL(route.request().url());
+        if (Number(url.port) === port) return route.continue();
+        const corsHeaders = {
+          "access-control-allow-origin": dashboardOrigin,
+          "access-control-allow-methods": "GET, OPTIONS",
+          "access-control-allow-headers": "content-type",
+          "access-control-allow-private-network": "true",
+          "cache-control": "no-store",
+          "vary": "Origin"
+        };
+        if (route.request().method() === "OPTIONS") return route.fulfill({ status: 204, headers: corsHeaders });
+        return route.fulfill({ status: 200, contentType: "application/json; charset=utf-8", headers: corsHeaders, body: JSON.stringify({ ...fixturePayload, extensionMessageLimitProbe: undefined }) });
+      });
       const page = await extensionContext.newPage();
       await page.setViewportSize({ width: 1366, height: 900 });
       const errors = [];

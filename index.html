@@ -3333,7 +3333,7 @@
         </div>
         <div class="rail-version">
           <span>LOCAL-FIRST</span>
-          <strong>v0.10.0</strong>
+          <strong>v0.10.1</strong>
         </div>
       </div>
     </aside>
@@ -3596,6 +3596,9 @@
       authSecret: localStorage.getItem("codexTokenDashboardSecret") || "",
       dataMode: "server",
       extensionBridgeStatus: null,
+      directLocalMode: false,
+      localApiConnected: false,
+      localApiPort: 0,
       staticPayload: null,
       staticCacheDirty: false,
       staticReadOnly: false,
@@ -3991,7 +3994,7 @@
       state.loading = isLoading;
       els.refreshBtn.disabled = isLoading;
       const idleLabel = state.dataMode === "static" && state.staticSourceType === "demo" ? "重新载入示例" : "同步数据";
-      els.refreshBtn.textContent = isLoading ? (state.dataMode === "server" || state.dataMode === "extension" ? "正在扫描" : "正在加载") : idleLabel;
+      els.refreshBtn.textContent = isLoading ? (state.dataMode === "server" || state.dataMode === "extension" ? "正在同步" : "正在加载") : idleLabel;
     }
 
     function closeImportMenu() {
@@ -4016,11 +4019,11 @@
     }
 
     function updateEmbeddedFolderAction() {
-      if (!isEmbeddedDashboard() || state.dataMode !== "extension") return;
+      if (!isEmbeddedDashboard() || (state.dataMode !== "extension" && !state.directLocalMode)) return;
       const action = els.importFolderBtn;
       const title = action?.querySelector("strong");
       const detail = action?.querySelector("span span");
-      if (title) title.textContent = "扩展已持续同步本机数据";
+      if (title) title.textContent = state.directLocalMode ? "本机服务已持续同步数据" : "扩展已持续同步本机数据";
       if (detail) detail.textContent = "无需选择文件夹；点击“同步数据”可立即刷新";
     }
 
@@ -4118,6 +4121,37 @@
       headers.set("x-dashboard-password", secret);
       headers.set("authorization", `Bearer ${secret}`);
       return fetchWithTimeout(url, { ...options, headers });
+    }
+
+    async function requestLocalDashboardApi(path, options = {}) {
+      const parsed = new URL(path, window.location.origin);
+      if (parsed.origin !== window.location.origin || !["/api/config", "/api/usage"].includes(parsed.pathname)) {
+        throw new Error("本机直连只允许读取用量和服务状态接口。");
+      }
+      const ports = state.localApiPort ? [state.localApiPort, ...[8787, 8788, 8789].filter(port => port !== state.localApiPort)] : [8787, 8788, 8789];
+      let lastError;
+      for (const port of ports) {
+        try {
+          const response = await fetchWithTimeout(`http://127.0.0.1:${port}${parsed.pathname}${parsed.search}`, {
+            method: "GET",
+            mode: "cors",
+            credentials: "omit",
+            cache: "no-store",
+            timeoutMs: options.timeoutMs || (options.auto ? 9000 : 14000)
+          });
+          const contentType = response.headers.get("content-type") || "";
+          if (!contentType.includes("application/json")) throw new Error("本机服务未返回 JSON 用量数据。");
+          const payload = await response.json();
+          if (!response.ok || payload?.ok !== true) throw new Error(payload?.error || `本机服务返回 ${response.status}`);
+          state.localApiPort = port;
+          state.localApiConnected = true;
+          return payload;
+        } catch (error) {
+          lastError = error;
+        }
+      }
+      state.localApiConnected = false;
+      throw new Error(`无法连接本机 Token 服务。若浏览器询问“本地网络访问”，请允许后重试；${lastError?.message || "请确认 setup-notion-sync.bat 已启动"}`);
     }
 
     const extensionBridgeChannel = "codex-token-dashboard-page-bridge";
@@ -5140,9 +5174,9 @@
     }
 
     async function chooseSessionsDirectory() {
-      if (isEmbeddedDashboard() && state.dataMode === "extension") {
+      if (isEmbeddedDashboard() && (state.dataMode === "extension" || state.directLocalMode)) {
         closeImportMenu();
-        setStatus("Chrome 扩展已自动同步本机数据，无需再次选择文件夹。", "info");
+        setStatus(state.directLocalMode ? "本机服务已自动同步数据，无需再次选择文件夹。" : "Chrome 扩展已自动同步本机数据，无需再次选择文件夹。", "info");
         return;
       }
       if (state.directoryPickerOpen) {
@@ -5536,6 +5570,11 @@
           updateEmbeddedFolderAction();
         }
       }
+      if (state.dataMode === "static" && state.extensionBridgeStatus === false &&
+          window.location.hostname === "xiaoqi8553.github.io" && isEmbeddedDashboard()) {
+        state.directLocalMode = true;
+        state.dataMode = "server";
+      }
       if (state.dataMode === "static") {
         if (state.staticSourceType === "demo") {
           try {
@@ -5583,6 +5622,8 @@
         let payload;
         if (state.dataMode === "extension") {
           payload = await extensionUsageRequest(usagePath);
+        } else if (state.directLocalMode) {
+          payload = await requestLocalDashboardApi(usagePath, options);
         } else {
           const response = await apiFetch(usagePath, { retries: options.auto ? 1 : 2, timeoutMs: options.auto ? 9000 : 14000 });
           const contentType = response.headers.get("content-type") || "";
@@ -5601,10 +5642,16 @@
         pruneSelection();
         renderModelOptions(payload.models || []);
         render(payload);
-        if (options.manual) setStatus(`${state.dataMode === "extension" ? "本机同步" : "扫描完成"}：${payload.scanMs ?? 0} ms，更新于 ${formatDateTime(payload.updatedAt)}。`);
+        if (options.manual) setStatus(`${state.dataMode === "extension" || state.directLocalMode ? "本机同步" : "扫描完成"}：${payload.scanMs ?? 0} ms，更新于 ${formatDateTime(payload.updatedAt)}。`);
         refreshWeatherFromSavedLocation({ silent: true, force: true });
       } catch (error) {
         state.refreshFailures += 1;
+        if (state.directLocalMode && !state.localApiConnected) {
+          state.directLocalMode = false;
+          state.dataMode = "static";
+          setStatus(error.message || "本机服务连接失败。", "warning");
+          return;
+        }
         if (state.data && options.auto) {
           if (state.refreshFailures === 3) {
             setStatus(`自动刷新暂时失败，已保留当前数据。最近错误：${error.message || "本地 API 暂不可用"}`);
@@ -6721,6 +6768,8 @@
       const standaloneDashboardUrl = `${location.origin}${location.pathname}`;
       const modeLabel = state.dataMode === "extension"
         ? "Chrome 扩展本机同步"
+        : state.directLocalMode
+          ? "Notion 桌面本机直连"
         : state.dataMode === "server"
           ? "本地 Node 模式"
         : state.staticSourceType === "demo"
@@ -6731,7 +6780,7 @@
         : state.staticSourceType === "demo"
           ? "sample-data/demo-usage-index.json"
           : state.staticPayload?.sessionsDir || "用户手动导入";
-      const accountSyncAvailable = !startupAccountBridge && state.dataMode === "server" && state.data?.config?.accountSyncAvailable;
+      const accountSyncAvailable = !startupAccountBridge && !state.directLocalMode && state.dataMode === "server" && state.data?.config?.accountSyncAvailable;
       const accountBridgeAvailable = startupAccountBridge || (!accountSyncAvailable && ["static", "extension"].includes(state.dataMode) && window.location.hostname === "xiaoqi8553.github.io");
       const accountBridgeLaunch = accountBridgeAvailable && !startupAccountBridgeKey
         ? (state.accountBridgeLaunch || (state.accountBridgeLaunch = createAccountBridgeLaunch()))
@@ -6746,7 +6795,7 @@
                 <h2>设置 / 关于</h2>
                 <p class="muted">检查当前运行方式、隐私边界、版本和公开部署状态。</p>
               </div>
-              <span class="badge">版本 0.10.0</span>
+              <span class="badge">版本 0.10.1</span>
             </div>
             <div class="settings-grid">
               <div class="settings-card">
@@ -6771,10 +6820,10 @@
               </div>
               <div class="settings-card notion-sync-card">
                 <strong>Notion 嵌入与持续同步</strong>
-                <p>Windows 首次运行仓库中的 setup-notion-sync.bat 并加载一次本机 Chrome 扩展后，本机服务会随登录自动启动；Notion 看板自动连接并每 5 秒刷新。</p>
+                <p>本机服务随 Windows 登录自动启动。Chrome 网页版优先使用扩展，Notion 桌面版自动直连本机用量接口；连接成功后每 5 秒刷新。</p>
                 <div class="privacy-list">
-                  <span>${state.dataMode === "extension" ? "扩展已连接本机服务，数据按当前筛选自动刷新。" : "首次设置：运行 setup-notion-sync.bat，在 Chrome 中加载一次 extension 文件夹，然后重新打开 Notion 看板。"}</span>
-                  <span>扩展仅读取本机用量 API，不读写 Notion，不上传原始会话内容。</span>
+                  <span>${state.dataMode === "extension" ? "Chrome 扩展已连接本机服务，数据按当前筛选自动刷新。" : state.directLocalMode && state.localApiConnected ? "Notion 桌面版已直连本机服务，数据按当前筛选自动刷新。" : "首次运行 setup-notion-sync.bat 启动本机服务；桌面版首次连接时按提示允许本地网络访问。"}</span>
+                  <span>${state.directLocalMode ? "本机直连只读取用量和服务状态接口；不会向 Notion 上传原始会话内容。" : "Chrome 扩展仅读取本机用量 API，不读写 Notion，不上传原始会话内容。"}</span>
                 </div>
                 <div class="table-actions">
                   <a class="btn compact" href="${escapeHtml(standaloneDashboardUrl)}" target="_blank" rel="noopener">在独立标签页打开看板</a>
@@ -7176,7 +7225,7 @@
       const summary = summarize(safeRecords.map(record => ({ ...record, activeTokens: activeTokens(record), uncachedInputTokens: uncachedInputTokens(record), hitRate: cacheHitRateOf(record) })));
       return {
         snapshotVersion: 1,
-        appVersion: "0.10.0",
+        appVersion: "0.10.1",
         generatedAt: new Date().toISOString(),
         privacy: {
           anonymized: true,
@@ -7966,7 +8015,15 @@
             await loadUsage({ silent: true, auto: true, startupRange: "7d" });
             setStatus("已连接本机 Chrome 扩展；统计每 5 秒自动更新。");
           } else if (isEmbeddedDashboard()) {
-            setStatus("Notion 看板尚未连接本机：首次运行 setup-notion-sync.bat 并在 Chrome 加载扩展后重新打开页面。", "warning");
+            state.directLocalMode = true;
+            state.dataMode = "server";
+            await loadUsage({ silent: true, auto: true, startupRange: "7d" });
+            if (state.localApiConnected) {
+              updateEmbeddedFolderAction();
+              setStatus("Notion 已直连本机服务；用量每 5 秒自动更新。", "info");
+            } else {
+              setStatus("Notion 桌面版未连接本机服务。请确认本机同步服务已启动；若浏览器询问本地网络访问，请选择允许，再点“同步数据”重试。", "warning");
+            }
           }
         }
       } else {
@@ -7985,7 +8042,7 @@
         window.location.hostname !== "xiaoqi8553.github.io" ||
         !isEmbeddedDashboard() ||
         !state.initialized ||
-        state.dataMode !== "static" ||
+        (state.dataMode !== "static" && !state.directLocalMode) ||
         state.extensionBridgeStatus === true ||
         state.loading ||
         state.directoryPickerOpen ||
@@ -7996,6 +8053,8 @@
         const probe = await requestExtensionBridge("probe");
         state.extensionBridgeStatus = Boolean(probe.ok);
         if (!probe.ok) return;
+        state.directLocalMode = false;
+        state.localApiConnected = false;
         state.dataMode = "extension";
         updateEmbeddedFolderAction();
         await loadUsage({ silent: true, auto: true, startupRange: "7d" });

@@ -324,18 +324,21 @@ test("usage trend has no persistent numeric overlays or summaries", () => {
   assert.doesNotMatch(cacheSource, /峰值 active|缓存 \$\{formatToken|命中率 \$\{avgHit\}% \/ active/);
 });
 
-test("0.10.0 uses the engineering workspace shell and removes Work Replay", () => {
-  assert.equal(packageJson.version, "0.10.0");
+test("0.10.1 uses the engineering workspace shell and removes Work Replay", () => {
+  assert.equal(packageJson.version, "0.10.1");
   assert.match(indexSource, /class="side-rail shell"/);
   assert.match(indexSource, /id="viewTitle"/);
-  assert.match(indexSource, /v0\.10\.0/);
+  assert.match(indexSource, /v0\.10\.1/);
   assert.doesNotMatch(indexSource, /replayBtn|replay\.html|工作回放/);
   assert.doesNotMatch(buildSource, /replay\.html/);
   assert.equal(fs.existsSync(path.join(root, "replay.html")), false);
 });
 
-test("Notion embed connects through the local Chrome extension without uploading session data", () => {
+test("Notion embed supports Chrome extension and desktop loopback sync without uploading sessions", () => {
   assert.match(indexSource, /Chrome 扩展本机同步/);
+  assert.match(indexSource, /Notion 桌面本机直连/);
+  assert.match(indexSource, /requestLocalDashboardApi\(usagePath, options\)/);
+  assert.match(indexSource, /本地网络访问/);
   assert.match(indexSource, /扩展仅读取本机用量 API/);
   assert.match(indexSource, /本机同步/);
   assert.match(indexSource, /在独立标签页打开看板/);

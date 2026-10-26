@@ -8,6 +8,7 @@ const indexSource = fs.readFileSync(path.join(root, "index.html"), "utf8");
 const serverSource = fs.readFileSync(path.join(root, "server.js"), "utf8");
 const uiReviewSource = fs.readFileSync(path.join(root, "scripts", "ui-review.js"), "utf8");
 const visualCheckSource = fs.readFileSync(path.join(root, "scripts", "visual-check.js"), "utf8");
+const notionLocalAccessSource = fs.readFileSync(path.join(root, "scripts", "notion-local-access.js"), "utf8");
 
 function extractFunction(source, name) {
   const marker = `function ${name}(`;
@@ -68,6 +69,16 @@ test("server reuses cached index for frequent usage requests", () => {
   assert.match(serverSource, /url\.searchParams\.get\("force"\) === "1"/);
   assert.match(serverSource, /setInterval\(\(\) => refreshIndexCache/);
   assert.doesNotMatch(serverSource, /function apiUsage\(url\) \{\s*const started = Date\.now\(\);\s*const index = buildIndex\(\);/);
+});
+
+test("Notion desktop can use a restricted local read-only API path", () => {
+  assert.match(serverSource, /NotionLocalAccess\.getNotionCorsHeaders/);
+  assert.match(serverSource, /req\.method === "OPTIONS"/);
+  assert.match(serverSource, /notionDashboardCorsHeaders\(req, url\)/);
+  assert.match(notionLocalAccessSource, /https:\/\/xiaoqi8553\.github\.io/);
+  assert.match(notionLocalAccessSource, /new Set\(\["\/api\/config", "\/api\/usage"\]\)/);
+  assert.match(indexSource, /async function requestLocalDashboardApi\(/);
+  assert.match(indexSource, /state\.directLocalMode/);
 });
 
 test("visual review scripts discover bundled Playwright versions", () => {

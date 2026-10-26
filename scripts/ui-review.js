@@ -265,8 +265,8 @@ async function openPage(page, pageInfo) {
   if (pageInfo.key === "settings-notion-embed") {
     const extensionLink = target.locator('.notion-sync-card a[href*="github.com"]');
     if (!(await extensionLink.getAttribute("href")) || !(await extensionLink.getAttribute("target")) ||
-        !(await target.locator(".notion-sync-card").innerText()).includes("本机 Chrome 扩展")) {
-      throw new Error("Notion 使用说明没有提供扩展安装入口或明确的数据边界");
+        !(await target.locator(".notion-sync-card").innerText()).includes("Notion 桌面版自动直连本机用量接口")) {
+      throw new Error("Notion 使用说明没有提供桌面版直连方案或 Chrome 扩展安装入口");
     }
   }
   return target;

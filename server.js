@@ -13,6 +13,7 @@ const INDEX_PATH = path.join(DATA_DIR, "usage-index.json");
 const UsageAccounting = require("./usage-accounting");
 const OutputSpeed = require("./output-speed");
 const SessionFiles = require("./session-files");
+const NotionLocalAccess = require("./scripts/notion-local-access");
 const zlib = require("node:zlib");
 const INDEX_VERSION = UsageAccounting.version;
 const SUPPORTED_SESSION_EXTENSIONS = new Set([".jsonl", ".json", ".log", ".txt", ".zst"]);
@@ -1398,9 +1399,18 @@ function saveImport(payload) {
   return target;
 }
 
-function sendJson(res, payload, status = 200) {
-  res.writeHead(status, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
+function sendJson(res, payload, status = 200, headers = {}) {
+  res.writeHead(status, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", ...headers });
   res.end(JSON.stringify(payload));
+}
+
+function notionDashboardCorsHeaders(req, url) {
+  return NotionLocalAccess.getNotionCorsHeaders({
+    origin: req.headers.origin,
+    pathname: url.pathname,
+    publicAccess: PUBLIC_ACCESS,
+    host: HOST
+  }) || {};
 }
 
 function isApiPath(url) {
@@ -1465,6 +1475,15 @@ function serveStatic(req, res, url) {
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${HOST}:${activePort || PORT}`);
   try {
+    if (req.method === "OPTIONS" && NotionLocalAccess.READ_ONLY_PATHS.has(url.pathname)) {
+      const corsHeaders = notionDashboardCorsHeaders(req, url);
+      if (!corsHeaders["access-control-allow-origin"] || req.headers["access-control-request-method"] !== "GET") {
+        res.writeHead(403, { "cache-control": "no-store", "vary": "Origin" });
+        return res.end();
+      }
+      res.writeHead(204, corsHeaders);
+      return res.end();
+    }
     if (isApiPath(url) && !isAuthorized(req, url)) return sendUnauthorized(res);
     if (req.method === "GET" && url.pathname === "/api/config") {
       return sendJson(res, {
@@ -1474,9 +1493,9 @@ const server = http.createServer(async (req, res) => {
         authRequired: PUBLIC_ACCESS,
         defaultDateRange: CONFIG.defaultDateRange,
         accountSyncAvailable: !PUBLIC_ACCESS && isLoopbackHost(HOST)
-      });
+      }, 200, notionDashboardCorsHeaders(req, url));
     }
-    if (req.method === "GET" && url.pathname === "/api/usage") return sendJson(res, await apiUsage(url));
+    if (req.method === "GET" && url.pathname === "/api/usage") return sendJson(res, await apiUsage(url), 200, notionDashboardCorsHeaders(req, url));
     if (req.method === "GET" && url.pathname === "/api/index") {
       if (PUBLIC_ACCESS) return sendJson(res, { ok: false, error: "Raw index is disabled in public access mode." }, 403);
       return sendJson(res, indexCache || loadIndex());

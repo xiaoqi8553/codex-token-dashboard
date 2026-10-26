@@ -7,7 +7,7 @@
 ![Codex Token Dashboard cover](screenshots/project-cover.svg)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-0f766e.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.10.0-17202e.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.10.1-17202e.svg)](CHANGELOG.md)
 [![OpenAI Sites](https://img.shields.io/badge/deploy-OpenAI%20Sites-275dcc.svg)](https://codex-token-dashboard.hazel-saepemx.chatgpt.site)
 [![Netlify Demo](https://img.shields.io/badge/demo-codetoken.netlify.app-2f6fed.svg)](https://codetoken.netlify.app/)
 [![GitHub Pages](https://img.shields.io/badge/pages-github.io-111827.svg)](https://xiaoqi8553.github.io/codex-token-dashboard/)
@@ -19,7 +19,7 @@
 - GitHub Pages Demo: https://xiaoqi8553.github.io/codex-token-dashboard/
 - GitHub: https://github.com/xiaoqi8553/codex-token-dashboard
 
-Notion 中可嵌入看板并持续显示本机数据。Windows 首次运行 `setup-notion-sync.bat` 并在 Chrome 中加载一次扩展后，本机服务会随 Windows 登录自动启动；Notion 看板自动连接并每 5 秒刷新，不需要反复启动或手动同步。会话数据不会经过 Notion，也不会上传。安装步骤见 extension/README.md。
+Notion 中可嵌入看板并持续显示本机数据。Windows 首次运行 `setup-notion-sync.bat` 后，本机服务会随 Windows 登录自动启动；Notion 桌面版直接连接本机只读接口，Chrome 网页版仍可使用扩展，连接后每 5 秒刷新，不需要反复启动或手动同步。会话数据不会经过 Notion，也不会上传。扩展安装步骤见 extension/README.md。
 
 OpenAI Sites 生产站与仓库中已经推送的版本保持同步；默认采用仅所有者可访问的私有发布方式。
 
@@ -111,7 +111,7 @@ npm run visual:test  # 生成截图并自动检查明显视觉问题
 
 #### 在 Notion 中使用
 
-Notion 中的持续同步首次运行 `setup-notion-sync.bat` 后即可自动工作。它为当前用户配置登录时启动本机服务；Chrome 扩展只在看板 iframe 中启用，只允许读取 127.0.0.1 的用量接口。目录扫描、索引和会话数据均由原有本机 Node 服务处理。完整安装和故障排查见 extension/README.md。
+Notion 中的持续同步首次运行 `setup-notion-sync.bat` 后即可自动工作。它为当前用户配置登录时启动本机服务；Notion 桌面版直接读取 127.0.0.1 的只读用量接口，Chrome 网页版可通过扩展读取同一接口。首次连接若出现“允许访问本地网络”，选择允许即可。目录扫描、索引和会话数据均由原有本机 Node 服务处理。完整安装和故障排查见 extension/README.md。
 
 ### 2. 浏览器导入模式
 
@@ -128,7 +128,7 @@ Notion 中的持续同步首次运行 `setup-notion-sync.bat` 后即可自动工
 
 在 Chrome / Edge 等支持 File System Access API 的浏览器里，普通标签页打开托管站点后，点击顶部“导入数据” -> “连接并持续同步 .codex 文件夹”，推荐选择 `.codex` 根目录以包含归档。页面会把完整解析结果和文件夹授权句柄保存在浏览器 IndexedDB 中。下次打开同一个网址时会直接恢复上次数据；如果文件夹权限仍有效，页面会立即自动同步最新日志，回到前台也会检查更新，无需每次点击。Notion 嵌入页可通过本机 Chrome 扩展复用本地 Node 扫描。
 
-未安装扩展时，Notion 嵌入页仍可选择“一次性兼容导入”；安装并启用扩展后，Notion 页面会优先从本机 Node 服务读取数据并自动更新。
+Notion 桌面版不需要 Chrome 扩展即可持续读取本机数据；Chrome 网页版会优先使用扩展。若本机服务未启动，页面会保留已有缓存并提示重新连接。
 
 ## 页面模块
 

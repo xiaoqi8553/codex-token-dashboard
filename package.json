@@ -1,6 +1,6 @@
 {
   "name": "codex-token-dashboard",
-  "version": "0.10.0",
+  "version": "0.10.1",
   "private": false,
   "description": "Local Codex token usage dashboard with official Plus and relay import support.",
   "scripts": {
@@ -10,6 +10,7 @@
     "test": "node --test tests/*.test.js",
     "sync:test": "node scripts/sync-check.js",
     "extension:test": "node scripts/extension-smoke.js",
+    "notion:test": "node scripts/notion-local-smoke.js",
     "build": "node scripts/build-static.js",
     "account:bridge": "node scripts/account-bridge.js --open",
     "visual:shot": "node scripts/visual-check.js --shot",
