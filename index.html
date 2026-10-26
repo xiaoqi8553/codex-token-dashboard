@@ -3333,7 +3333,7 @@
         </div>
         <div class="rail-version">
           <span>LOCAL-FIRST</span>
-          <strong>v0.9.7</strong>
+          <strong>v0.9.8</strong>
         </div>
       </div>
     </aside>
@@ -6731,7 +6731,7 @@
                 <h2>设置 / 关于</h2>
                 <p class="muted">检查当前运行方式、隐私边界、版本和公开部署状态。</p>
               </div>
-              <span class="badge">版本 0.9.7</span>
+              <span class="badge">版本 0.9.8</span>
             </div>
             <div class="settings-grid">
               <div class="settings-card">
@@ -6756,9 +6756,9 @@
               </div>
               <div class="settings-card notion-sync-card">
                 <strong>Notion 嵌入与持续同步</strong>
-                <p>安装本机 Chrome 扩展并启动看板服务后，Notion 嵌入页会每 5 秒读取本机统计；会话内容不会上传。</p>
+                <p>Windows 首次运行仓库中的 setup-notion-sync.bat 并加载一次本机 Chrome 扩展后，本机服务会随登录自动启动；Notion 看板自动连接并每 5 秒刷新。</p>
                 <div class="privacy-list">
-                  <span>${state.dataMode === "extension" ? "扩展已连接本机服务，数据按当前筛选自动刷新。" : "首次设置：在 Chrome 加载 extension 文件夹，并启动本机 start-dashboard.bat。"}</span>
+                  <span>${state.dataMode === "extension" ? "扩展已连接本机服务，数据按当前筛选自动刷新。" : "首次设置：运行 setup-notion-sync.bat，在 Chrome 中加载一次 extension 文件夹，然后重新打开 Notion 看板。"}</span>
                   <span>扩展仅读取本机用量 API，不读写 Notion，不上传原始会话内容。</span>
                 </div>
                 <div class="table-actions">
@@ -7161,7 +7161,7 @@
       const summary = summarize(safeRecords.map(record => ({ ...record, activeTokens: activeTokens(record), uncachedInputTokens: uncachedInputTokens(record), hitRate: cacheHitRateOf(record) })));
       return {
         snapshotVersion: 1,
-        appVersion: "0.9.7",
+        appVersion: "0.9.8",
         generatedAt: new Date().toISOString(),
         privacy: {
           anonymized: true,
@@ -7950,6 +7950,8 @@
             updateEmbeddedFolderAction();
             await loadUsage({ silent: true, auto: true, startupRange: "7d" });
             setStatus("已连接本机 Chrome 扩展；统计每 5 秒自动更新。");
+          } else if (isEmbeddedDashboard()) {
+            setStatus("Notion 看板尚未连接本机：首次运行 setup-notion-sync.bat 并在 Chrome 加载扩展后重新打开页面。", "warning");
           }
         }
       } else {
@@ -7962,8 +7964,34 @@
     }
     initializeDashboard().catch(error => setStatus(`启动失败，请点击“同步数据”重试：${error.message}`, "error"));
     const serverAutoRefreshMs = 5000;
+    let extensionBridgeProbeInFlight = false;
+    async function reconnectExtensionBridge() {
+      if (
+        window.location.hostname !== "xiaoqi8553.github.io" ||
+        !isEmbeddedDashboard() ||
+        !state.initialized ||
+        state.dataMode !== "static" ||
+        state.extensionBridgeStatus === true ||
+        state.loading ||
+        state.directoryPickerOpen ||
+        extensionBridgeProbeInFlight
+      ) return;
+      extensionBridgeProbeInFlight = true;
+      try {
+        const probe = await requestExtensionBridge("probe");
+        state.extensionBridgeStatus = Boolean(probe.ok);
+        if (!probe.ok) return;
+        state.dataMode = "extension";
+        updateEmbeddedFolderAction();
+        await loadUsage({ silent: true, auto: true, startupRange: "7d" });
+        setStatus("已自动连接本机 Chrome 扩展；统计每 5 秒自动更新。", "info");
+      } finally {
+        extensionBridgeProbeInFlight = false;
+      }
+    }
     function refreshServerInBackground(options = {}) {
       if (!state.initialized) return;
+      reconnectExtensionBridge().catch(error => setStatus(`连接本机同步扩展失败：${error.message}`, "error"));
       if ((state.dataMode === "server" || state.dataMode === "extension") && !state.loading) {
         loadUsage({ silent: true, auto: true, ...options });
       }

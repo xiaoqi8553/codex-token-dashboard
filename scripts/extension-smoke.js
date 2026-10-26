@@ -82,9 +82,16 @@ async function main() {
     const port = await startMockApi(fixturePayload, server => { apiServer = server; });
 
     profilePath = fs.mkdtempSync(path.join(os.tmpdir(), "ctd-extension-profile-"));
+    const delayedExtensionPath = path.join(profilePath, "extension");
+    fs.cpSync(extensionPath, delayedExtensionPath, { recursive: true });
+    const delayedWorkerPath = path.join(delayedExtensionPath, "background.js");
+    const delayedWorkerSource = fs.readFileSync(delayedWorkerPath, "utf8");
+    const probeHandler = 'if (message.type === "probe") {';
+    if (!delayedWorkerSource.includes(probeHandler)) throw new Error("Unable to configure delayed extension probe fixture.");
+    fs.writeFileSync(delayedWorkerPath, delayedWorkerSource.replace(probeHandler, `${probeHandler}\n    globalThis.extensionProbeCount = (globalThis.extensionProbeCount || 0) + 1;\n    if (globalThis.extensionProbeCount === 1) { sendResponse({ ok: false }); return false; }`));
     const args = [
-      "--disable-extensions-except=" + extensionPath,
-      "--load-extension=" + extensionPath,
+      "--disable-extensions-except=" + delayedExtensionPath,
+      "--load-extension=" + delayedExtensionPath,
       "--no-first-run",
       "--no-default-browser-check"
     ];
@@ -105,7 +112,7 @@ async function main() {
       const dashboardFrame = extensionContext.pages().flatMap(item => item.frames()).find(frame => frame.url().startsWith(dashboardUrl));
       if (!dashboardFrame) throw new Error("Notion dashboard iframe was not created.");
       try {
-        await dashboardFrame.waitForFunction(() => state.initialized && state.dataMode === "extension" && state.records.length > 0, null, { timeout: 20000 });
+        await dashboardFrame.waitForFunction(expectedRecords => state.initialized && state.dataMode === "extension" && state.extensionBridgeStatus === true && state.records.length === expectedRecords && !document.querySelector("#statusNotice")?.classList.contains("show"), fixturePayload.records.length, { timeout: 20000 });
       } catch (error) {
         const debug = await dashboardFrame.evaluate(() => ({ href: location.href, initialized: state.initialized, mode: state.dataMode,
           bridge: state.extensionBridgeStatus, count: state.records.length, status: document.querySelector("#statusNotice")?.textContent }));

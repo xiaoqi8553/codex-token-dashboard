@@ -7,7 +7,7 @@
 ![Codex Token Dashboard cover](screenshots/project-cover.svg)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-0f766e.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.9.7-17202e.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.9.8-17202e.svg)](CHANGELOG.md)
 [![OpenAI Sites](https://img.shields.io/badge/deploy-OpenAI%20Sites-275dcc.svg)](https://codex-token-dashboard.hazel-saepemx.chatgpt.site)
 [![Netlify Demo](https://img.shields.io/badge/demo-codetoken.netlify.app-2f6fed.svg)](https://codetoken.netlify.app/)
 [![GitHub Pages](https://img.shields.io/badge/pages-github.io-111827.svg)](https://xiaoqi8553.github.io/codex-token-dashboard/)
@@ -19,7 +19,7 @@
 - GitHub Pages Demo: https://xiaoqi8553.github.io/codex-token-dashboard/
 - GitHub: https://github.com/xiaoqi8553/codex-token-dashboard
 
-Notion 中可嵌入看板并持续显示本机数据。安装仓库的 extension Chrome 扩展、启动本机 Node 服务并重新加载 Notion 后，扩展会每 5 秒从本机只读用量接口刷新统计；会话数据不会经过 Notion，也不会上传。安装步骤见 extension/README.md。
+Notion 中可嵌入看板并持续显示本机数据。Windows 首次运行 `setup-notion-sync.bat` 并在 Chrome 中加载一次扩展后，本机服务会随 Windows 登录自动启动；Notion 看板自动连接并每 5 秒刷新，不需要反复启动或手动同步。会话数据不会经过 Notion，也不会上传。安装步骤见 extension/README.md。
 
 OpenAI Sites 生产站与仓库中已经推送的版本保持同步；默认采用仅所有者可访问的私有发布方式。
 
@@ -111,7 +111,7 @@ npm run visual:test  # 生成截图并自动检查明显视觉问题
 
 #### 在 Notion 中使用
 
-Notion 中的持续同步需要本机 Chrome 扩展与 start-dashboard.bat 同时运行。扩展只在看板 iframe 中启用，只允许读取 127.0.0.1 的用量接口；目录扫描、索引和会话数据均由原有本机 Node 服务处理。完整安装和故障排查见 extension/README.md。
+Notion 中的持续同步首次运行 `setup-notion-sync.bat` 后即可自动工作。它为当前用户配置登录时启动本机服务；Chrome 扩展只在看板 iframe 中启用，只允许读取 127.0.0.1 的用量接口。目录扫描、索引和会话数据均由原有本机 Node 服务处理。完整安装和故障排查见 extension/README.md。
 
 ### 2. 浏览器导入模式
 

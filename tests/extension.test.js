@@ -9,6 +9,8 @@ const extensionDir = path.join(root, "extension");
 const manifest = JSON.parse(fs.readFileSync(path.join(extensionDir, "manifest.json"), "utf8"));
 const workerSource = fs.readFileSync(path.join(extensionDir, "background.js"), "utf8");
 const pageSource = fs.readFileSync(path.join(root, "index.html"), "utf8");
+const setupSource = fs.readFileSync(path.join(root, "scripts", "setup-notion-sync.ps1"), "utf8");
+const backgroundRunnerSource = fs.readFileSync(path.join(root, "scripts", "run-dashboard-background.ps1"), "utf8");
 
 test("extension is restricted to the dashboard page and local read-only usage ports", () => {
   assert.equal(manifest.manifest_version, 3);
@@ -65,4 +67,11 @@ test("extension worker forwards only usage queries from the dashboard and falls 
   assert.equal(ignored, false);
   assert.match(pageSource, /state\.dataMode === "extension"/);
   assert.match(pageSource, /serverAutoRefreshMs = 5000/);
+  assert.match(pageSource, /async function reconnectExtensionBridge\(\)/);
+  assert.match(pageSource, /!isEmbeddedDashboard\(\)/);
+  assert.match(pageSource, /Notion 看板尚未连接本机/);
+  assert.match(setupSource, /Register-ScheduledTask/);
+  assert.match(setupSource, /Start-ScheduledTask/);
+  assert.match(backgroundRunnerSource, /DASHBOARD_AUTO_OPEN = "0"/);
+  assert.match(backgroundRunnerSource, /127\.0\.0\.1:\$port\/api\/config/);
 });
