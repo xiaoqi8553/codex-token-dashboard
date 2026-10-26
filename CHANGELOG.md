@@ -1,5 +1,10 @@
 # 更新日志
 
+## 0.10.2 - 2026-10-26
+
+- 修复 `setup-notion-sync.bat` 在 Windows PowerShell 5.1 下因 UTF-8 无 BOM 导致的解析失败。
+- 安装脚本改为只配置本机服务登录启动；Notion 桌面版不再要求 Chrome 扩展，也不会强制打开 Chrome 扩展页。
+
 ## 0.10.1 - 2026-10-26
 
 - 支持 Notion 桌面版在未安装 Chrome 扩展时自动直连本机 Token 服务；Chrome 网页版仍优先使用扩展。

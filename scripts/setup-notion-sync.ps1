@@ -1,18 +1,16 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param()
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 $projectRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "..")).Path
 $runnerPath = Join-Path $PSScriptRoot "run-dashboard-background.ps1"
-$extensionPath = Join-Path $projectRoot "extension"
 $powershellPath = Join-Path $env:SystemRoot "System32\WindowsPowerShell\v1.0\powershell.exe"
 $runKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run"
 $runValueName = "CodexTokenDashboardNotionSync"
 
 try {
   if (-not (Test-Path -LiteralPath $runnerPath -PathType Leaf)) { throw "找不到后台启动脚本。" }
-  if (-not (Test-Path -LiteralPath $extensionPath -PathType Container)) { throw "找不到 Chrome 扩展目录。" }
   if (-not (Test-Path -LiteralPath $powershellPath -PathType Leaf)) { throw "找不到 Windows PowerShell。" }
 
   # Remove the experimental scheduled-task entry used by early 0.9.8 installers.
@@ -23,14 +21,10 @@ try {
   New-ItemProperty -Path $runKey -Name $runValueName -Value $startupCommand -PropertyType String -Force | Out-Null
   Start-Process -FilePath $powershellPath -ArgumentList $startupArguments -WindowStyle Hidden
 
-  $chromeExtensionsUrl = "chrome://extensions"
-  try { Start-Process -FilePath "chrome.exe" -ArgumentList $chromeExtensionsUrl } catch { }
-  Start-Process -FilePath "explorer.exe" -ArgumentList ('"' + $extensionPath + '"')
-
   Write-Host ""
   Write-Host "已完成自动同步设置：本机看板会在你登录 Windows 后自动后台运行。" -ForegroundColor Green
-  Write-Host "首次使用还要在 Chrome 扩展页开启开发者模式 -> 加载已解压的扩展程序 -> 选择刚打开的 extension 文件夹。" -ForegroundColor Cyan
-  Write-Host "加载扩展后，重新打开 Notion 看板一次；以后会自动连接并每 5 秒刷新，不必再启动服务或点击同步。" -ForegroundColor Cyan
+  Write-Host "Notion 桌面版不需要安装 Chrome 扩展；重新打开看板后会直接连接本机只读服务。" -ForegroundColor Cyan
+  Write-Host "首次连接若出现本地网络访问提示，请选择允许；以后会每 5 秒自动刷新。" -ForegroundColor Cyan
   Write-Host "本机日志：$env:LOCALAPPDATA\CodexTokenDashboard\logs" -ForegroundColor DarkGray
   Write-Host ""
 } catch {
