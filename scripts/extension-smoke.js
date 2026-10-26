@@ -79,6 +79,8 @@ async function main() {
       };
     });
     if (!fixturePayload.records.length) throw new Error("Unable to create API fixture records.");
+    const oversizedMessageProbeBytes = 65 * 1024 * 1024;
+    fixturePayload.extensionMessageLimitProbe = "x".repeat(oversizedMessageProbeBytes);
     const port = await startMockApi(fixturePayload, server => { apiServer = server; });
 
     profilePath = fs.mkdtempSync(path.join(os.tmpdir(), "ctd-extension-profile-"));
@@ -86,9 +88,16 @@ async function main() {
     fs.cpSync(extensionPath, delayedExtensionPath, { recursive: true });
     const delayedWorkerPath = path.join(delayedExtensionPath, "background.js");
     const delayedWorkerSource = fs.readFileSync(delayedWorkerPath, "utf8");
+    const delayedManifestPath = path.join(delayedExtensionPath, "manifest.json");
+    const delayedManifest = JSON.parse(fs.readFileSync(delayedManifestPath, "utf8"));
+    delayedManifest.host_permissions = [`http://127.0.0.1:${port}/*`];
+    fs.writeFileSync(delayedManifestPath, JSON.stringify(delayedManifest, null, 2));
+    const portsDeclaration = 'const PORTS = [8787, 8788, 8789];';
+    if (!delayedWorkerSource.includes(portsDeclaration)) throw new Error("Unable to configure the isolated API port fixture.");
+    const isolatedWorkerSource = delayedWorkerSource.replace(portsDeclaration, `const PORTS = [${port}];`);
     const probeHandler = 'if (message.type === "probe") {';
-    if (!delayedWorkerSource.includes(probeHandler)) throw new Error("Unable to configure delayed extension probe fixture.");
-    fs.writeFileSync(delayedWorkerPath, delayedWorkerSource.replace(probeHandler, `${probeHandler}\n    globalThis.extensionProbeCount = (globalThis.extensionProbeCount || 0) + 1;\n    if (globalThis.extensionProbeCount === 1) { sendResponse({ ok: false }); return false; }`));
+    if (!isolatedWorkerSource.includes(probeHandler)) throw new Error("Unable to configure delayed extension probe fixture.");
+    fs.writeFileSync(delayedWorkerPath, isolatedWorkerSource.replace(probeHandler, `${probeHandler}\n    globalThis.extensionProbeCount = (globalThis.extensionProbeCount || 0) + 1;\n    if (globalThis.extensionProbeCount === 1) { sendResponse({ ok: false }); return false; }`));
     const args = [
       "--disable-extensions-except=" + delayedExtensionPath,
       "--load-extension=" + delayedExtensionPath,
@@ -112,12 +121,13 @@ async function main() {
       const dashboardFrame = extensionContext.pages().flatMap(item => item.frames()).find(frame => frame.url().startsWith(dashboardUrl));
       if (!dashboardFrame) throw new Error("Notion dashboard iframe was not created.");
       try {
-        await dashboardFrame.waitForFunction(expectedRecords => state.initialized && state.dataMode === "extension" && state.extensionBridgeStatus === true && state.records.length === expectedRecords && !document.querySelector("#statusNotice")?.classList.contains("show"), fixturePayload.records.length, { timeout: 20000 });
+        await dashboardFrame.waitForFunction(({ expectedRecords, oversizedMessageProbeBytes }) => state.initialized && state.dataMode === "extension" && state.extensionBridgeStatus === true && state.records.length === expectedRecords && state.data?.extensionMessageLimitProbe?.length === oversizedMessageProbeBytes && !document.querySelector("#statusNotice")?.classList.contains("show"), { expectedRecords: fixturePayload.records.length, oversizedMessageProbeBytes }, { timeout: 45000 });
       } catch (error) {
         const debug = await dashboardFrame.evaluate(() => ({ href: location.href, initialized: state.initialized, mode: state.dataMode,
-          bridge: state.extensionBridgeStatus, count: state.records.length, status: document.querySelector("#statusNotice")?.textContent }));
+          bridge: state.extensionBridgeStatus, count: state.records.length, status: document.querySelector("#statusNotice")?.textContent,
+          dataUpdatedAt: state.data?.updatedAt, refreshFailures: state.refreshFailures }));
         throw new Error(error.message + " Dashboard state: " + JSON.stringify(debug) + " Service workers: " +
-          extensionContext.serviceWorkers().map(worker => worker.url()).join(",") + " Browser errors: " + JSON.stringify(errors));
+          extensionContext.serviceWorkers().map(worker => worker.url()).join(",") + " API requests: " + (apiServer?.requests || 0) + " Browser errors: " + JSON.stringify(errors));
       }
       const first = await dashboardFrame.evaluate(() => ({ mode: state.dataMode, count: state.records.length, status: document.querySelector("#statusNotice")?.textContent }));
       await dashboardFrame.locator("#importBtn").click();

@@ -324,11 +324,11 @@ test("usage trend has no persistent numeric overlays or summaries", () => {
   assert.doesNotMatch(cacheSource, /峰值 active|缓存 \$\{formatToken|命中率 \$\{avgHit\}% \/ active/);
 });
 
-test("0.9.9 uses the engineering workspace shell and removes Work Replay", () => {
-  assert.equal(packageJson.version, "0.9.9");
+test("0.10.0 uses the engineering workspace shell and removes Work Replay", () => {
+  assert.equal(packageJson.version, "0.10.0");
   assert.match(indexSource, /class="side-rail shell"/);
   assert.match(indexSource, /id="viewTitle"/);
-  assert.match(indexSource, /v0\.9\.9/);
+  assert.match(indexSource, /v0\.10\.0/);
   assert.doesNotMatch(indexSource, /replayBtn|replay\.html|工作回放/);
   assert.doesNotMatch(buildSource, /replay\.html/);
   assert.equal(fs.existsSync(path.join(root, "replay.html")), false);

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Codex Token Dashboard 本机同步",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "在 Notion 嵌入看板中安全读取本机 Codex Token 仪表盘数据。",
   "permissions": [],
   "host_permissions": [

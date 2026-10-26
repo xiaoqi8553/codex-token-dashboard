@@ -3333,7 +3333,7 @@
         </div>
         <div class="rail-version">
           <span>LOCAL-FIRST</span>
-          <strong>v0.9.9</strong>
+          <strong>v0.10.0</strong>
         </div>
       </div>
     </aside>
@@ -4150,7 +4150,22 @@
     async function extensionUsageRequest(path) {
       const result = await requestExtensionBridge("usage", path, 25000);
       if (!result.ok) throw new Error(result.error || "本机扩展同步失败。");
-      return result.payload;
+      if (result.encoding !== "gzip-base64" || typeof result.data !== "string") {
+        throw new Error("Chrome 扩展返回的数据格式不受支持，请重新加载扩展。");
+      }
+      const binary = atob(result.data);
+      const compressed = new Uint8Array(binary.length);
+      for (let index = 0; index < binary.length; index += 1) compressed[index] = binary.charCodeAt(index);
+      const stream = new Blob([compressed]).stream().pipeThrough(new DecompressionStream("gzip"));
+      const json = await new Response(stream).text();
+      let payload;
+      try {
+        payload = JSON.parse(json);
+      } catch {
+        throw new Error("本机服务返回的用量数据格式无效。");
+      }
+      if (payload?.ok !== true) throw new Error(payload?.error || "本机服务未返回有效用量数据。");
+      return payload;
     }
 
     function simpleHash(text) {
@@ -6731,7 +6746,7 @@
                 <h2>设置 / 关于</h2>
                 <p class="muted">检查当前运行方式、隐私边界、版本和公开部署状态。</p>
               </div>
-              <span class="badge">版本 0.9.9</span>
+              <span class="badge">版本 0.10.0</span>
             </div>
             <div class="settings-grid">
               <div class="settings-card">
@@ -7161,7 +7176,7 @@
       const summary = summarize(safeRecords.map(record => ({ ...record, activeTokens: activeTokens(record), uncachedInputTokens: uncachedInputTokens(record), hitRate: cacheHitRateOf(record) })));
       return {
         snapshotVersion: 1,
-        appVersion: "0.9.9",
+        appVersion: "0.10.0",
         generatedAt: new Date().toISOString(),
         privacy: {
           anonymized: true,

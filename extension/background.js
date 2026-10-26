@@ -1,6 +1,17 @@
 const DASHBOARD_ORIGIN = "https://xiaoqi8553.github.io";
 const PORTS = [8787, 8788, 8789];
 
+async function gzipBase64(text) {
+  const stream = new Blob([text]).stream().pipeThrough(new CompressionStream("gzip"));
+  const bytes = new Uint8Array(await new Response(stream).arrayBuffer());
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(offset, offset + chunkSize));
+  }
+  return btoa(binary);
+}
+
 function isDashboardSender(sender) {
   try {
     const url = new URL(sender.url || "");
@@ -28,9 +39,14 @@ async function fetchUsage(path) {
       });
       const type = response.headers.get("content-type") || "";
       if (!type.includes("application/json")) throw new Error("本机服务未返回用量数据。");
-      const payload = await response.json();
-      if (!response.ok || payload?.ok !== true) throw new Error(payload?.error || ("本机服务返回 " + response.status));
-      return payload;
+      if (!response.ok) {
+        const errorText = await response.text();
+        let errorPayload;
+        try { errorPayload = JSON.parse(errorText); } catch {}
+        throw new Error(errorPayload?.error || ("本机服务返回 " + response.status));
+      }
+      const responseText = await response.text();
+      return { encoding: "gzip-base64", data: await gzipBase64(responseText) };
     } catch (error) {
       lastError = error;
     }
@@ -46,7 +62,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
   if (message.type !== "usage" || typeof message.path !== "string") return false;
   fetchUsage(message.path).then(
-    payload => sendResponse({ ok: true, payload }),
+    compressed => sendResponse({ ok: true, ...compressed }),
     error => sendResponse({ ok: false, error: error?.message || "本机同步失败。" })
   );
   return true;

@@ -3,6 +3,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const test = require("node:test");
 const vm = require("node:vm");
+const { gunzipSync } = require("node:zlib");
 
 const root = path.resolve(__dirname, "..");
 const extensionDir = path.join(root, "extension");
@@ -23,6 +24,7 @@ test("extension is restricted to the dashboard page and local read-only usage po
     "http://127.0.0.1:8789/*"
   ]);
   assert.match(workerSource, /method: "GET"/);
+  assert.match(workerSource, /CompressionStream\("gzip"\)/);
   assert.doesNotMatch(workerSource, /method: "POST"/);
   assert.doesNotMatch(workerSource, /\/api\/(account|import)/);
 });
@@ -36,18 +38,23 @@ test("extension worker forwards only usage queries from the dashboard and falls 
     chrome: {
       runtime: {
         onMessage: { addListener: listener => listeners.push(listener) },
-        getManifest: () => ({ version: "0.1.0" })
+        getManifest: () => ({ version: "0.2.0" })
       }
     },
+    Blob,
+    CompressionStream,
+    Response,
+    btoa,
     fetch: async (url, options) => {
       calls.push({ url: String(url), options });
       if (String(url).includes(":8787/")) throw new Error("port busy");
-      return { ok: true, status: 200, headers: { get: () => "application/json" }, json: async () => ({ ok: true, records: [] }) };
+      return { ok: true, status: 200, headers: { get: () => "application/json" }, text: async () => JSON.stringify({ ok: true, records: ["完整会话数据"] }) };
     }
   });
   vm.runInContext(workerSource, context);
   const fetchResult = await vm.runInContext('fetchUsage("/api/usage?from=2026-10-01")', context);
-  assert.equal(fetchResult.ok, true);
+  assert.equal(fetchResult.encoding, "gzip-base64");
+  assert.deepEqual(JSON.parse(gunzipSync(Buffer.from(fetchResult.data, "base64")).toString("utf8")), { ok: true, records: ["完整会话数据"] });
   assert.equal(calls.length, 2);
   assert.match(calls[0].url, /^http:\/\/127\.0\.0\.1:8787\/api\/usage\?/);
   assert.match(calls[1].url, /^http:\/\/127\.0\.0\.1:8788\/api\/usage\?/);
@@ -67,6 +74,7 @@ test("extension worker forwards only usage queries from the dashboard and falls 
   assert.equal(ignored, false);
   assert.match(pageSource, /state\.dataMode === "extension"/);
   assert.match(pageSource, /serverAutoRefreshMs = 5000/);
+  assert.match(pageSource, /DecompressionStream\("gzip"\)/);
   assert.match(pageSource, /async function reconnectExtensionBridge\(\)/);
   assert.match(pageSource, /!isEmbeddedDashboard\(\)/);
   assert.match(pageSource, /Notion 看板尚未连接本机/);
