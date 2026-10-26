@@ -3333,7 +3333,7 @@
         </div>
         <div class="rail-version">
           <span>LOCAL-FIRST</span>
-          <strong>v0.9.6</strong>
+          <strong>v0.9.7</strong>
         </div>
       </div>
     </aside>
@@ -4357,24 +4357,38 @@
       const content = payload?.content;
       if (typeof content === "string") return content;
       if (!Array.isArray(content)) return "";
-      return content
-        .map(entry => {
-          if (typeof entry === "string") return entry;
-          return entry?.text || entry?.input_text || "";
-        })
-        .filter(Boolean)
-        .join(" ");
+      let text = "";
+      for (const entry of content) {
+        const part = typeof entry === "string" ? entry : entry?.text || entry?.input_text || "";
+        if (part) text += `${text ? " " : ""}${part}`;
+      }
+      return text;
     }
 
     function cleanSessionTitle(value) {
-      const text = String(value || "").replace(/\s+/g, " ").trim();
+      const text = String(value || "");
       if (!text) return "";
-      const requestMarker = text.match(/(?:my request for codex:|我的请求[:：]|请你|现在我|我现在|还有几个问题|版本即将|please implement)/i);
-      const trimmed = requestMarker ? text.slice(requestMarker.index).trim() : text;
-      return trimmed
-        .replace(/^my request for codex:\s*/i, "")
-        .replace(/^我的请求[:：]\s*/i, "")
-        .slice(0, 180);
+      const requestMarker = text.match(/(?:my\s+request\s+for\s+codex:|我的请求[:：]|请你|现在我|我现在|还有几个问题|版本即将|please\s+implement)/i);
+      let start = requestMarker ? requestMarker.index : 0;
+      if (requestMarker && /^(?:my\s+request\s+for\s+codex:|我的请求[:：])$/i.test(requestMarker[0])) {
+        start += requestMarker[0].length;
+      }
+      let result = "";
+      let pendingSpace = false;
+      for (let index = start; index < text.length && result.length < 180; index += 1) {
+        const character = text[index];
+        if (/\s/.test(character)) {
+          if (result) pendingSpace = true;
+          continue;
+        }
+        if (pendingSpace) {
+          result += " ";
+          pendingSpace = false;
+          if (result.length >= 180) break;
+        }
+        result += character;
+      }
+      return result.slice(0, 180);
     }
 
     function considerSessionTitle(meta, candidate) {
@@ -4386,6 +4400,7 @@
     function visitUsageObjects(item, lineNumber, meta, relativePath, records) {
       if (!item || typeof item !== "object") return;
       const payload = item.payload && typeof item.payload === "object" ? item.payload : item;
+      const responseUserMessage = item.type === "response_item" && payload.type === "message" && payload.role === "user";
       if (item.type === "session_meta" || item.type === "turn_context" || payload.model_provider || payload.thread_source || payload.model || payload.cwd) {
         meta.sessionId = firstScalar(payload.id, payload.session_id, meta.sessionId);
         meta.provider = firstScalar(payload.model_provider, payload.provider, meta.provider);
@@ -4395,10 +4410,10 @@
         meta.cwd = firstScalar(payload.cwd, meta.cwd);
         meta.turnId = firstScalar(payload.turn_id, payload.turnId, meta.turnId);
       }
-      if (item.type === "response_item" && payload.type === "message" && payload.role === "user") {
+      if (responseUserMessage) {
         considerSessionTitle(meta, textFromMessagePayload(payload));
       }
-      if (payload.role === "user" || item.role === "user") {
+      if (!responseUserMessage && (payload.role === "user" || item.role === "user")) {
         considerSessionTitle(meta, textFromMessagePayload(payload) || textFromMessagePayload(item));
       }
       meta.outputTiming ||= CodexOutputSpeed.createCollector();
@@ -4679,7 +4694,8 @@
           if (!prefix && name !== "sessions" && name !== "archived_sessions" && !/^\d{4}$/.test(name)) continue;
           files.push(...await collectDirectoryFiles(handle, relativePath));
         } else {
-          const entry = { file: await handle.getFile(), relativePath };
+          if (!CodexSessionFiles.supported(name) && !/^logs(?:_\d+)?\.sqlite$/i.test(name)) continue;
+          const entry = { file: await handle.getFile(), fileHandle: handle, relativePath };
           if (isSessionImportEntry(entry) || isEndpointEvidenceEntry(entry)) files.push(entry);
         }
       }
@@ -4859,7 +4875,10 @@
         consumeChunk(text);
       }
       } catch (error) {
-        throw new Error(`读取${compressed ? "压缩" : ""}会话失败：${file.name}（${error.message}）。上次缓存仍保留。`);
+        const wrapped = new Error(`读取${compressed ? "压缩" : ""}会话失败：${file.name}（${error.message}）。上次缓存仍保留。`);
+        wrapped.name = error?.name || wrapped.name;
+        wrapped.cause = error;
+        throw wrapped;
       }
 
       if (lineParts.length) completeLine("");
@@ -4888,52 +4907,94 @@
       const reusable = browserSourceAttributionMode === "custom-fast" &&
         manifest?.parserVersion === staticParserVersion && manifest?.mode === browserSourceAttributionMode && Array.isArray(manifest.files);
       const previousFiles = new Map(reusable ? manifest.files.map(entry => [entry.relativePath, entry]) : []);
-      const nextFiles = [];
-      const records = [];
+      const parsedEntries = new Array(files.length);
+      const progressBytes = new Array(files.length).fill(0);
+      const progressRecords = new Array(files.length).fill(0);
       let parsedFiles = 0;
       let reusedFiles = 0;
-      let loadedBytes = 0;
       const totalBytes = files.reduce((sum, entry) => sum + toNumber(entry.file?.size), 0);
-      const emitProgress = currentFileBytes => options.onProgress?.({
-        loadedBytes: Math.min(loadedBytes + currentFileBytes, totalBytes),
+      const emitProgress = () => options.onProgress?.({
+        loadedBytes: Math.min(progressBytes.reduce((sum, size) => sum + size, 0), totalBytes),
         totalBytes,
         parsedFiles: parsedFiles + reusedFiles,
         totalFiles: files.length,
-        records: records.length
+        records: progressRecords.reduce((sum, count) => sum + count, 0)
       });
-      for (const entry of files) {
+      const pendingIndexes = [];
+      for (let index = 0; index < files.length; index += 1) {
+        const entry = files[index];
         const file = entry.file;
         const relativePath = entry.relativePath || file.webkitRelativePath || file.name;
         const cached = previousFiles.get(relativePath);
-        const signature = { relativePath, size: file.size, lastModified: file.lastModified, start: records.length };
         if (cached && cached.size === file.size && cached.lastModified === file.lastModified &&
             Number.isInteger(cached.start) && Number.isInteger(cached.count) && cached.start >= 0 &&
             cached.count >= 0 && cached.start + cached.count <= previous.records.length) {
-          for (const record of previous.records.slice(cached.start, cached.start + cached.count)) records.push(record);
-          nextFiles.push({ ...signature, count: cached.count });
+          const reused = previous.records.slice(cached.start, cached.start + cached.count);
+          parsedEntries[index] = { relativePath, size: file.size, lastModified: file.lastModified, records: reused, reused: true };
+          progressBytes[index] = toNumber(file.size);
+          progressRecords[index] = reused.length;
           reusedFiles += 1;
-          loadedBytes += toNumber(file.size);
-          continue;
+        } else {
+          pendingIndexes.push(index);
         }
-        const meta = { sessionId: file.name, provider: "", source: "", model: "unknown", timestamp: new Date(file.lastModified || Date.now()).toISOString(), title: "", cwd: "", turnId: "" };
-        const before = records.length;
+      }
+      const parseEntry = async (entry, index) => {
+        let file = entry.file;
+        const relativePath = entry.relativePath || file.webkitRelativePath || file.name;
+        const records = [];
+        let meta;
         let preview = "";
         let fallbackText = "";
-        if (/\.json$/i.test(file.name)) {
-          const text = await file.text();
-          fallbackText = text;
-          preview = text.slice(0, 2000);
-          const parsed = parseJsonLine(text);
-          if (parsed) visitUsageObjects(parsed, 1, meta, relativePath, records);
-        } else {
-          const scan = await readSessionFileLines(file, (line, lineNumber) => {
-            if (!isRelevantSessionImportLine(line)) return;
-            const parsed = parseJsonLine(line);
-            if (parsed) visitUsageObjects(parsed, lineNumber, meta, relativePath, records);
-          }, { onProgress: emitProgress });
-          preview = scan.preview;
+        const retryableReadError = error => {
+          const detail = `${error?.name || ""} ${error?.message || error || ""}`.toLowerCase();
+          return error?.name === "NotReadableError" || error?.name === "NetworkError" ||
+            /network error|temporarily unavailable|resource busy|file changed while reading/.test(detail);
+        };
+        let parsed = false;
+        for (let attempt = 0; attempt < 3; attempt += 1) {
+          if (attempt > 0) {
+            records.length = 0;
+            preview = "";
+            fallbackText = "";
+            progressBytes[index] = 0;
+            progressRecords[index] = 0;
+            await new Promise(resolve => setTimeout(resolve, 100 * attempt));
+          }
+          try {
+            if (attempt > 0 && entry.fileHandle?.getFile) file = await entry.fileHandle.getFile();
+            meta = { sessionId: file.name, provider: "", source: "", model: "unknown", timestamp: new Date(file.lastModified || Date.now()).toISOString(), title: "", cwd: "", turnId: "" };
+            if (/\.json$/i.test(file.name)) {
+              const text = await file.text();
+              fallbackText = text;
+              preview = text.slice(0, 2000);
+              const value = parseJsonLine(text);
+              if (value) visitUsageObjects(value, 1, meta, relativePath, records);
+            } else {
+              const scan = await readSessionFileLines(file, (line, lineNumber) => {
+                if (!isRelevantSessionImportLine(line)) return;
+                const value = parseJsonLine(line);
+                if (value) visitUsageObjects(value, lineNumber, meta, relativePath, records);
+              }, { onProgress: currentFileBytes => {
+                progressBytes[index] = Math.min(toNumber(file.size), currentFileBytes);
+                progressRecords[index] = records.length;
+                emitProgress();
+              } });
+              preview = scan.preview;
+            }
+            parsed = true;
+            break;
+          } catch (error) {
+            if (!retryableReadError(error)) throw error;
+            if (attempt === 2) {
+              const wrapped = new Error(`文件重试后仍暂时无法读取：${file.name}。可能正被 Codex 写入或本机磁盘暂不可用；上次完整缓存仍保留，请稍后重试。`);
+              wrapped.name = error?.name || wrapped.name;
+              wrapped.cause = error;
+              throw wrapped;
+            }
+          }
         }
-        if (records.length === before && file.size > 0) {
+        if (!parsed) throw new Error(`文件暂时无法读取：${file.name}。上次缓存仍保留，请稍后同步。`);
+        if (records.length === 0 && file.size > 0) {
           if (!fallbackText && CodexSessionFiles.compressed(file.name)) {
             const lines = [];
             await readSessionFileLines(file, line => lines.push(line));
@@ -4957,8 +5018,8 @@
             projectPath: meta.cwd
           }, { relativePath, projectPath: meta.cwd }));
         }
-        if (records.length > before) {
-          for (const record of records.slice(before)) {
+        if (records.length > 0) {
+          for (const record of records) {
             if (meta.cwd && !record.projectPath) {
               const project = inferProject({ projectPath: meta.cwd });
               record.projectPath = project.projectPath;
@@ -4971,12 +5032,36 @@
             }
           }
         }
-        meta.outputTiming?.apply(records.slice(before));
         parsedFiles += 1;
-        nextFiles.push({ ...signature, count: records.length - before });
-        loadedBytes += toNumber(file.size);
-        emitProgress(0);
-        await yieldSessionImport();
+        meta.outputTiming?.apply(records);
+        parsedEntries[index] = { relativePath, size: file.size, lastModified: file.lastModified, records, reused: false };
+        progressBytes[index] = toNumber(file.size);
+        progressRecords[index] = records.length;
+        emitProgress();
+      };
+      let nextIndex = 0;
+      let parseFailure = null;
+      const workerCount = Math.min(3, pendingIndexes.length);
+      await Promise.all(Array.from({ length: workerCount }, async () => {
+        while (!parseFailure && nextIndex < pendingIndexes.length) {
+          const index = pendingIndexes[nextIndex];
+          nextIndex += 1;
+          try {
+            await parseEntry(files[index], index);
+            await yieldSessionImport();
+          } catch (error) {
+            parseFailure = error;
+          }
+        }
+      }));
+      if (parseFailure) throw parseFailure;
+      emitProgress();
+      const nextFiles = [];
+      const records = [];
+      for (const result of parsedEntries) {
+        const start = records.length;
+        for (const record of result.records) records.push(record);
+        nextFiles.push({ relativePath: result.relativePath, size: result.size, lastModified: result.lastModified, start, count: result.records.length });
       }
       const classifiedRecords = records.map(record => applyBrowserSourceEvidence(record, evidence));
       const payload = makeStaticPayload(classifiedRecords, {
@@ -6646,7 +6731,7 @@
                 <h2>设置 / 关于</h2>
                 <p class="muted">检查当前运行方式、隐私边界、版本和公开部署状态。</p>
               </div>
-              <span class="badge">版本 0.9.6</span>
+              <span class="badge">版本 0.9.7</span>
             </div>
             <div class="settings-grid">
               <div class="settings-card">
@@ -7076,7 +7161,7 @@
       const summary = summarize(safeRecords.map(record => ({ ...record, activeTokens: activeTokens(record), uncachedInputTokens: uncachedInputTokens(record), hitRate: cacheHitRateOf(record) })));
       return {
         snapshotVersion: 1,
-        appVersion: "0.9.6",
+        appVersion: "0.9.7",
         generatedAt: new Date().toISOString(),
         privacy: {
           anonymized: true,

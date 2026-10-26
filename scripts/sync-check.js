@@ -134,6 +134,35 @@ async function main() {
     assert.equal(compression.preserved, true);
     assert.match(compression.error, /压缩.*失败/);
 
+    const transientRead = await page.evaluate(async fixture => {
+      const directory = await (await navigator.storage.getDirectory()).getDirectoryHandle("retry-sessions", { create: true });
+      const fileHandle = await directory.getFileHandle("rollout-network.jsonl", { create: true });
+      const writer = await fileHandle.createWritable();
+      await writer.write(fixture.text);
+      await writer.close();
+      const getFile = fileHandle.getFile.bind(fileHandle);
+      let freshSnapshots = 0;
+      fileHandle.getFile = async () => { freshSnapshots += 1; return getFile(); };
+      const originalStream = File.prototype.stream;
+      let attempts = 0;
+      File.prototype.stream = function () {
+        if (this.name === "rollout-network.jsonl" && attempts++ === 0) {
+          return new ReadableStream({ start(controller) { controller.error(new DOMException("network error", "NetworkError")); } });
+        }
+        return originalStream.call(this);
+      };
+      try {
+        const payload = await parseSessionFiles([{
+          file: await fileHandle.getFile(), fileHandle, relativePath: "sessions/rollout-network.jsonl"
+        }]);
+        return { attempts, freshSnapshots, records: payload.records.length,
+          total: payload.records.reduce((sum, row) => sum + row.totalTokens, 0), expected: fixture.expected };
+      } finally {
+        File.prototype.stream = originalStream;
+      }
+    }, fixtures[0]);
+    assert.deepEqual(transientRead, { attempts: 2, freshSnapshots: 2, records: 1, total: fixtures[0].expected, expected: fixtures[0].expected });
+
     const benchmark = await page.evaluate(async () => {
       const directory = await (await navigator.storage.getDirectory()).getDirectoryHandle("sessions", { create: true });
       const oldDate = "2025-01-02T08:00:00.000Z";
@@ -417,7 +446,7 @@ async function main() {
       fs.rmSync(pickerDirectory, { recursive: true, force: true });
     }
     assert.deepEqual(errors, []);
-    console.log(JSON.stringify({ ok: true, benchmark, mutation, checks: ["unchanged reuse", "add/change/delete equality", "reopen IndexedDB", "startup autosync", "permission retry", "handle-only recovery", "parser invalidation", "sync lock", "new current-day data", "evidence mode", "one-shot import recovery", "no Pages API request", "picker click during sync", "picker abort and security feedback", "native picker selection waits for sync", "compatibility filechooser at 1920/1366/mobile", "Notion cross-origin iframe extension handshake and repeated local usage refresh", "Notion embed skips disconnected folder picker popup", "late native result ignored", "unsupported native picker fallback"] }, null, 2));
+    console.log(JSON.stringify({ ok: true, benchmark, mutation, checks: ["unchanged reuse", "add/change/delete equality", "reopen IndexedDB", "startup autosync", "permission retry", "handle-only recovery", "parser invalidation", "sync lock", "transient file network error retry", "new current-day data", "evidence mode", "one-shot import recovery", "no Pages API request", "picker click during sync", "picker abort and security feedback", "native picker selection waits for sync", "compatibility filechooser at 1920/1366/mobile", "Notion cross-origin iframe extension handshake and repeated local usage refresh", "Notion embed skips disconnected folder picker popup", "late native result ignored", "unsupported native picker fallback"] }, null, 2));
   } finally {
     await context.close();
     await browser.close();

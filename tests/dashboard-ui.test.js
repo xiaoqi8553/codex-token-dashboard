@@ -142,6 +142,26 @@ test("sessions import streams large files and ignores irrelevant rollout records
   assert.match(indexSource, /onProgress:\s*reportSessionImportProgress/);
 });
 
+test("session title cleanup keeps the same 180-character result without normalizing entire prompts", () => {
+  const clean = vm.runInNewContext(`(${extractFunction("cleanSessionTitle")})`);
+  const legacyClean = value => {
+    const text = String(value || "").replace(/\s+/g, " ").trim();
+    if (!text) return "";
+    const requestMarker = text.match(/(?:my request for codex:|我的请求[:：]|请你|现在我|我现在|还有几个问题|版本即将|please implement)/i);
+    const trimmed = requestMarker ? text.slice(requestMarker.index).trim() : text;
+    return trimmed.replace(/^my request for codex:\s*/i, "").replace(/^我的请求[:：]\s*/i, "").slice(0, 180);
+  };
+  const inputs = [
+    "",
+    "  hello\n\tworld  ",
+    "Earlier context\nMy   request for Codex:\tPlease fix this\nwith details",
+    "前文\n我的请求：\n请检查这个问题",
+    `long prompt ${"x".repeat(100000)} 请你${" y".repeat(200)}`,
+    `${" ".repeat(2000)}先前内容 ${"x".repeat(1000)}`
+  ];
+  for (const input of inputs) assert.equal(clean(input), legacyClean(input));
+});
+
 test("large browser imports persist in IndexedDB and restore on startup", () => {
   const cacheSource = extractFunction("cacheStaticPayload");
   const loadSource = extractFunction("loadCachedStaticPayload");
@@ -304,11 +324,11 @@ test("usage trend has no persistent numeric overlays or summaries", () => {
   assert.doesNotMatch(cacheSource, /峰值 active|缓存 \$\{formatToken|命中率 \$\{avgHit\}% \/ active/);
 });
 
-test("0.9.6 uses the engineering workspace shell and removes Work Replay", () => {
-  assert.equal(packageJson.version, "0.9.6");
+test("0.9.7 uses the engineering workspace shell and removes Work Replay", () => {
+  assert.equal(packageJson.version, "0.9.7");
   assert.match(indexSource, /class="side-rail shell"/);
   assert.match(indexSource, /id="viewTitle"/);
-  assert.match(indexSource, /v0\.9\.6/);
+  assert.match(indexSource, /v0\.9\.7/);
   assert.doesNotMatch(indexSource, /replayBtn|replay\.html|工作回放/);
   assert.doesNotMatch(buildSource, /replay\.html/);
   assert.equal(fs.existsSync(path.join(root, "replay.html")), false);
