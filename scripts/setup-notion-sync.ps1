@@ -6,27 +6,22 @@ $ErrorActionPreference = "Stop"
 $projectRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "..")).Path
 $runnerPath = Join-Path $PSScriptRoot "run-dashboard-background.ps1"
 $extensionPath = Join-Path $projectRoot "extension"
-$taskName = "CodexTokenDashboardNotionSync"
 $powershellPath = Join-Path $env:SystemRoot "System32\WindowsPowerShell\v1.0\powershell.exe"
+$runKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run"
+$runValueName = "CodexTokenDashboardNotionSync"
 
 try {
   if (-not (Test-Path -LiteralPath $runnerPath -PathType Leaf)) { throw "找不到后台启动脚本。" }
   if (-not (Test-Path -LiteralPath $extensionPath -PathType Container)) { throw "找不到 Chrome 扩展目录。" }
   if (-not (Test-Path -LiteralPath $powershellPath -PathType Leaf)) { throw "找不到 Windows PowerShell。" }
 
-  $arguments = '-NoLogo -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "{0}" -ProjectRoot "{1}"' -f $runnerPath, $projectRoot
-  $action = New-ScheduledTaskAction -Execute $powershellPath -Argument $arguments
-  $identity = [Security.Principal.WindowsIdentity]::GetCurrent().Name
-  $principal = New-ScheduledTaskPrincipal -UserId $identity -LogonType Interactive -RunLevel Limited
-  $trigger = New-ScheduledTaskTrigger -AtLogOn -User $identity
-  $settings = New-ScheduledTaskSettingsSet `
-    -MultipleInstances IgnoreNew `
-    -ExecutionTimeLimit ([TimeSpan]::Zero) `
-    -StartWhenAvailable `
-    -AllowStartIfOnBatteries `
-    -DontStopIfGoingOnBatteries
-  Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Description "登录 Windows 后在后台启动 Codex Token Dashboard，供 Notion 看板自动同步本机数据。" -Force | Out-Null
-  Start-ScheduledTask -TaskName $taskName
+  # Remove the experimental scheduled-task entry used by early 0.9.8 installers.
+  Unregister-ScheduledTask -TaskName $runValueName -Confirm:$false -ErrorAction SilentlyContinue
+  New-Item -Path $runKey -Force | Out-Null
+  $startupArguments = '-NoLogo -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "{0}" -ProjectRoot "{1}"' -f $runnerPath, $projectRoot
+  $startupCommand = '"{0}" {1}' -f $powershellPath, $startupArguments
+  New-ItemProperty -Path $runKey -Name $runValueName -Value $startupCommand -PropertyType String -Force | Out-Null
+  Start-Process -FilePath $powershellPath -ArgumentList $startupArguments -WindowStyle Hidden
 
   $chromeExtensionsUrl = "chrome://extensions"
   try { Start-Process -FilePath "chrome.exe" -ArgumentList $chromeExtensionsUrl } catch { }

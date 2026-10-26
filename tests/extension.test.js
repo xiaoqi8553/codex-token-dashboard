@@ -70,8 +70,8 @@ test("extension worker forwards only usage queries from the dashboard and falls 
   assert.match(pageSource, /async function reconnectExtensionBridge\(\)/);
   assert.match(pageSource, /!isEmbeddedDashboard\(\)/);
   assert.match(pageSource, /Notion 看板尚未连接本机/);
-  assert.match(setupSource, /Register-ScheduledTask/);
-  assert.match(setupSource, /Start-ScheduledTask/);
+  assert.match(setupSource, /CurrentVersion\\Run/);
+  assert.match(setupSource, /New-ItemProperty/);
   assert.match(backgroundRunnerSource, /DASHBOARD_AUTO_OPEN = "0"/);
   assert.match(backgroundRunnerSource, /127\.0\.0\.1:\$port\/api\/config/);
 });

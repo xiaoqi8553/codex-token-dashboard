@@ -5,7 +5,7 @@
 ## 一次设置，之后自动同步
 
 1. 从项目 GitHub 页面下载并解压仓库 ZIP。
-2. 双击项目根目录的 `setup-notion-sync.bat`。它会为当前 Windows 用户配置登录时自动启动本机服务，并打开 Chrome 扩展页和 `extension` 文件夹。
+2. 双击项目根目录的 `setup-notion-sync.bat`。它会为当前 Windows 用户配置登录启动项、立即在后台启动本机服务，并打开 Chrome 扩展页和 `extension` 文件夹。
 3. Chrome 需要用户确认首次安装：开启“开发者模式”，点击“加载已解压的扩展程序”，选择打开的 `extension` 文件夹。
 4. 重新打开一次 Notion 看板。之后登录 Windows 会自动启动后台服务，Notion 看板自动连接本机统计，每 5 秒刷新；不必再启动 BAT 或点击“同步数据”。
 
