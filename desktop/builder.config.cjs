@@ -5,7 +5,7 @@ module.exports = {
   productName: "Codex Token",
   artifactName: "Codex-Token-Setup-${version}.${ext}",
   directories: {
-    output: "release/desktop"
+    output: process.env.CODEX_TOKEN_BUILD_DIR || "release/desktop"
   },
   asar: false,
   electronDist: path.resolve(__dirname, "../node_modules/electron/dist"),

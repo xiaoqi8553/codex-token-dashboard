@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-10-27T12:55:53.312Z",
-  "baseUrl": "http://127.0.0.1:8787",
+  "generatedAt": "2026-10-27T14:33:45.785Z",
+  "baseUrl": "http://127.0.0.1:8788",
   "screenshotsDir": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current",
   "pages": [
     {
@@ -91,7 +91,7 @@
         "kpiBaselineDrift": 0,
         "kpiTextInsetDrift": 0,
         "regularBarMinFont": 0,
-        "trendValueCenterDrift": 0.0078125,
+        "trendValueCenterDrift": 0,
         "trendValueOverflowCount": 0
       }
     },

@@ -324,12 +324,18 @@ test("usage trend has no persistent numeric overlays or summaries", () => {
   assert.doesNotMatch(cacheSource, /峰值 active|缓存 \$\{formatToken|命中率 \$\{avgHit\}% \/ active/);
 });
 
-test("1.0.1 uses the engineering workspace shell and CodexBar usage board", () => {
-  assert.equal(packageJson.version, "1.0.1");
+test("1.0.2 uses the engineering workspace shell and CodexBar usage board", () => {
+  assert.equal(packageJson.version, "1.0.2");
   assert.match(indexSource, /class="side-rail shell"/);
   assert.match(indexSource, /id="viewTitle"/);
-  assert.match(indexSource, /v1\.0\.1/);
-  assert.match(indexSource, /CodexBar \/ LOCAL USAGE/);
+  assert.match(indexSource, /v1\.0\.2/);
+  assert.match(indexSource, /<strong>CodexBar<\/strong>/);
+  assert.match(indexSource, /近 5 小时/);
+  assert.match(indexSource, /近 7 天/);
+  assert.match(indexSource, /Live usage/);
+  assert.match(indexSource, /data-action="refresh"/);
+  assert.match(indexSource, /Codex 官方额度和重置时间需官方接口授权/);
+  assert.doesNotMatch(indexSource, /每个 Token 窗口，都看得见/);
   assert.doesNotMatch(indexSource, /replayBtn|replay\.html|工作回放/);
   assert.doesNotMatch(buildSource, /replay\.html/);
   assert.equal(fs.existsSync(path.join(root, "replay.html")), false);

@@ -75,13 +75,31 @@ async function main() {
       title: document.title,
       host: document.documentElement.dataset.host,
       overviewTitle: document.querySelector("#viewTitle")?.textContent.trim(),
+      codexBarText: document.querySelector("#codexbarPanel")?.innerText || "",
       hasUsageApi: performance.getEntriesByType("resource").some(entry => entry.name.includes("/api/usage")),
       pageText: document.body.innerText.includes("100")
     }));
     assert.equal(appInfo.host, "desktop");
     assert.equal(appInfo.overviewTitle, "运行总览");
+    assert.match(appInfo.codexBarText, /CodexBar/);
+    assert.match(appInfo.codexBarText, /Official Plus/);
+    assert.match(appInfo.codexBarText, /近 5 小时/);
     assert.equal(appInfo.hasUsageApi, true);
     assert.equal(appInfo.pageText, true);
+
+    await page.locator('#codexbarPanel [data-view="details"]').click();
+    await page.waitForFunction(() => document.querySelector("#viewTitle")?.textContent.trim() === "用量明细");
+    await page.locator('#viewTabs [data-view="overview"]').click();
+    await page.waitForFunction(() => document.querySelector("#viewTitle")?.textContent.trim() === "运行总览");
+    await page.locator('#codexbarPanel [data-view="settings"]').click();
+    await page.waitForFunction(() => document.querySelector("#viewTitle")?.textContent.trim() === "系统设置");
+    await page.locator('#viewTabs [data-view="overview"]').click();
+    const forcedUsage = page.waitForResponse(response => {
+      const url = new URL(response.url());
+      return url.pathname === "/api/usage" && url.searchParams.get("force") === "1";
+    }, { timeout: 20_000 });
+    await page.locator('#codexbarPanel [data-action="refresh"]').click();
+    await forcedUsage;
     process.stdout.write(`Electron desktop smoke passed: ${JSON.stringify(appInfo)}\n`);
 
     const exitDeadline = Date.now() + 12_000;

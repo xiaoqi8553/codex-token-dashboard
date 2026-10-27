@@ -6,7 +6,7 @@ const PRODUCT_NAME = "Codex Token";
 const PORTS = [8787, 8788, 8789];
 const APP_ROOT = app.getAppPath();
 const SERVER_PATH = path.join(APP_ROOT, "server.js");
-const gotLock = app.requestSingleInstanceLock();
+const gotLock = process.env.CODEX_TOKEN_DASHBOARD_SMOKE === "1" || app.requestSingleInstanceLock();
 
 if (!gotLock) {
   app.quit();
