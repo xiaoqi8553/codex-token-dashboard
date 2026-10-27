@@ -244,7 +244,7 @@ async function openPage(page, pageInfo) {
     });
   }
   if (pageInfo.view !== "overview") {
-    await target.locator(`[data-view="${pageInfo.view}"]`).click();
+    await target.locator(`.page-nav [data-view="${pageInfo.view}"]`).click();
     await page.waitForTimeout(450);
   }
   if (pageInfo.key === "settings-bridge") {

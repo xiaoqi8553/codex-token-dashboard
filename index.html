@@ -3321,6 +3321,48 @@
       html[data-host="desktop"] .side-rail { top: 10px; height: calc(100vh - 20px); }
     }
   </style>
+  <style id="codexbar-usage-design">
+    .codexbar-board { display: grid; gap: 12px; margin-bottom: 14px; }
+    .codexbar-hero { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(330px, .8fr); gap: 14px; padding: 20px; color: #f8fbff; background: linear-gradient(135deg, #101b2c 0%, #1b2d47 58%, #234b76 100%); border: 1px solid #2d4663; border-radius: 14px; box-shadow: 0 12px 26px rgba(16, 27, 44, .14); }
+    .codexbar-kicker { display: flex; align-items: center; gap: 9px; color: #a9c6ec; font: 700 10px/1.2 ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .14em; text-transform: uppercase; }
+    .codexbar-dot { width: 8px; height: 8px; border-radius: 50%; background: #56d2b2; box-shadow: 0 0 0 4px rgba(86, 210, 178, .15); }
+    .codexbar-hero h2 { margin: 16px 0 5px; color: #fff; font-size: clamp(28px, 3.3vw, 42px); letter-spacing: -.035em; }
+    .codexbar-hero p { margin: 0; max-width: 62ch; color: #bfd0e6; font-size: 12px; line-height: 1.65; }
+    .codexbar-hero-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 17px; }
+    .codexbar-hero-actions .btn { border-color: #426184; color: #fff; background: rgba(255, 255, 255, .08); }
+    .codexbar-hero-actions .btn:hover { background: rgba(255, 255, 255, .15); }
+    .codexbar-hero-stat { align-self: stretch; display: flex; flex-direction: column; justify-content: space-between; min-width: 0; padding: 16px; border: 1px solid rgba(183, 211, 239, .22); border-radius: 11px; background: rgba(8, 18, 32, .24); }
+    .codexbar-hero-stat > span { color: #a9c6ec; font-size: 11px; }
+    .codexbar-hero-stat strong { display: block; margin: 7px 0 5px; color: #fff; font-size: clamp(30px, 3vw, 44px); letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+    .codexbar-hero-stat small { color: #bfd0e6; font-size: 11px; }
+    .codexbar-window-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+    .codexbar-window { padding: 14px; border: 1px solid var(--line); border-radius: 11px; background: var(--panel); }
+    .codexbar-window-head { display: flex; justify-content: space-between; gap: 8px; color: var(--muted); font-size: 11px; }
+    .codexbar-window strong { display: block; margin: 9px 0 3px; color: var(--ink); font-size: 22px; font-variant-numeric: tabular-nums; }
+    .codexbar-window small { color: var(--muted); font-size: 10px; }
+    .codexbar-window-track { height: 5px; margin-top: 12px; overflow: hidden; border-radius: 8px; background: var(--panel-2); }
+    .codexbar-window-track i { display: block; height: 100%; border-radius: inherit; background: var(--official); }
+    .codexbar-window:nth-child(2) .codexbar-window-track i { background: var(--relay); }
+    .codexbar-window:nth-child(3) .codexbar-window-track i { background: var(--cache); }
+    .codexbar-providers { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+    .codexbar-provider { min-width: 0; padding: 15px; border: 1px solid var(--line); border-radius: 11px; background: var(--panel); }
+    .codexbar-provider-head { display: flex; align-items: center; gap: 9px; }
+    .codexbar-provider-icon { display: grid; place-items: center; width: 30px; height: 30px; flex: 0 0 auto; border-radius: 9px; color: #fff; background: var(--official); font: 700 12px ui-monospace, monospace; }
+    .codexbar-provider:nth-child(2) .codexbar-provider-icon { background: var(--relay); }
+    .codexbar-provider:nth-child(3) .codexbar-provider-icon { background: var(--unknown); }
+    .codexbar-provider-head strong { min-width: 0; overflow: hidden; color: var(--ink); text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+    .codexbar-provider-head span { margin-left: auto; color: var(--muted); font-size: 10px; white-space: nowrap; }
+    .codexbar-provider-total { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-top: 14px; }
+    .codexbar-provider-total strong { color: var(--ink); font-size: 24px; font-variant-numeric: tabular-nums; }
+    .codexbar-provider-total small { color: var(--muted); font-size: 10px; }
+    .codexbar-provider-track { height: 7px; margin-top: 10px; overflow: hidden; border-radius: 8px; background: var(--panel-2); }
+    .codexbar-provider-track i { display: block; height: 100%; border-radius: inherit; background: var(--official); }
+    .codexbar-provider:nth-child(2) .codexbar-provider-track i { background: var(--relay); }
+    .codexbar-provider:nth-child(3) .codexbar-provider-track i { background: var(--unknown); }
+    .codexbar-provider-foot { display: flex; justify-content: space-between; gap: 8px; margin-top: 9px; color: var(--muted); font-size: 10px; }
+    @media (max-width: 900px) { .codexbar-hero { grid-template-columns: 1fr; } .codexbar-providers { grid-template-columns: 1fr; } }
+    @media (max-width: 620px) { .codexbar-window-row { grid-template-columns: 1fr; } .codexbar-hero { padding: 16px; } .codexbar-hero h2 { font-size: 30px; } }
+  </style>
 </head>
 <body>
   <main class="app">
@@ -3354,7 +3396,7 @@
         </div>
         <div class="rail-version">
           <span>LOCAL-FIRST</span>
-          <strong>v1.0.0</strong>
+          <strong>v1.0.1</strong>
         </div>
       </div>
     </aside>
@@ -3451,6 +3493,8 @@
         </div>
       </article>
     </section>
+
+    <section class="overview-only" id="codexbarPanel" aria-live="polite"></section>
 
     <section class="filters shell" aria-label="筛选条件">
       <div class="filter-head">
@@ -3660,6 +3704,7 @@
       trendMode: document.querySelector("#trendMode"),
       ratioChart: document.querySelector("#ratioChart"),
       cacheTrendPanel: document.querySelector("#cacheTrendPanel"),
+      codexbarPanel: document.querySelector("#codexbarPanel"),
       ratioHint: document.querySelector("#ratioHint"),
       cacheTrendChart: document.querySelector("#cacheTrendChart"),
       viewPanel: document.querySelector("#viewPanel"),
@@ -6816,7 +6861,7 @@
                 <h2>设置 / 关于</h2>
                 <p class="muted">检查当前运行方式、隐私边界、版本和公开部署状态。</p>
               </div>
-              <span class="badge">版本 1.0.0</span>
+              <span class="badge">版本 1.0.1</span>
             </div>
             <div class="settings-grid">
               <div class="settings-card">
@@ -6915,8 +6960,100 @@
       `;
     }
 
+    function codexBarDate(daysAgo = 0) {
+      const date = new Date();
+      date.setHours(0, 0, 0, 0);
+      date.setDate(date.getDate() - daysAgo);
+      return date.toISOString().slice(0, 10);
+    }
+
+    function codexBarNextReset(kind) {
+      const reset = new Date();
+      reset.setHours(0, 0, 0, 0);
+      if (kind === "week") {
+        const daysUntilMonday = (8 - reset.getDay()) % 7 || 7;
+        reset.setDate(reset.getDate() + daysUntilMonday);
+      } else if (kind === "month") {
+        reset.setMonth(reset.getMonth() + 1, 1);
+      } else {
+        reset.setDate(reset.getDate() + 1);
+      }
+      return reset;
+    }
+
+    function codexBarCountdown(target) {
+      const seconds = Math.max(0, Math.floor((target.getTime() - Date.now()) / 1000));
+      const days = Math.floor(seconds / 86400);
+      const hours = Math.floor((seconds % 86400) / 3600);
+      const minutes = Math.floor((seconds % 3600) / 60);
+      if (days) return `${days}天 ${String(hours).padStart(2, "0")}小时`;
+      return `${String(hours).padStart(2, "0")}小时 ${String(minutes).padStart(2, "0")}分`;
+    }
+
+    function codexBarWindow(label, kind, days, allRecords, totalTokens) {
+      const from = codexBarDate(days - 1);
+      const records = allRecords.filter(record => record.date >= from);
+      const windowSummary = summarize(records);
+      const share = percent(windowSummary.totalTokens, totalTokens, 1);
+      return `
+        <article class="codexbar-window">
+          <div class="codexbar-window-head"><span>${label}</span><span>重置 ${codexBarCountdown(codexBarNextReset(kind))}</span></div>
+          <strong>${formatToken(windowSummary.totalTokens)}</strong>
+          <small>${formatInt(windowSummary.records)} 条记录 · 占累计 ${share}%</small>
+          <div class="codexbar-window-track"><i style="width:${Math.min(100, Math.max(0, share))}%"></i></div>
+        </article>
+      `;
+    }
+
+    function renderCodexBarBoard(summary) {
+      const labels = { official_plus: "Official Plus", relay: "Relay / 中转", unknown: "Unknown" };
+      const icons = { official_plus: "C", relay: "R", unknown: "?" };
+      const sourceGroups = ["official_plus", "relay", "unknown"].map(key => groupByKey(summary.bySource, key));
+      const allRecords = state.records || [];
+      const today = allRecords.filter(record => record.date === codexBarDate());
+      const todaySummary = summarize(today);
+      const topProvider = sourceGroups.reduce((best, group) => group.totalTokens > best.totalTokens ? group : best, sourceGroups[0]);
+      return `
+        <section class="codexbar-board" aria-label="CodexBar 用量总览">
+          <article class="codexbar-hero">
+            <div>
+              <div class="codexbar-kicker"><i class="codexbar-dot"></i>CodexBar / LOCAL USAGE</div>
+              <h2>每个 Token 窗口，都看得见。</h2>
+              <p>按提供方显示本地 Token 账本、窗口重置倒计时和实时同步状态。你的历史明细、项目归因和输出速度仍在下方保留。</p>
+              <div class="codexbar-hero-actions">
+                <button class="btn compact" type="button" data-view="details">查看明细</button>
+                <button class="btn compact" type="button" data-view="settings">提供方设置</button>
+                <span class="badge">${escapeHtml(labels[topProvider.key] || "本地账本")} 当前最高</span>
+              </div>
+            </div>
+            <div class="codexbar-hero-stat">
+              <span>今天 / LIVE</span>
+              <strong>${formatToken(todaySummary.totalTokens)}</strong>
+              <small>${formatInt(todaySummary.records)} 条记录 · ${formatInt(todaySummary.sessions)} 个会话 · ${todaySummary.outputTokens ? `输出 ${formatToken(todaySummary.outputTokens)}` : "等待今日输出"}</small>
+            </div>
+          </article>
+          <div class="codexbar-window-row">
+            ${codexBarWindow("Session window", "day", 1, allRecords, summary.totalTokens)}
+            ${codexBarWindow("7-day window", "week", 7, allRecords, summary.totalTokens)}
+            ${codexBarWindow("30-day window", "month", 30, allRecords, summary.totalTokens)}
+          </div>
+          <div class="codexbar-providers">
+            ${sourceGroups.map(group => `
+              <article class="codexbar-provider">
+                <div class="codexbar-provider-head"><i class="codexbar-provider-icon">${icons[group.key] || "?"}</i><strong>${labels[group.key] || "Unknown"}</strong><span>${formatInt(group.sessions)} sessions</span></div>
+                <div class="codexbar-provider-total"><strong>${formatToken(group.totalTokens)}</strong><small>${percent(group.totalTokens, summary.totalTokens, 1)}%</small></div>
+                <div class="codexbar-provider-track"><i style="width:${percent(group.totalTokens, summary.totalTokens, 1)}%"></i></div>
+                <div class="codexbar-provider-foot"><span>今日 ${formatToken(groupByKey(summarize(today).bySource, group.key).totalTokens)}</span><span>${formatInt(group.records)} records</span></div>
+              </article>
+            `).join("")}
+          </div>
+        </section>
+      `;
+    }
+
     function renderOverview(summary) {
       const modelMax = summary.byModel[0]?.totalTokens || 1;
+      els.codexbarPanel.innerHTML = renderCodexBarBoard(summary);
       els.viewPanel.innerHTML = `
         <section class="content-grid">
           <article class="panel">
@@ -7246,7 +7383,7 @@
       const summary = summarize(safeRecords.map(record => ({ ...record, activeTokens: activeTokens(record), uncachedInputTokens: uncachedInputTokens(record), hitRate: cacheHitRateOf(record) })));
       return {
         snapshotVersion: 1,
-        appVersion: "1.0.0",
+        appVersion: "1.0.1",
         generatedAt: new Date().toISOString(),
         privacy: {
           anonymized: true,

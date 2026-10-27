@@ -1344,6 +1344,7 @@ async function apiDesktopStatus(url) {
   const today = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
   const totals = { totalTokens: 0, inputTokens: 0, cachedInputTokens: 0, outputTokens: 0, records: 0 };
   const todayTotals = { totalTokens: 0, outputTokens: 0, records: 0 };
+  const providers = {};
   const sessions = new Set();
   for (const record of index.records) {
     totals.totalTokens += record.totalTokens;
@@ -1352,10 +1353,15 @@ async function apiDesktopStatus(url) {
     totals.outputTokens += record.outputTokens;
     totals.records += 1;
     sessions.add(record.sessionId);
+    const providerKey = record.source || "unknown";
+    if (!providers[providerKey]) providers[providerKey] = { key: providerKey, totalTokens: 0, todayTokens: 0, records: 0 };
+    providers[providerKey].totalTokens += record.totalTokens;
+    providers[providerKey].records += 1;
     if (record.date === today) {
       todayTotals.totalTokens += record.totalTokens;
       todayTotals.outputTokens += record.outputTokens;
       todayTotals.records += 1;
+      providers[providerKey].todayTokens += record.totalTokens;
     }
   }
   return {
@@ -1364,7 +1370,8 @@ async function apiDesktopStatus(url) {
     sessions: sessions.size,
     estimatedRecords: index.records.reduce((count, record) => count + Number(Boolean(record.estimated)), 0),
     totals,
-    today: todayTotals
+    today: todayTotals,
+    providers: Object.values(providers).sort((a, b) => b.totalTokens - a.totalTokens)
   };
 }
 

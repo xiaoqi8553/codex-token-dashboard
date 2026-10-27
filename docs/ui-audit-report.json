@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-27T11:20:01.832Z",
+  "generatedAt": "2026-10-27T12:55:53.312Z",
   "baseUrl": "http://127.0.0.1:8787",
   "screenshotsDir": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current",
   "pages": [
@@ -1328,7 +1328,7 @@
         "charts": [
           {
             "selector": ".task-layout",
-            "height": 1356.5625,
+            "height": 1341.71875,
             "hasGraphic": true,
             "hasEmpty": true
           }

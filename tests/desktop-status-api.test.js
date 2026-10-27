@@ -67,6 +67,10 @@ test("desktop status endpoint exposes compact local and cumulative token totals"
     assert.equal(status.totals.outputTokens, 20);
     assert.equal(status.today.totalTokens, 100);
     assert.equal(status.today.outputTokens, 20);
+    assert.deepEqual(status.providers.map(provider => provider.key), ["official_plus"]);
+    assert.equal(status.providers[0].totalTokens, 100);
+    assert.equal(status.providers[0].todayTokens, 100);
+    assert.equal(status.providers[0].records, 1);
     assert.equal(status.sessions, 1);
     assert.equal("records" in status, false);
     assert.equal("calendarRecords" in status, false);

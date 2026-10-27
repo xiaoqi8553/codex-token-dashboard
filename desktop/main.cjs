@@ -231,8 +231,16 @@ if (!gotLock) {
       ? `Codex Token · 今日 ${formatTokens(data.today?.totalTokens)} · 累计 ${formatTokens(data.totals?.totalTokens)}`
       : startupError || "Codex Token · 正在等待用量数据";
     tray.setToolTip(tooltip.slice(0, 127));
+    const providerLabels = { official_plus: "Official Plus", relay: "Relay", unknown: "Unknown" };
+    const providerItems = (data?.providers || []).slice(0, 4).flatMap(provider => [
+      { label: `${providerLabels[provider.key] || provider.key}  ${formatTokens(provider.totalTokens)}`, enabled: false },
+      { label: `  今日 ${formatTokens(provider.todayTokens)} · ${provider.records.toLocaleString("zh-CN")} 条记录`, enabled: false }
+    ]);
     tray.setContextMenu(Menu.buildFromTemplate([
       { label: "打开 Codex Token", click: showWindow },
+      { type: "separator" },
+      { label: "CodexBar 用量速览", enabled: false },
+      ...providerItems,
       { type: "separator" },
       { label: `今日用量：${formatTokens(data?.today?.totalTokens)} tokens`, enabled: false },
       { label: `累计用量：${formatTokens(data?.totals?.totalTokens)} tokens`, enabled: false },

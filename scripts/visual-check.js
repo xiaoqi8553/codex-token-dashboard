@@ -110,7 +110,7 @@ async function ensureServer() {
 async function clickView(page, view) {
   await page.goto(baseUrl, { waitUntil: "networkidle" });
   if (view !== "overview") {
-    await page.locator(`[data-view="${view}"]`).click();
+    await page.locator(`.page-nav [data-view="${view}"]`).click();
     await page.waitForTimeout(350);
   }
 }
