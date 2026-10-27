@@ -7,9 +7,11 @@ const childProcess = require("child_process");
 const { parseSnapshotProcessOutput, safeAccountName } = require("./scripts/account-snapshot-process");
 
 const ROOT = __dirname;
-const DATA_DIR = path.join(ROOT, "data");
+const USER_DATA_DIR = process.env.CODEX_TOKEN_DASHBOARD_USER_DATA_DIR || ROOT;
+const DATA_DIR = path.resolve(process.env.CODEX_TOKEN_DASHBOARD_DATA_DIR || path.join(ROOT, "data"));
 const IMPORT_DIR = path.join(DATA_DIR, "imports");
 const INDEX_PATH = path.join(DATA_DIR, "usage-index.json");
+const CONFIG_PATH = path.join(USER_DATA_DIR, "config.json");
 const UsageAccounting = require("./usage-accounting");
 const OutputSpeed = require("./output-speed");
 const SessionFiles = require("./session-files");
@@ -69,7 +71,7 @@ function envString(name, fallback) {
 }
 
 function loadConfig() {
-  const fileConfig = readJsonIfExists(path.join(ROOT, "config.json"));
+  const fileConfig = readJsonIfExists(CONFIG_PATH);
   const publicAccess = envBool("PUBLIC_ACCESS", Boolean(fileConfig.allowPublicAccess));
   return {
     sessionsDir: envString("CODEX_SESSIONS_DIR", envString("SESSIONS_DIR", fileConfig.sessionsDir || "")),
@@ -1336,6 +1338,36 @@ async function apiUsage(url) {
   });
 }
 
+async function apiDesktopStatus(url) {
+  const index = await getUsageIndex({ force: url.searchParams.get("force") === "1" });
+  const now = new Date();
+  const today = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+  const totals = { totalTokens: 0, inputTokens: 0, cachedInputTokens: 0, outputTokens: 0, records: 0 };
+  const todayTotals = { totalTokens: 0, outputTokens: 0, records: 0 };
+  const sessions = new Set();
+  for (const record of index.records) {
+    totals.totalTokens += record.totalTokens;
+    totals.inputTokens += record.inputTokens;
+    totals.cachedInputTokens += record.cachedInputTokens;
+    totals.outputTokens += record.outputTokens;
+    totals.records += 1;
+    sessions.add(record.sessionId);
+    if (record.date === today) {
+      todayTotals.totalTokens += record.totalTokens;
+      todayTotals.outputTokens += record.outputTokens;
+      todayTotals.records += 1;
+    }
+  }
+  return {
+    ok: true,
+    updatedAt: index.updatedAt,
+    sessions: sessions.size,
+    estimatedRecords: index.records.reduce((count, record) => count + Number(Boolean(record.estimated)), 0),
+    totals,
+    today: todayTotals
+  };
+}
+
 function sanitizeRecord(record) {
   if (!PUBLIC_ACCESS && !ANONYMIZE_DATA) return record;
   return {
@@ -1496,6 +1528,7 @@ const server = http.createServer(async (req, res) => {
       }, 200, notionDashboardCorsHeaders(req, url));
     }
     if (req.method === "GET" && url.pathname === "/api/usage") return sendJson(res, await apiUsage(url), 200, notionDashboardCorsHeaders(req, url));
+    if (req.method === "GET" && url.pathname === "/api/desktop/status") return sendJson(res, await apiDesktopStatus(url), 200, notionDashboardCorsHeaders(req, url));
     if (req.method === "GET" && url.pathname === "/api/index") {
       if (PUBLIC_ACCESS) return sendJson(res, { ok: false, error: "Raw index is disabled in public access mode." }, 403);
       return sendJson(res, indexCache || loadIndex());

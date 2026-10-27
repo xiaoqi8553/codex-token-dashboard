@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-26T02:58:26.143Z",
+  "generatedAt": "2026-10-27T11:20:01.832Z",
   "baseUrl": "http://127.0.0.1:8787",
   "screenshotsDir": "C:\\Users\\10242\\Documents\\Codex\\2026-05-29\\html-codex-token-codex-plus-token\\docs\\screenshots\\current",
   "pages": [
@@ -153,7 +153,7 @@
             "hasEmpty": true
           }
         ],
-        "cards": 16,
+        "cards": 15,
         "h1Count": 1,
         "activeNav": "03任务复盘",
         "kpiBaselineDrift": 0,
@@ -743,7 +743,7 @@
             "hasEmpty": true
           }
         ],
-        "cards": 16,
+        "cards": 15,
         "h1Count": 1,
         "activeNav": "03任务复盘",
         "kpiBaselineDrift": 0,
@@ -1328,12 +1328,12 @@
         "charts": [
           {
             "selector": ".task-layout",
-            "height": 1424.5625,
+            "height": 1356.5625,
             "hasGraphic": true,
             "hasEmpty": true
           }
         ],
-        "cards": 16,
+        "cards": 15,
         "h1Count": 1,
         "activeNav": "03任务复盘",
         "kpiBaselineDrift": 0,

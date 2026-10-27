@@ -3,7 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Codex Token Console</title>
+  <title>Codex Token</title>
+  <script>if (new URLSearchParams(location.search).get("desktop") === "1") document.documentElement.dataset.host = "desktop";</script>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23111827'/%3E%3Cpath d='M18 22l10 10-10 10' fill='none' stroke='%23f8fafc' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M32 43h14' stroke='%232f6fed' stroke-width='5' stroke-linecap='round'/%3E%3C/svg%3E">
   <style>
     :root {
@@ -3300,6 +3301,26 @@
       .speed-empty { padding: 16px; }
     }
   </style>
+  <style id="desktop-shell-design">
+    html[data-host="desktop"] body { min-width: 0; background: #edf1f6; }
+    html[data-host="desktop"] .app { width: 100%; max-width: none; min-height: 100vh; padding: 14px; grid-template-columns: 224px minmax(0, 1fr); gap: 14px; }
+    html[data-host="desktop"] .side-rail { position: sticky; top: 14px; height: calc(100vh - 28px); border-radius: 14px; }
+    html[data-host="desktop"] .workspace { min-width: 0; gap: 14px; }
+    html[data-host="desktop"] .header { min-height: 96px; border-radius: 14px; padding: 17px 22px; }
+    html[data-host="desktop"] .panel,
+    html[data-host="desktop"] .metric-card,
+    html[data-host="desktop"] .filter-panel,
+    html[data-host="desktop"] .shell { border-radius: 14px; }
+    html[data-host="desktop"] .brand-caption { letter-spacing: .12em; }
+    html[data-host="desktop"] .view-tabs button { min-height: 42px; border-radius: 10px; }
+    html[data-host="desktop"] .view-tabs button > span { min-width: 27px; height: 26px; border-radius: 7px; }
+    html[data-host="desktop"] .metric-card { box-shadow: 0 2px 8px rgba(24, 42, 66, .035); }
+    html[data-host="desktop"] .header .view-description { margin-top: 5px; }
+    @media (max-width: 1020px) {
+      html[data-host="desktop"] .app { grid-template-columns: 188px minmax(0, 1fr); padding: 10px; gap: 10px; }
+      html[data-host="desktop"] .side-rail { top: 10px; height: calc(100vh - 20px); }
+    }
+  </style>
 </head>
 <body>
   <main class="app">
@@ -3333,7 +3354,7 @@
         </div>
         <div class="rail-version">
           <span>LOCAL-FIRST</span>
-          <strong>v0.10.2</strong>
+          <strong>v1.0.0</strong>
         </div>
       </div>
     </aside>
@@ -6795,7 +6816,7 @@
                 <h2>设置 / 关于</h2>
                 <p class="muted">检查当前运行方式、隐私边界、版本和公开部署状态。</p>
               </div>
-              <span class="badge">版本 0.10.2</span>
+              <span class="badge">版本 1.0.0</span>
             </div>
             <div class="settings-grid">
               <div class="settings-card">
@@ -7225,7 +7246,7 @@
       const summary = summarize(safeRecords.map(record => ({ ...record, activeTokens: activeTokens(record), uncachedInputTokens: uncachedInputTokens(record), hitRate: cacheHitRateOf(record) })));
       return {
         snapshotVersion: 1,
-        appVersion: "0.10.2",
+        appVersion: "1.0.0",
         generatedAt: new Date().toISOString(),
         privacy: {
           anonymized: true,

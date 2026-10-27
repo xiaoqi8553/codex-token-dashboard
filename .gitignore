@@ -19,8 +19,8 @@ config.json
 
 # Dependency and OS noise
 node_modules/
-package-lock.json
 dist/
+release/
 *.zip
 docs/screenshots/current/
 .DS_Store

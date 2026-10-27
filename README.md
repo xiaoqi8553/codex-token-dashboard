@@ -7,7 +7,7 @@
 ![Codex Token Dashboard cover](screenshots/project-cover.svg)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-0f766e.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.10.2-17202e.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.0.0-17202e.svg)](CHANGELOG.md)
 [![OpenAI Sites](https://img.shields.io/badge/deploy-OpenAI%20Sites-275dcc.svg)](https://codex-token-dashboard.hazel-saepemx.chatgpt.site)
 [![Netlify Demo](https://img.shields.io/badge/demo-codetoken.netlify.app-2f6fed.svg)](https://codetoken.netlify.app/)
 [![GitHub Pages](https://img.shields.io/badge/pages-github.io-111827.svg)](https://xiaoqi8553.github.io/codex-token-dashboard/)
@@ -63,19 +63,28 @@ http://127.0.0.1:8787
 
 ### npm 启动
 
-### Windows `.exe` 可行性评估
+### Windows 桌面应用
 
-可行，但当前项目不能简单把 `start-dashboard.bat` 改名为 `.exe`。它现在是“浏览器前端 + 本地 Node 服务”的结构，本地服务会读取 `~/.codex/sessions`、写入 `data/usage-index.json`，精确来源诊断模式还会调用 Python 读取 `logs_2.sqlite`。
+V1.0 提供 Windows 原生窗口和系统托盘，托盘可查看今日/累计/输出 Token、手动同步、打开看板和设置登录启动。关闭窗口默认收至托盘；从托盘退出时会结束由桌面应用启动的数据服务。首次扫描期间窗口会显示启动状态，扫描与统计仍由项目现有 `server.js` 完成。
 
-面向大众发布 Windows 应用时，推荐先采用 Electron：主进程启动现有本地服务，渲染进程打开 `127.0.0.1` 页面，使用 `electron-builder` 生成安装包。这样可以最大程度复用当前已经验证的导入、刷新和统计逻辑。正式打包前必须完成以下工程化改造：
+桌面版参考 CodexBar 的轻量托盘入口和用量速览，但针对 Windows 和本项目已有的历史账本重新组织：保留 Token 日历、来源归因、任务/项目复盘、输出速度、明细审计、导入导出、账号快照及 Notion 本机同步，不替换或重写解析统计核心。
 
-- 将索引、导入文件和日志迁移到 `%APPDATA%\\Codex Token Dashboard`，避免安装目录不可写。
-- 把 Node 服务生命周期交给桌面主进程管理，处理端口占用、退出清理、崩溃提示和升级迁移。
-- 将 Python/SQLite 精确诊断改为内置 Node SQLite 能力，或明确把它作为可选诊断组件，避免用户额外安装 Python。
-- 增加首次启动向导、sessions 目录选择、数据权限说明、导入进度、失败重试和卸载保留数据选项。
-- 对安装包做 Windows Defender、无管理员权限、离线启动、不同用户名路径和大目录导入测试，并为发布包签名。
+#### 运行与打包
 
-因此，0.7.2 可以作为稳定的 Web / 本地 Node 版本继续使用；`.exe` 是下一阶段的发布形态，技术上没有阻塞，但需要单独做桌面壳和本地运行时工程，不能只做前端压缩打包。
+```bash
+npm install
+npm run start:desktop
+```
+
+生成 Windows 安装程序：
+
+```bash
+npm run desktop:build
+```
+
+安装包位于 `release/desktop/`。用户运行安装包后无需另外安装 Node.js；应用默认读取 `~/.codex/sessions`，本地索引、导入文件、设置和日志存放在 Windows 用户数据目录。首次启动会迁移仓库 `data/` 和 `config.json`（若存在），卸载应用默认保留这些数据。桌面版与浏览器版可共用本机 8787–8789 服务。
+
+`npm run desktop:dir` 可生成免安装目录，适合本机验证。构建应用需要联网获取 Electron / Windows 安装包工具。未签名安装包可能显示 Windows SmartScreen 提示。
 
 ```bash
 npm start
