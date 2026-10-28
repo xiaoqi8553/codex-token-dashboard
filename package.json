@@ -26,7 +26,8 @@
     "visual:test": "node scripts/visual-check.js --test",
     "ui:shot": "node scripts/ui-review.js --shot",
     "ui:audit": "node scripts/ui-review.js --audit",
-    "ui:report": "node scripts/ui-review.js --report"
+    "ui:report": "node scripts/ui-review.js --report",
+    "desktop:shortcut": "electron scripts/make-desktop-shortcut.cjs"
   },
   "engines": {
     "node": ">=18"

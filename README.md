@@ -105,6 +105,14 @@ npm run desktop:build
 
 `npm run desktop:dir` 可生成免安装目录，适合本机验证。构建应用需要联网获取 Electron / Windows 安装包工具。未签名安装包可能显示 Windows SmartScreen 提示。
 
+免安装目录生成后，可在桌面创建快捷方式：
+
+```bash
+npm run desktop:shortcut
+```
+
+默认指向 `release/desktop/win-unpacked/Codex Token.exe`；如需指向其他位置，追加 `-- --target "D:\path\Codex Token.exe"`。该脚本走 Electron 原生 `shell.writeShortcutLink`，不依赖 WScript.Shell COM，因此在受限环境下同样可用。
+
 ```bash
 npm start
 ```
