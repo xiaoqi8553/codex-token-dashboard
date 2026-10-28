@@ -486,6 +486,8 @@ class CodexStore {
         inputTokens: Math.max(0, bucket.inputTokens),
         cachedInputTokens: Math.max(0, bucket.cachedInputTokens),
         outputTokens: Math.max(0, bucket.outputTokens),
+        // 历史索引里没有推理 token 字段，缺失时按 0 处理
+        reasoningOutputTokens: Math.max(0, bucket.reasoningOutputTokens || 0),
         records: Math.max(0, bucket.records)
       });
     }
