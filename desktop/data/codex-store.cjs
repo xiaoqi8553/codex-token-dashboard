@@ -18,8 +18,13 @@ const fsp = require("node:fs/promises");
 const path = require("node:path");
 
 const CACHE_VERSION = 3;
+const DETAIL_CACHE_VERSION = 2;
 const TAIL_BYTES = 8 * 1024 * 1024;
 const FAST_FILE_COUNT = 3;
+/** 明细扫描的分块大小：大文件流式读，不整块进内存 */
+const SCAN_CHUNK_BYTES = 8 * 1024 * 1024;
+/** 小时分布的统计窗口（天），避免缓存文件无限膨胀 */
+const HOUR_WINDOW_DAYS = 13;
 const EMPTY_BUCKET = () => ({
   inputTokens: 0,
   cachedInputTokens: 0,
@@ -46,6 +51,13 @@ function dayKeyFromTimestamp(value) {
   const date = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(date.getTime())) return null;
   return dayKeyOf(date);
+}
+
+/** 从工作目录推断项目名（取最后一段路径） */
+function projectNameOf(cwd) {
+  if (!cwd) return null;
+  const parts = String(cwd).split(/[\\/]+/).filter(Boolean);
+  return parts.length ? parts[parts.length - 1] : null;
 }
 
 function addToBucket(bucket, usage, sign) {
@@ -132,6 +144,14 @@ class CodexStore {
   constructor(options = {}) {
     this.sessionsDir = options.sessionsDir;
     this.cacheFile = options.cacheFile;
+    /** 明细扫描结果单独缓存，与轻量索引互不影响 */
+    this.detailFile = options.detailCacheFile || null;
+    /** @type {Map<string, {size:number,mtimeMs:number,detail:object|null}>} */
+    this.detailFiles = new Map();
+    this.detailBuiltAt = null;
+    this._detailPromise = null;
+    /** 旧版索引沉淀下来的历史（日志已被清理的那部分），按天聚合 */
+    this.baseline = options.baseline || null;
     /** @type {Map<string, {size:number,mtimeMs:number,offset:number,sessionTotal:object|null,days:Map<string,object>,full:boolean}>} */
     this.files = new Map();
     /** @type {Map<string, object>} */
@@ -264,7 +284,12 @@ class CodexStore {
 
     let startOffset = 0;
     let truncatedFromTail = false;
-    if (existing && existing.offset && info.size >= existing.offset) {
+    if (effectiveFull && !priorFull) {
+      // 从「尾部快照」升级到「全量」：必须从头重读。
+      // 否则 offset 已指向文件末尾，会被下面的 size 判断直接跳过，
+      // 文件前半段的用量将永远统计不到。
+      startOffset = 0;
+    } else if (existing && existing.offset && info.size >= existing.offset) {
       startOffset = existing.offset;
     } else if (!effectiveFull) {
       startOffset = Math.max(0, info.size - tailBytes);
@@ -425,6 +450,27 @@ class CodexStore {
 
   // -- 输出 --------------------------------------------------------------
 
+  /**
+   * 某一天的最终桶：磁盘日志与历史索引按天取大者。
+   * 两边扫的是同一批 rollout，同一天的数据只会重叠、不会互补，所以取大者
+   * 既能补上被清理的历史，又不会把同一天算两遍。
+   */
+  mergedDay(key) {
+    const logDay = this.daily.get(key) || null;
+    const baseDay = this.baseline && this.baseline.days ? this.baseline.days[key] : null;
+    if (!baseDay || !baseDay.totalTokens) return logDay;
+    if (!logDay) return baseDay;
+    return (baseDay.totalTokens || 0) > (logDay.totalTokens || 0) ? baseDay : logDay;
+  }
+
+  mergedDayKeys() {
+    const keys = new Set(this.daily.keys());
+    if (this.baseline && this.baseline.days) {
+      for (const key of Object.keys(this.baseline.days)) keys.add(key);
+    }
+    return keys;
+  }
+
   bucketsSince(days) {
     const out = [];
     const today = new Date();
@@ -433,7 +479,7 @@ class CodexStore {
       const date = new Date(today);
       date.setDate(date.getDate() - offset);
       const key = dayKeyOf(date);
-      const bucket = this.daily.get(key) || zeroBucket();
+      const bucket = this.mergedDay(key) || zeroBucket();
       out.push({
         day: key,
         totalTokens: Math.max(0, bucket.totalTokens),
@@ -448,8 +494,10 @@ class CodexStore {
 
   totals() {
     const sum = zeroBucket();
-    for (const bucket of this.daily.values()) {
-      for (const key of Object.keys(sum)) sum[key] += Math.max(0, bucket[key] || 0);
+    for (const key of this.mergedDayKeys()) {
+      const bucket = this.mergedDay(key);
+      if (!bucket) continue;
+      for (const field of Object.keys(sum)) sum[field] += Math.max(0, bucket[field] || 0);
     }
     // 会话累计以 session 日志里的 total_token_usage 为准（更接近 Codex 内部口径）
     let sessionTotal = null;
@@ -473,8 +521,20 @@ class CodexStore {
     };
   }
 
+  baselineMeta() {
+    const baseline = this.baseline;
+    if (!baseline || !baseline.days) return null;
+    return {
+      days: Object.keys(baseline.days).length,
+      records: baseline.records || 0,
+      totalTokens: baseline.totalTokens || 0,
+      sessions: Object.keys(baseline.sessions || {}).length,
+      builtAt: baseline.builtAt || null
+    };
+  }
+
   snapshot() {
-    const { totals, sessionTotals } = this.totals();
+    const { totals } = this.totals();
     const series = this.bucketsSince(14);
     const todayKey = dayKeyOf(new Date());
     const today = series.find(item => item.day === todayKey) || zeroBucket();
@@ -482,20 +542,28 @@ class CodexStore {
     yesterdayDate.setDate(yesterdayDate.getDate() - 1);
     const yesterday = series.find(item => item.day === dayKeyOf(yesterdayDate)) || zeroBucket();
 
+    const legacy = this.baselineMeta();
+
     return {
       ok: true,
       source: "codex-store",
       phase: this.phase,
       updatedAt: this.lastBuiltAt,
       lastEventAt: this.lastEventAt,
-      sessions: this.sessionCount,
+      // 会话数取「磁盘文件数」与「历史索引会话数」的较大者：
+      // 索引里的 223 个会话覆盖了磁盘上已清理的那部分
+      sessions: Math.max(this.sessionCount || 0, legacy ? legacy.sessions : 0),
+      // 累计口径：按每轮 last_token_usage 逐条累加，再与历史索引按天取大者合并。
+      // 不能用各会话 total_token_usage 相加——续跑（resume）会生成新会话文件，
+      // 其 total 携带了此前的累计值，相加会把历史用量重复计算。
       totals: {
-        inputTokens: sessionTotals.inputTokens || totals.inputTokens,
-        cachedInputTokens: sessionTotals.cachedInputTokens || totals.cachedInputTokens,
-        outputTokens: sessionTotals.outputTokens || totals.outputTokens,
-        totalTokens: sessionTotals.totalTokens || totals.totalTokens,
+        inputTokens: totals.inputTokens,
+        cachedInputTokens: totals.cachedInputTokens,
+        outputTokens: totals.outputTokens,
+        totalTokens: totals.totalTokens,
         records: totals.records
       },
+      baseline: legacy,
       today,
       yesterday,
       series,
@@ -537,11 +605,529 @@ class CodexStore {
     this.saveCache();
     return this.snapshot();
   }
+
+  // ---------------------------------------------------------------------
+  // 明细扫描：模型 / 项目 / 会话 / 小时分布
+  //
+  // 与 buildFast/buildFull 相互独立：那两条路径只为弹窗提供「今日常用」的
+  // 聚合桶，信息粒度到天为止；完整看板需要按模型、按项目、按会话拆分，
+  // 因此单独做一次全量流式扫描，结果按文件签名增量缓存。
+  // ---------------------------------------------------------------------
+
+  detailCacheFile() {
+    return this.detailFile || null;
+  }
+
+  loadDetailCache() {
+    const file = this.detailCacheFile();
+    if (!file) return false;
+    try {
+      const data = JSON.parse(fs.readFileSync(file, "utf8"));
+      if (!data || data.version !== DETAIL_CACHE_VERSION) return false;
+      this.detailFiles = new Map();
+      for (const entry of data.files || []) {
+        this.detailFiles.set(entry.path, {
+          size: Number(entry.size) || 0,
+          mtimeMs: Number(entry.mtimeMs) || 0,
+          detail: entry.detail || null
+        });
+      }
+      return this.detailFiles.size > 0;
+    } catch {
+      return false;
+    }
+  }
+
+  saveDetailCache() {
+    const file = this.detailCacheFile();
+    if (!file) return;
+    try {
+      fs.mkdirSync(path.dirname(file), { recursive: true });
+      fs.writeFileSync(file, JSON.stringify({
+        version: DETAIL_CACHE_VERSION,
+        savedAt: new Date().toISOString(),
+        files: [...this.detailFiles.entries()].map(([filePath, entry]) => ({
+          path: filePath,
+          size: entry.size,
+          mtimeMs: entry.mtimeMs,
+          detail: entry.detail
+        }))
+      }), "utf8");
+    } catch {
+      /* 缓存失败不影响功能 */
+    }
+  }
+
+  /**
+   * 流式读取单个会话文件，提取明细。
+   * 分块读取 + 保留未完结行的 Buffer，避免大文件整块进内存，也避免
+   * 多字节字符被块边界切断。
+   */
+  async scanFileDetail(filePath, size, onLine) {
+    const handle = await fsp.open(filePath, "r");
+    try {
+      let remainder = Buffer.alloc(0);
+      let position = 0;
+      while (position < size) {
+        const length = Math.min(SCAN_CHUNK_BYTES, size - position);
+        const chunk = Buffer.allocUnsafe(length);
+        const { bytesRead } = await handle.read(chunk, 0, length, position);
+        if (!bytesRead) break;
+        position += bytesRead;
+
+        const joined = remainder.length ? Buffer.concat([remainder, chunk.subarray(0, bytesRead)]) : chunk.subarray(0, bytesRead);
+        const lastBreak = joined.lastIndexOf(0x0a);
+        if (lastBreak === -1) {
+          remainder = Buffer.from(joined);
+          continue;
+        }
+        const body = joined.subarray(0, lastBreak);
+        remainder = Buffer.from(joined.subarray(lastBreak + 1));
+        onLine(body.toString("utf8"));
+      }
+      if (remainder.length) onLine(remainder.toString("utf8"));
+    } finally {
+      await handle.close();
+    }
+  }
+
+  /** 创建单文件明细累加器：feeds 分块文本，finish() 返回结果 */
+  createDetailBuilder(filePath) {
+    const detail = {
+      file: filePath,
+      sessionId: null,
+      cwd: null,
+      project: null,
+      source: null,
+      originator: null,
+      cliVersion: null,
+      firstAt: null,
+      lastAt: null,
+      tokens: zeroBucket(),
+      /** Codex 自己维护的线程累计（total_token_usage 的最大值） */
+      sessionTotal: 0,
+      models: {},
+      modelDays: {},
+      days: {},
+      hours: {},
+      quota: null
+    };
+    let currentModel = null;
+    const hourFloor = Date.now() - HOUR_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+
+    const feed = text => {
+      for (const line of text.split("\n")) {
+        if (line.length < 24) continue;
+
+        if (line.indexOf('"session_meta"') !== -1) {
+          try {
+            const payload = JSON.parse(line).payload;
+            if (payload) {
+              detail.sessionId = payload.session_id || payload.id || detail.sessionId;
+              detail.cwd = payload.cwd || detail.cwd;
+              detail.source = payload.source || detail.source;
+              detail.originator = payload.originator || detail.originator;
+              detail.cliVersion = payload.cli_version || detail.cliVersion;
+              if (!detail.firstAt && payload.timestamp) detail.firstAt = payload.timestamp;
+            }
+          } catch {
+            /* 单行损坏跳过 */
+          }
+          continue;
+        }
+
+        if (line.indexOf('"turn_context"') !== -1) {
+          try {
+            const payload = JSON.parse(line).payload;
+            const settings = payload && payload.collaboration_mode && payload.collaboration_mode.settings;
+            const model = payload && (payload.model || (settings && settings.model));
+            if (model) currentModel = model;
+            if (payload && payload.cwd && !detail.cwd) detail.cwd = payload.cwd;
+          } catch {
+            /* ignore */
+          }
+          continue;
+        }
+
+        if (line.indexOf("token_count") === -1) continue;
+        let event;
+        try {
+          event = JSON.parse(line);
+        } catch {
+          continue;
+        }
+        const payload = event.payload;
+        if (!payload || payload.type !== "token_count") continue;
+
+        const stamp = event.timestamp || payload.timestamp || null;
+        if (stamp) {
+          if (!detail.firstAt || stamp < detail.firstAt) detail.firstAt = stamp;
+          if (!detail.lastAt || stamp > detail.lastAt) detail.lastAt = stamp;
+        }
+
+        if (payload.info && payload.info.last_token_usage) {
+          const usage = payload.info.last_token_usage;
+          addToBucket(detail.tokens, usage, 1);
+
+          // 同时记下线程累计：这是 Codex 自己的账，包含已被清理的早期历史
+          const runningTotal = payload.info.total_token_usage && Number(payload.info.total_token_usage.total_tokens);
+          if (runningTotal && runningTotal > detail.sessionTotal) detail.sessionTotal = runningTotal;
+
+          const model = currentModel || "unknown";
+          if (!detail.models[model]) detail.models[model] = zeroBucket();
+          addToBucket(detail.models[model], usage, 1);
+
+          const date = stamp ? new Date(stamp) : new Date();
+          if (!Number.isNaN(date.getTime())) {
+            const day = dayKeyOf(date);
+            if (!detail.days[day]) detail.days[day] = zeroBucket();
+            addToBucket(detail.days[day], usage, 1);
+
+            // 按天×模型留一份，供看板切换时间范围时重算模型占比
+            if (!detail.modelDays[day]) detail.modelDays[day] = {};
+            if (!detail.modelDays[day][model]) detail.modelDays[day][model] = zeroBucket();
+            addToBucket(detail.modelDays[day][model], usage, 1);
+
+            if (date.getTime() >= hourFloor) {
+              const hourKey = `${day}T${pad2(date.getHours())}`;
+              detail.hours[hourKey] = (detail.hours[hourKey] || 0) + (usage.total_tokens || 0);
+            }
+          }
+        }
+
+        if (payload.rate_limits) {
+          const normalized = normalizeRateLimits(payload.rate_limits, stamp);
+          if (normalized && (!detail.quota || !stamp || !detail.quota.sampledAt || stamp >= detail.quota.sampledAt)) {
+            detail.quota = normalized;
+          }
+        }
+      }
+    };
+
+    return {
+      feed,
+      finish() {
+        detail.project = projectNameOf(detail.cwd);
+        return detail;
+      }
+    };
+  }
+
+  /** 全量明细扫描（增量：按 size/mtime 跳过未变更文件） */
+  async buildDetail({ onProgress } = {}) {
+    if (this._detailPromise) return this._detailPromise;
+    this._detailPromise = (async () => {
+      const files = await this.listSessionFiles();
+      this.sessionCount = files.length;
+      let index = 0;
+      let changed = false;
+      for (const info of files) {
+        index += 1;
+        if (onProgress) onProgress({ index, total: files.length, name: path.basename(info.path) });
+        const existing = this.detailFiles.get(info.path);
+        if (existing && existing.size === info.size && existing.mtimeMs === info.mtimeMs && existing.detail) continue;
+        try {
+          const builder = this.createDetailBuilder(info.path);
+          await this.scanFileDetail(info.path, info.size, builder.feed);
+          this.detailFiles.set(info.path, {
+            size: info.size,
+            mtimeMs: info.mtimeMs,
+            detail: builder.finish()
+          });
+          changed = true;
+        } catch {
+          /* 单个文件读取失败继续 */
+        }
+      }
+      if (changed || !this.detailBuiltAt) this.detailBuiltAt = new Date().toISOString();
+      if (changed) this.saveDetailCache();
+      return this.detailSnapshot();
+    })();
+    try {
+      return await this._detailPromise;
+    } finally {
+      this._detailPromise = null;
+    }
+  }
+
+  detailSnapshot() {
+    /** 按 session_id 合并：续跑会为同一会话生成多个 rollout 文件 */
+    const sessionsById = new Map();
+    const models = new Map();
+    const projects = new Map();
+    const days = new Map();
+    /** @type {Record<string, Record<string, object>>} 天 → 模型 → 桶 */
+    const modelDays = {};
+    /** @type {Record<string, Record<string, object>>} 天 → 项目 → 桶 */
+    const projectDays = {};
+    const hours = new Array(24).fill(0);
+    /** @type {Record<string, number[]>} 天 → 24 小时桶，用于「昨日同期」这类对比 */
+    const dailyHours = {};
+    const sum = zeroBucket();
+
+    const todayKey = dayKeyOf(new Date());
+    const hourFloor = Date.now() - 7 * 24 * 60 * 60 * 1000;
+
+    for (const entry of this.detailFiles.values()) {
+      const detail = entry.detail;
+      if (!detail) continue;
+
+      const sessionKey = detail.sessionId || detail.file;
+      let session = sessionsById.get(sessionKey);
+      if (!session) {
+        session = {
+          id: sessionKey,
+          sessionId: detail.sessionId,
+          project: detail.project || "未标注",
+          cwd: detail.cwd,
+          source: detail.source,
+          firstAt: detail.firstAt,
+          lastAt: detail.lastAt,
+          totalTokens: 0,
+          inputTokens: 0,
+          cachedInputTokens: 0,
+          outputTokens: 0,
+          records: 0,
+          files: 0,
+          sessionTotal: 0,
+          modelSet: new Set(),
+          quota: null
+        };
+        sessionsById.set(sessionKey, session);
+      }
+      session.files += 1;
+      if ((detail.sessionTotal || 0) > session.sessionTotal) session.sessionTotal = detail.sessionTotal || 0;
+      session.totalTokens += detail.tokens.totalTokens;
+      session.inputTokens += detail.tokens.inputTokens;
+      session.cachedInputTokens += detail.tokens.cachedInputTokens;
+      session.outputTokens += detail.tokens.outputTokens;
+      session.records += detail.tokens.records;
+      for (const name of Object.keys(detail.models)) session.modelSet.add(name);
+      if (detail.firstAt && (!session.firstAt || detail.firstAt < session.firstAt)) session.firstAt = detail.firstAt;
+      if (detail.lastAt && (!session.lastAt || detail.lastAt > session.lastAt)) session.lastAt = detail.lastAt;
+      if (detail.quota && (!session.quota || String(detail.quota.sampledAt || "") > String(session.quota.sampledAt || ""))) {
+        session.quota = detail.quota;
+      }
+
+      for (const [name, bucket] of Object.entries(detail.models)) {
+        let target = models.get(name);
+        if (!target) {
+          target = { model: name, ...zeroBucket() };
+          models.set(name, target);
+        }
+        for (const key of Object.keys(zeroBucket())) target[key] += bucket[key] || 0;
+      }
+
+      const projectKey = detail.project || "未标注";
+      let project = projects.get(projectKey);
+      if (!project) {
+        project = { project: projectKey, cwd: detail.cwd, ...zeroBucket(), sessions: 0 };
+        projects.set(projectKey, project);
+      }
+      for (const key of Object.keys(zeroBucket())) project[key] += detail.tokens[key] || 0;
+      project.sessions += 1;
+
+      for (const [day, bucket] of Object.entries(detail.days)) {
+        let target = days.get(day);
+        if (!target) {
+          target = { day, ...zeroBucket() };
+          days.set(day, target);
+        }
+        for (const key of Object.keys(zeroBucket())) target[key] += bucket[key] || 0;
+
+        // 项目维度没有跨会话混合，可直接按该会话的日桶归属
+        if (!projectDays[day]) projectDays[day] = {};
+        if (!projectDays[day][projectKey]) projectDays[day][projectKey] = zeroBucket();
+        for (const key of Object.keys(zeroBucket())) projectDays[day][projectKey][key] += bucket[key] || 0;
+      }
+
+      for (const [day, byModel] of Object.entries(detail.modelDays || {})) {
+        if (!modelDays[day]) modelDays[day] = {};
+        for (const [model, bucket] of Object.entries(byModel)) {
+          if (!modelDays[day][model]) modelDays[day][model] = zeroBucket();
+          for (const key of Object.keys(zeroBucket())) modelDays[day][model][key] += bucket[key] || 0;
+        }
+      }
+
+      for (const [hourKey, tokens] of Object.entries(detail.hours)) {
+        const [dayPart, hourPart] = hourKey.split("T");
+        const stamp = new Date(`${hourKey}:00:00`).getTime();
+        if (Number.isNaN(stamp) || stamp < hourFloor) continue;
+        const hour = new Date(stamp).getHours();
+        hours[hour] += tokens;
+        if (!dailyHours[dayPart]) dailyHours[dayPart] = new Array(24).fill(0);
+        dailyHours[dayPart][Number(hourPart)] += tokens;
+      }
+
+      for (const key of Object.keys(zeroBucket())) sum[key] += detail.tokens[key] || 0;
+    }
+
+    // ------------------------------------------------------------------
+    // 与历史基线合并
+    //
+    // Codex 会清理/压缩旧的 rollout，磁盘上的日志往往只有最近一段。
+    // 旧版索引把历史上扫到过的请求都留了下来（本机 135 天、5.70B）。
+    // 这里按「天」逐个裁决：哪边的量大就用哪边，避免重复计入同一天。
+    // ------------------------------------------------------------------
+    const baseline = this.baseline;
+    if (baseline && baseline.days) {
+      for (const [day, baseDay] of Object.entries(baseline.days)) {
+        if (!baseDay || !baseDay.totalTokens) continue;
+        const logDay = days.get(day);
+        const useBaseline = !logDay || baseDay.totalTokens > (logDay.totalTokens || 0);
+        if (!useBaseline) continue;
+
+        days.set(day, {
+          day,
+          totalTokens: baseDay.totalTokens,
+          inputTokens: baseDay.inputTokens,
+          cachedInputTokens: baseDay.cachedInputTokens,
+          outputTokens: baseDay.outputTokens,
+          records: baseDay.records
+        });
+
+        // 模型维度整体替换为基线的（保证同一天内各维度口径一致）
+        modelDays[day] = {};
+        for (const [model, bucket] of Object.entries(baseDay.models || {})) {
+          modelDays[day][model] = { ...zeroBucket(), ...bucket };
+        }
+
+        // 项目维度同理
+        projectDays[day] = {};
+        for (const cell of Object.values(baseDay.sessions || {})) {
+          const project = cell.project || "历史索引";
+          if (!projectDays[day][project]) projectDays[day][project] = zeroBucket();
+          const target = projectDays[day][project];
+          target.totalTokens += cell.totalTokens || 0;
+          target.inputTokens += cell.inputTokens || 0;
+          target.cachedInputTokens += cell.cachedInputTokens || 0;
+          target.outputTokens += cell.outputTokens || 0;
+          target.records += cell.records || 0;
+        }
+      }
+
+      // 只存在于历史索引里的会话补进会话列表
+      for (const [sessionId, baseSession] of Object.entries(baseline.sessions || {})) {
+        if (sessionsById.has(sessionId)) continue;
+        sessionsById.set(sessionId, {
+          id: sessionId,
+          sessionId,
+          project: baseSession.project || "历史索引",
+          cwd: null,
+          source: "legacy-index",
+          firstAt: baseSession.firstAt,
+          lastAt: baseSession.lastAt,
+          totalTokens: baseSession.totalTokens,
+          inputTokens: baseSession.inputTokens,
+          cachedInputTokens: baseSession.cachedInputTokens,
+          outputTokens: baseSession.outputTokens,
+          records: baseSession.records,
+          files: 0,
+          sessionTotal: baseSession.totalTokens,
+          modelSet: new Set(Object.keys(baseSession.models || {})),
+          quota: null
+        });
+      }
+    }
+
+    // 合并后按天重算总量与各维度，避免新旧口径混在一起
+    const merged = zeroBucket();
+    for (const bucket of days.values()) {
+      merged.totalTokens += bucket.totalTokens || 0;
+      merged.inputTokens += bucket.inputTokens || 0;
+      merged.cachedInputTokens += bucket.cachedInputTokens || 0;
+      merged.outputTokens += bucket.outputTokens || 0;
+      merged.records += bucket.records || 0;
+    }
+
+    const sessions = [...sessionsById.values()]
+      .map(item => {
+        const { modelSet, ...rest } = item;
+        return { ...rest, models: [...modelSet] };
+      })
+      .sort((a, b) => String(b.lastAt || "").localeCompare(String(a.lastAt || "")));
+
+    const series = [...days.values()]
+      .map(item => ({
+        day: item.day,
+        totalTokens: item.totalTokens,
+        inputTokens: item.inputTokens,
+        cachedInputTokens: item.cachedInputTokens,
+        outputTokens: item.outputTokens,
+        records: item.records
+      }))
+      .sort((a, b) => a.day.localeCompare(b.day));
+
+    const modelList = Object.entries(modelDays).reduce((acc, [, byModel]) => {
+      for (const [model, bucket] of Object.entries(byModel)) {
+        if (!acc[model]) acc[model] = { model, ...zeroBucket() };
+        const target = acc[model];
+        target.totalTokens += bucket.totalTokens || 0;
+        target.inputTokens += bucket.inputTokens || 0;
+        target.cachedInputTokens += bucket.cachedInputTokens || 0;
+        target.outputTokens += bucket.outputTokens || 0;
+        target.records += bucket.records || 0;
+      }
+      return acc;
+    }, {});
+
+    const modelListArray = Object.values(modelList)
+      .map(item => ({ ...item, share: merged.totalTokens ? item.totalTokens / merged.totalTokens : 0 }))
+      .sort((a, b) => b.totalTokens - a.totalTokens);
+
+    const projectTotals = Object.entries(projectDays).reduce((acc, [, byProject]) => {
+      for (const [project, bucket] of Object.entries(byProject)) {
+        if (!acc[project]) acc[project] = { project, ...zeroBucket(), sessions: 0 };
+        const target = acc[project];
+        target.totalTokens += bucket.totalTokens || 0;
+        target.inputTokens += bucket.inputTokens || 0;
+        target.cachedInputTokens += bucket.cachedInputTokens || 0;
+        target.outputTokens += bucket.outputTokens || 0;
+        target.records += bucket.records || 0;
+      }
+      return acc;
+    }, {});
+
+    const projectList = Object.values(projectTotals)
+      .map(item => ({ ...item, share: merged.totalTokens ? item.totalTokens / merged.totalTokens : 0 }))
+      .sort((a, b) => b.totalTokens - a.totalTokens);
+
+    // 累计口径 = 磁盘日志 ∪ 历史索引，按天去重后求和。
+    // 这就是「总共用了多少」，不需要再叠加任何线程计数器。
+    const legacy = this.baselineMeta();
+
+    return {
+      ok: true,
+      builtAt: this.detailBuiltAt || null,
+      sessions: sessions.length,
+      scannedFiles: this.detailFiles.size,
+      baseline: legacy,
+      totals: {
+        inputTokens: merged.inputTokens,
+        cachedInputTokens: merged.cachedInputTokens,
+        outputTokens: merged.outputTokens,
+        totalTokens: merged.totalTokens,
+        records: merged.records,
+        sessions: sessions.length
+      },
+      series,
+      models: modelListArray,
+      projects: projectList,
+      modelDays,
+      projectDays,
+      hourly: hours,
+      dailyHours,
+      sessionList: sessions,
+      today: series.find(item => item.day === todayKey) || null
+    };
+  }
 }
 
 module.exports = {
   CodexStore,
   dayKeyOf,
   normalizeRateLimits,
-  CACHE_VERSION
+  projectNameOf,
+  CACHE_VERSION,
+  DETAIL_CACHE_VERSION
 };

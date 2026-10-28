@@ -3,6 +3,7 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const { CodexStore } = require("./data/codex-store.cjs");
+const { buildBaseline, baselineIsFresh, loadBaseline, saveBaseline } = require("./data/history-baseline.cjs");
 
 const PRODUCT_NAME = "Codex Token";
 const PORTS = [8787, 8788, 8789];
@@ -74,7 +75,10 @@ if (!gotLock) {
       logs: path.join(userData, "logs"),
       config: path.join(userData, "config.json"),
       preferences: path.join(userData, "preferences.json"),
-      usageCache: path.join(userData, "data", "codex-usage-cache.json")
+      usageCache: path.join(userData, "data", "codex-usage-cache.json"),
+      detailCache: path.join(userData, "data", "codex-detail-cache.json"),
+      legacyIndex: path.join(userData, "data", "usage-index.json"),
+      baseline: path.join(userData, "data", "history-baseline.json")
     };
   }
 
@@ -244,17 +248,24 @@ if (!gotLock) {
     return `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
   }
 
+  /**
+   * 完整看板窗口：直接加载本地 dashboard.html，由 preload 从 CodexStore 取数，
+   * 不经过 server.js / index.html。
+   */
   function createWindow() {
+    if (mainWindow && !mainWindow.isDestroyed()) return mainWindow;
+
     mainWindow = new BrowserWindow({
-      width: 1440,
-      height: 940,
-      minWidth: 960,
-      minHeight: 640,
+      width: 1180,
+      height: 860,
+      minWidth: 820,
+      minHeight: 620,
       show: false,
-      title: PRODUCT_NAME,
-      backgroundColor: "#f2f5f9",
+      title: `${PRODUCT_NAME} · 用量看板`,
+      backgroundColor: "#f3f4f7",
       autoHideMenuBar: true,
       webPreferences: {
+        preload: path.join(__dirname, "dashboard-preload.cjs"),
         contextIsolation: true,
         nodeIntegration: false,
         sandbox: true,
@@ -262,24 +273,65 @@ if (!gotLock) {
       }
     });
 
-    mainWindow.loadURL(loadingPage());
-    mainWindow.once("ready-to-show", () => mainWindow?.show());
+    mainWindow.loadFile(path.join(__dirname, "dashboard.html"));
+    mainWindow.once("ready-to-show", () => {
+      if (mainWindow && !mainWindow.isDestroyed()) mainWindow.show();
+    });
     mainWindow.on("close", event => {
       if (allowWindowClose || quitting) return;
       event.preventDefault();
       mainWindow.hide();
     });
+    mainWindow.on("closed", () => {
+      mainWindow = null;
+    });
     mainWindow.webContents.setWindowOpenHandler(({ url }) => {
       if (/^https:\/\//i.test(url)) shell.openExternal(url);
       return { action: "deny" };
     });
-    mainWindow.webContents.on("will-navigate", (event, url) => {
-      if (url.startsWith("data:text/html,")) return;
-      if (!serviceUrl || new URL(url).origin !== new URL(serviceUrl).origin) {
-        event.preventDefault();
+    return mainWindow;
+  }
+
+  /** 旧版网页看板：按需拉起本地服务，作为可选的历史分析工作台 */
+  let legacyWindow = null;
+
+  async function openLegacyDashboard() {
+    if (!legacyWindow || legacyWindow.isDestroyed()) {
+      legacyWindow = new BrowserWindow({
+        width: 1440,
+        height: 940,
+        minWidth: 960,
+        minHeight: 640,
+        show: false,
+        title: `${PRODUCT_NAME} · 旧版网页看板`,
+        backgroundColor: "#f2f5f9",
+        autoHideMenuBar: true,
+        webPreferences: {
+          contextIsolation: true,
+          nodeIntegration: false,
+          sandbox: true,
+          webSecurity: true
+        }
+      });
+      legacyWindow.loadURL(loadingPage());
+      legacyWindow.once("ready-to-show", () => legacyWindow?.show());
+      legacyWindow.on("closed", () => { legacyWindow = null; });
+      legacyWindow.webContents.setWindowOpenHandler(({ url }) => {
         if (/^https:\/\//i.test(url)) shell.openExternal(url);
-      }
-    });
+        return { action: "deny" };
+      });
+    } else {
+      if (legacyWindow.isMinimized()) legacyWindow.restore();
+      legacyWindow.show();
+    }
+
+    try {
+      const url = await ensureBackend();
+      await legacyWindow.loadURL(`${url}/?desktop=1`);
+    } catch (error) {
+      await legacyWindow.loadURL(loadingPage(`旧版看板启动失败：${error.message}`));
+    }
+    return true;
   }
 
   // ---------------------------------------------------------------------
@@ -427,6 +479,45 @@ if (!gotLock) {
     });
   }
 
+  // ---------------------------------------------------------------------
+  // 完整看板（本地数据，无 HTTP 服务）
+  // ---------------------------------------------------------------------
+
+  function pushDetailProgress(progress) {
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    mainWindow.webContents.send("dashboard:progress", progress);
+  }
+
+  function registerDashboardHandlers() {
+    ipcMain.handle("dashboard:status", () => latestStatus || (store ? store.snapshot() : null));
+
+    ipcMain.handle("dashboard:get-detail", async () => {
+      if (!store) throw new Error("用量数据层尚未初始化，请稍候重试");
+      const detail = await store.buildDetail({ onProgress: pushDetailProgress });
+      latestStatus = store.snapshot();
+      updateTray();
+      pushStatusToPopover();
+      return detail;
+    });
+
+    ipcMain.handle("dashboard:refresh", async () => {
+      if (!store) throw new Error("用量数据层尚未初始化，请稍候重试");
+      await store.refresh({ full: true });
+      const detail = await store.buildDetail({ onProgress: pushDetailProgress });
+      latestStatus = store.snapshot();
+      updateTray();
+      pushStatusToPopover();
+      return detail;
+    });
+
+    ipcMain.handle("dashboard:open-legacy", () => openLegacyDashboard());
+    ipcMain.handle("dashboard:open-sessions", () => shell.openPath(sessionsDir()));
+    ipcMain.handle("dashboard:open-external", (_event, url) => {
+      if (typeof url === "string" && /^https:\/\//i.test(url)) shell.openExternal(url);
+      return true;
+    });
+  }
+
   function formatTokens(value) {
     const number = Number(value) || 0;
     if (number >= 1e9) return `${(number / 1e9).toFixed(number >= 1e10 ? 1 : 2).replace(/0+$/, "").replace(/\.$/, "")}B`;
@@ -446,6 +537,7 @@ if (!gotLock) {
     trayMenu = Menu.buildFromTemplate([
       { label: "打开用量速览", click: showPopover },
       { label: "打开完整看板", click: () => { showWindow(); } },
+      { label: "打开旧版网页看板", click: () => { openLegacyDashboard().catch(() => {}); } },
       { type: "separator" },
       { label: quota && quota.session ? `会话额度：${Math.round(quota.session.usedPercent)}% 已用` : "会话额度：暂无数据", enabled: false },
       { label: quota && quota.weekly ? `每周额度：${Math.round(quota.weekly.usedPercent)}% 已用` : "每周额度：暂无数据", enabled: false },
@@ -493,21 +585,13 @@ if (!gotLock) {
   }
 
   async function showWindow() {
-    if (!mainWindow || mainWindow.isDestroyed()) return;
-    if (mainWindow.isMinimized()) mainWindow.restore();
-    if (!serviceUrl) {
-      mainWindow.show();
-      mainWindow.focus();
-      try {
-        const url = await ensureBackend();
-        await mainWindow.loadURL(`${url}/?desktop=1`);
-      } catch (error) {
-        await mainWindow.loadURL(loadingPage(`完整看板启动失败：${error.message}`));
-      }
-      return;
-    }
-    mainWindow.show();
-    mainWindow.focus();
+    // 窗口是惰性创建的：默认启动模式不建看板窗口，
+    // 早先这里直接 return，导致「打开完整看板」看起来毫无反应。
+    const win = createWindow();
+    if (!win || win.isDestroyed()) return;
+    if (win.isMinimized()) win.restore();
+    win.show();
+    win.focus();
   }
 
   function createTray() {
@@ -522,11 +606,36 @@ if (!gotLock) {
     updateTray();
   }
 
-  async function initStore(paths) {
+  /**
+   * 历史基线：旧版网页看板把历史上扫到的每条请求都存进了 usage-index.json，
+   * 里面包含 Codex 已经清理掉的早期日志。没有它，累计会少算一大半。
+   */
+  function resolveBaseline(paths) {
+    const indexPath = paths.legacyIndex;
+    if (!fs.existsSync(indexPath)) return null;
+    const cached = loadBaseline(paths.baseline);
+    if (cached && baselineIsFresh(cached, indexPath)) return cached;
+    try {
+      const started = Date.now();
+      const baseline = buildBaseline(indexPath);
+      saveBaseline(paths.baseline, baseline);
+      log(`history baseline: ${baseline.records} records, ${(baseline.totalTokens / 1e9).toFixed(2)}B, ${Object.keys(baseline.days).length} days, ${Date.now() - started}ms`);
+      return baseline;
+    } catch (error) {
+      log(`history baseline failed: ${error.message}`);
+      return cached || null;
+    }
+  }
+
+  async function initStore(paths, baseline) {
     store = new CodexStore({
       sessionsDir: sessionsDir(),
-      cacheFile: paths.usageCache
+      cacheFile: paths.usageCache,
+      detailCacheFile: paths.detailCache,
+      baseline
     });
+    // 明细缓存先读盘：看板第二次打开可以秒出
+    store.loadDetailCache();
     const snapshot = await store.init({ full: false });
     latestStatus = snapshot;
     updateTray();
@@ -537,6 +646,13 @@ if (!gotLock) {
         latestStatus = fullSnapshot;
         updateTray();
         pushStatusToPopover();
+        // 再补一次明细：拿到「线程累计」口径（含被清理的早期历史），
+        // 弹窗与看板才能显示同一个总量
+        return store.buildDetail().then(() => {
+          latestStatus = store.snapshot();
+          updateTray();
+          pushStatusToPopover();
+        });
       })
       .catch(error => {
         startupError = `历史索引构建失败：${error.message}`;
@@ -552,6 +668,7 @@ if (!gotLock) {
     log(`start v${app.getVersion()} | smoke=${SMOKE} | packaged=${app.isPackaged} | execPath=${process.execPath}`);
     loadPreferences(paths);
     registerPopoverHandlers();
+    registerDashboardHandlers();
     log("creating popover");
     createPopover();
     log("creating tray");
@@ -559,7 +676,7 @@ if (!gotLock) {
     // 完整看板窗口延后创建：弹窗是主入口，不需要先起一个大窗口
     if (preferences.startMode === "dashboard" && !SMOKE) createWindow();
 
-    initStore(paths).catch(error => {
+    initStore(paths, resolveBaseline(paths)).catch(error => {
       log(`initStore failed: ${error.stack || error.message}`);
       startupError = `用量数据初始化失败：${error.message}`;
       updateTray();
@@ -588,11 +705,60 @@ if (!gotLock) {
       }, 3000);
     }
 
+    // Dev 诊断：把真实看板内容截成 PNG，用于验证 preload 与真实数据链路
+    if (process.env.CODEX_TOKEN_DASHBOARD_SHOT) {
+      setTimeout(async () => {
+        try {
+          await showWindow();
+          // 等首次明细扫描 + 渲染完成
+          await new Promise(resolve => setTimeout(resolve, Number(process.env.CODEX_TOKEN_DASHBOARD_SHOT_DELAY) || 14000));
+          if (!mainWindow || mainWindow.isDestroyed()) return;
+          const shotPath = process.env.CODEX_TOKEN_DASHBOARD_SHOT;
+          // 明确先回到顶部，避免捕获到上一次滚动位置
+          await mainWindow.webContents.executeJavaScript('(() => { const el = document.querySelector("main"); if (el) el.scrollTop = 0; return true; })()');
+          await new Promise(resolve => setTimeout(resolve, 350));
+          const info = await mainWindow.webContents.executeJavaScript(
+            '({scrollTop: (document.querySelector("main")||{}).scrollTop, innerHeight: window.innerHeight, dpr: window.devicePixelRatio, scrollHeight: (document.querySelector("main")||{}).scrollHeight})'
+          );
+          process.stdout.write(`dashboard layout: ${JSON.stringify(info)}\n`);
+          const shoot = async () => {
+            let lastError;
+            for (let attempt = 0; attempt < 4; attempt += 1) {
+              try {
+                if (mainWindow.isMinimized()) mainWindow.restore();
+                mainWindow.show();
+                mainWindow.focus();
+                await new Promise(resolve => setTimeout(resolve, 400));
+                return await mainWindow.webContents.capturePage();
+              } catch (error) {
+                lastError = error;
+                await new Promise(resolve => setTimeout(resolve, 500));
+              }
+            }
+            throw lastError;
+          };
+          const image = await shoot();
+          fs.writeFileSync(shotPath, image.toPNG());
+          process.stdout.write(`dashboard shot saved: ${shotPath}\n`);
+          if (process.env.CODEX_TOKEN_DASHBOARD_SHOT_SCROLL) {
+            await mainWindow.webContents.executeJavaScript('(() => { const el = document.querySelector("main"); if (el) el.scrollTop = el.scrollHeight; return el ? el.scrollTop : -1; })()');
+            await new Promise(resolve => setTimeout(resolve, 700));
+            const bottom = await shoot();
+            const bottomPath = shotPath.replace(/\.png$/i, "-bottom.png");
+            fs.writeFileSync(bottomPath, bottom.toPNG());
+            process.stdout.write(`dashboard shot saved: ${bottomPath}\n`);
+          }
+        } catch (error) {
+          process.stdout.write(`dashboard shot failed: ${error.message}\n`);
+        }
+      }, 1500);
+    }
+
     if (SMOKE) {
       smokeExitTimer = setTimeout(() => {
         process.stdout.write("Desktop smoke lifecycle check complete; quitting.\n");
         app.quit();
-      }, 8_000);
+      }, process.env.CODEX_TOKEN_DASHBOARD_SHOT ? 40_000 : 8_000);
     }
   }
 

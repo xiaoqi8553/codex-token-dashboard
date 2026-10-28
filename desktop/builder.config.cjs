@@ -13,6 +13,8 @@ module.exports = {
     "desktop/main.cjs",
     "desktop/preload.cjs",
     "desktop/popover.html",
+    "desktop/dashboard.html",
+    "desktop/dashboard-preload.cjs",
     "desktop/icon.png",
     "desktop/data/**",
     "server.js",

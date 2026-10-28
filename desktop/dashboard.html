@@ -1,0 +1,1405 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Codex Token · 用量看板</title>
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #f3f4f7;
+    --panel: #ffffff;
+    --panel-soft: #fafbfc;
+    --line: #e7e8ee;
+    --line-soft: #f0f1f5;
+    --text: #16171b;
+    --text-2: #555a67;
+    --text-3: #8b90a0;
+    --accent: #3f6ef0;
+    --accent-2: #a9c0fb;
+    --accent-3: #dbe5fe;
+    --c-cached: #bccdfd;
+    --c-input: #3f6ef0;
+    --c-output: #e59a34;
+    --warn: #d9822b;
+    --ok: #1f9d63;
+    --danger: #d9534f;
+    --shadow: 0 1px 2px rgba(19, 24, 40, .05), 0 10px 28px rgba(19, 24, 40, .06);
+    --radius: 14px;
+  }
+
+  html[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0f1013;
+    --panel: #181920;
+    --panel-soft: #1d1e26;
+    --line: #292b34;
+    --line-soft: #23252d;
+    --text: #f1f2f6;
+    --text-2: #a6abb9;
+    --text-3: #6e7482;
+    --accent: #5b84ff;
+    --accent-2: #34508f;
+    --accent-3: #22304f;
+    --c-cached: #3a568f;
+    --c-input: #7aa0ff;
+    --c-output: #e0a04c;
+    --warn: #e0a04c;
+    --ok: #38b57e;
+    --danger: #e06c68;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .34), 0 12px 34px rgba(0, 0, 0, .38);
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    height: 100%;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 13px/1.5 "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, "Microsoft YaHei UI", sans-serif;
+    font-variant-numeric: tabular-nums;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--text-3) 34%, transparent);
+    border-radius: 8px;
+    border: 3px solid transparent;
+    background-clip: padding-box;
+  }
+  ::-webkit-scrollbar-thumb:hover { background: color-mix(in srgb, var(--text-3) 55%, transparent); background-clip: padding-box; border: 3px solid transparent; }
+  ::-webkit-scrollbar-track { background: transparent; }
+
+  /* ---------------- 启动屏 ---------------- */
+
+  .boot {
+    position: fixed;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    background: var(--bg);
+    z-index: 40;
+    transition: opacity .28s ease;
+  }
+
+  .boot.done { opacity: 0; pointer-events: none; }
+
+  .boot-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .boot-mark {
+    width: 46px;
+    height: 46px;
+    border-radius: 13px;
+    background: linear-gradient(160deg, #2b57d6, #3f6ef0);
+    color: #fff;
+    display: grid;
+    place-items: center;
+    font-size: 19px;
+    font-weight: 650;
+    letter-spacing: -.5px;
+    box-shadow: 0 8px 24px rgba(63, 110, 240, .32);
+  }
+
+  .boot-text { color: var(--text-2); font-size: 12.5px; }
+  .boot-hint { color: var(--text-3); font-size: 11.5px; }
+
+  .boot-bar {
+    width: 210px;
+    height: 4px;
+    border-radius: 4px;
+    background: var(--line);
+    overflow: hidden;
+  }
+
+  .boot-bar i {
+    display: block;
+    height: 100%;
+    width: 12%;
+    border-radius: 4px;
+    background: var(--accent);
+    transition: width .3s ease;
+  }
+
+  /* ---------------- 布局 ---------------- */
+
+  .app {
+    height: 100%;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+  }
+
+  .app[hidden] { display: none; }
+
+  .topbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 13px 18px;
+    background: color-mix(in srgb, var(--panel) 82%, transparent);
+    border-bottom: 1px solid var(--line);
+    backdrop-filter: saturate(140%) blur(10px);
+    -webkit-app-region: drag;
+  }
+
+  .topbar button, .topbar .range { -webkit-app-region: no-drag; }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .brand-mark {
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+    background: linear-gradient(160deg, #2b57d6, #3f6ef0);
+    color: #fff;
+    display: grid;
+    place-items: center;
+    font-size: 13px;
+    font-weight: 650;
+    flex: none;
+  }
+
+  .brand-title { font-size: 13.5px; font-weight: 620; letter-spacing: -.1px; }
+  .brand-sub { font-size: 11px; color: var(--text-3); }
+
+  .spacer { flex: 1; }
+
+  .range {
+    display: flex;
+    gap: 2px;
+    padding: 2px;
+    background: var(--line-soft);
+    border-radius: 9px;
+  }
+
+  .range button {
+    border: 0;
+    background: transparent;
+    color: var(--text-2);
+    font: inherit;
+    font-size: 12px;
+    padding: 5px 11px;
+    border-radius: 7px;
+    cursor: pointer;
+    transition: background .16s ease, color .16s ease;
+  }
+
+  .range button:hover { color: var(--text); }
+  .range button[aria-pressed="true"] {
+    background: var(--panel);
+    color: var(--text);
+    font-weight: 580;
+    box-shadow: 0 1px 2px rgba(19, 24, 40, .1);
+  }
+
+  .icon-btn {
+    width: 30px;
+    height: 30px;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--panel);
+    color: var(--text-2);
+    cursor: pointer;
+    transition: color .16s ease, border-color .16s ease, background .16s ease;
+  }
+
+  .icon-btn:hover { color: var(--text); border-color: color-mix(in srgb, var(--text-3) 50%, transparent); }
+  .icon-btn[data-busy="1"] svg { animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  main {
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 16px 18px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 14px 16px 16px;
+  }
+
+  .card-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .card-head h2 {
+    margin: 0;
+    font-size: 12.5px;
+    font-weight: 620;
+    letter-spacing: -.1px;
+  }
+
+  .card-head .sub {
+    margin: 3px 0 0;
+    font-size: 11.5px;
+    color: var(--text-3);
+  }
+
+  .badge {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--text-3);
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: var(--line-soft);
+    white-space: nowrap;
+  }
+
+  /* ---------------- 额度卡片 ---------------- */
+
+  .stat-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .stat {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    min-width: 0;
+  }
+
+  .stat-top {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+
+  .stat-label {
+    font-size: 12px;
+    color: var(--text-2);
+    font-weight: 560;
+  }
+
+  .stat-window {
+    margin-left: auto;
+    font-size: 10.5px;
+    color: var(--text-3);
+    padding: 2px 6px;
+    border-radius: 5px;
+    background: var(--line-soft);
+  }
+
+  .stat-value {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+  }
+
+  .stat-num {
+    font-size: 26px;
+    font-weight: 640;
+    letter-spacing: -1px;
+    line-height: 1.1;
+  }
+
+  .stat-unit { font-size: 12px; color: var(--text-3); }
+
+  .meter {
+    height: 5px;
+    border-radius: 4px;
+    background: var(--line-soft);
+    overflow: hidden;
+  }
+
+  .meter i {
+    display: block;
+    height: 100%;
+    border-radius: 4px;
+    background: var(--accent);
+    transition: width .45s cubic-bezier(.3, .8, .3, 1);
+  }
+
+  .meter i[data-level="high"] { background: var(--warn); }
+  .meter i[data-level="full"] { background: var(--danger); }
+
+  .stat-foot {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11.5px;
+    color: var(--text-3);
+    min-height: 17px;
+  }
+
+  .stat-foot b { color: var(--text-2); font-weight: 560; }
+
+  .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--ok);
+    flex: none;
+  }
+  .dot[data-tone="warn"] { background: var(--warn); }
+  .dot[data-tone="muted"] { background: var(--text-3); }
+
+  /* ---------------- 趋势图 ---------------- */
+
+  .chart-wrap {
+    position: relative;
+    width: 100%;
+    height: 232px;
+  }
+
+  .chart-wrap svg { display: block; width: 100%; height: 100%; }
+
+  .axis-text {
+    fill: var(--text-3);
+    font-size: 10px;
+    font-family: inherit;
+  }
+
+  .grid-line { stroke: var(--line-soft); stroke-width: 1; }
+
+  .legend {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-top: 10px;
+    font-size: 11.5px;
+    color: var(--text-3);
+  }
+
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend i { width: 9px; height: 9px; border-radius: 2.5px; display: inline-block; }
+
+  .tip {
+    position: absolute;
+    z-index: 5;
+    min-width: 148px;
+    padding: 9px 11px;
+    background: color-mix(in srgb, var(--panel) 96%, transparent);
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    box-shadow: 0 8px 24px rgba(19, 24, 40, .16);
+    font-size: 11.5px;
+    pointer-events: none;
+    opacity: 0;
+    transform: translate(-50%, -100%);
+    transition: opacity .12s ease;
+  }
+
+  .tip.show { opacity: 1; }
+  .tip-title { font-weight: 600; margin-bottom: 5px; color: var(--text); }
+  .tip-row { display: flex; justify-content: space-between; gap: 14px; color: var(--text-2); }
+  .tip-row b { font-weight: 560; color: var(--text); }
+
+  .note {
+    margin: 8px 0 0;
+    font-size: 11.5px;
+    line-height: 1.6;
+    color: var(--text-3);
+    padding: 7px 10px;
+    border-radius: 8px;
+    background: var(--line-soft);
+  }
+
+  .note b { color: var(--text-2); font-weight: 560; }
+
+  /* ---------------- 分布条 ---------------- */
+
+  .cols {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    align-items: start;
+  }
+
+  .bars { display: flex; flex-direction: column; gap: 10px; }
+
+  .bar-row { display: grid; grid-template-columns: 1fr auto; gap: 3px 10px; }
+
+  .bar-name {
+    font-size: 12px;
+    color: var(--text-2);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .bar-val { font-size: 11.5px; color: var(--text-3); }
+  .bar-val b { color: var(--text); font-weight: 560; }
+
+  .bar-track {
+    grid-column: 1 / -1;
+    height: 6px;
+    border-radius: 4px;
+    background: var(--line-soft);
+    overflow: hidden;
+  }
+
+  .bar-track i {
+    display: block;
+    height: 100%;
+    border-radius: 4px;
+    background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 62%, var(--accent-3)));
+    transition: width .4s cubic-bezier(.3, .8, .3, 1);
+  }
+
+  .empty {
+    color: var(--text-3);
+    font-size: 12px;
+    padding: 10px 0;
+  }
+
+  /* ---------------- 时段图 ---------------- */
+
+  .hours {
+    display: flex;
+    align-items: flex-end;
+    gap: 4px;
+    height: 96px;
+  }
+
+  .hour-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    height: 100%;
+  }
+
+  .hour-bar {
+    width: 100%;
+    margin-top: auto;
+    border-radius: 3px 3px 2px 2px;
+    background: var(--accent-2);
+    min-height: 2px;
+    transition: background .16s ease;
+  }
+
+  .hour-col:hover .hour-bar { background: var(--accent); }
+
+  .hour-label {
+    font-size: 9.5px;
+    color: var(--text-3);
+    height: 12px;
+  }
+
+  /* ---------------- 会话表 ---------------- */
+
+  .table-wrap {
+    max-height: 244px;
+    overflow-y: auto;
+    border-radius: 10px;
+    border: 1px solid var(--line-soft);
+  }
+
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+
+  thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--panel-soft);
+    color: var(--text-3);
+    font-weight: 560;
+    font-size: 11px;
+    text-align: left;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--line);
+    white-space: nowrap;
+  }
+
+  tbody td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--line-soft);
+    color: var(--text-2);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  tbody tr:last-child td { border-bottom: 0; }
+  tbody tr:hover td { background: var(--panel-soft); }
+  td.num { text-align: right; color: var(--text); font-weight: 540; }
+  td.proj { color: var(--text); }
+  .muted { color: var(--text-3); }
+
+  .chip {
+    display: inline-block;
+    padding: 1px 7px;
+    border-radius: 5px;
+    background: var(--accent-3);
+    color: var(--accent);
+    font-size: 10.5px;
+    font-weight: 540;
+  }
+
+  /* ---------------- 底栏 ---------------- */
+
+  .statusbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 18px;
+    border-top: 1px solid var(--line);
+    background: color-mix(in srgb, var(--panel) 82%, transparent);
+    font-size: 11.5px;
+    color: var(--text-3);
+  }
+
+  .statusbar .link {
+    color: var(--text-2);
+    background: none;
+    border: 0;
+    font: inherit;
+    cursor: pointer;
+    padding: 0;
+    text-decoration: underline;
+    text-decoration-color: color-mix(in srgb, var(--text-3) 45%, transparent);
+    text-underline-offset: 2px;
+  }
+
+  .statusbar .link:hover { color: var(--accent); }
+
+  @media (max-width: 900px) {
+    .stat-row { grid-template-columns: 1fr; }
+    .cols { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="boot" id="boot">
+  <div class="boot-card">
+    <div class="boot-mark">&gt;_</div>
+    <div class="boot-text" id="boot-text">正在读取本地会话日志…</div>
+    <div class="boot-bar"><i id="boot-fill"></i></div>
+    <div class="boot-hint" id="boot-hint">数据来自 ~/.codex/sessions，不联网</div>
+  </div>
+</div>
+
+<div class="app" id="app" hidden>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">&gt;_</div>
+      <div>
+        <div class="brand-title">Codex Token</div>
+        <div class="brand-sub" id="brand-sub">本地用量看板</div>
+      </div>
+    </div>
+    <div class="spacer"></div>
+    <div class="range" id="range" role="group" aria-label="时间范围"></div>
+    <button class="icon-btn" id="btn-refresh" title="重新扫描" aria-label="重新扫描">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round">
+        <path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v5h-5"/>
+      </svg>
+    </button>
+    <button class="icon-btn" id="btn-theme" title="切换深色模式" aria-label="切换深色模式">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M21 12.8A8.5 8.5 0 1 1 11.2 3a6.6 6.6 0 0 0 9.8 9.8Z"/>
+      </svg>
+    </button>
+  </header>
+
+  <main>
+    <section class="stat-row" id="stat-row"></section>
+
+    <section class="card">
+      <div class="card-head">
+        <div>
+          <h2>用量趋势</h2>
+          <p class="sub" id="chart-sub">—</p>
+        </div>
+        <span class="badge" id="chart-badge">—</span>
+      </div>
+      <div class="chart-wrap">
+        <svg id="chart" role="img" aria-label="每日 token 用量"></svg>
+        <div class="tip" id="tip"></div>
+      </div>
+      <div class="legend">
+        <span><i style="background: var(--c-cached)"></i>缓存命中</span>
+        <span><i style="background: var(--c-input)"></i>输入</span>
+        <span><i style="background: var(--c-output)"></i>输出</span>
+      </div>
+      <p class="note" id="chart-note" hidden></p>
+    </section>
+
+    <div class="cols">
+      <section class="card">
+        <div class="card-head">
+          <div><h2>模型分布</h2></div>
+          <span class="badge" id="model-badge">—</span>
+        </div>
+        <div class="bars" id="models"></div>
+      </section>
+      <section class="card">
+        <div class="card-head">
+          <div><h2>项目分布</h2></div>
+          <span class="badge" id="project-badge">—</span>
+        </div>
+        <div class="bars" id="projects"></div>
+      </section>
+    </div>
+
+    <section class="card">
+      <div class="card-head">
+        <div><h2>活跃时段</h2><p class="sub">按小时聚合，看你的工作节奏</p></div>
+        <span class="badge">最近 7 天</span>
+      </div>
+      <div class="hours" id="hours"></div>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <div><h2>会话记录</h2><p class="sub">续跑产生的多个文件已按 session 合并</p></div>
+        <span class="badge" id="session-badge">—</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 92px">最近活动</th>
+              <th>项目</th>
+              <th style="width: 150px">模型</th>
+              <th style="width: 84px; text-align: right">用量</th>
+              <th style="width: 64px; text-align: right">请求</th>
+              <th style="width: 82px; text-align: right">时长</th>
+            </tr>
+          </thead>
+          <tbody id="session-body"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer class="statusbar">
+    <span class="dot" id="status-dot"></span>
+    <span id="status-text">—</span>
+    <span style="flex:1"></span>
+    <button class="link" id="btn-sessions">日志目录</button>
+    <button class="link" id="btn-legacy">旧版网页看板</button>
+  </footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ---------------------------------------------------------------------
+  // 状态
+  // ---------------------------------------------------------------------
+  const RANGES = [
+    { key: 7, label: "7 天" },
+    { key: 14, label: "14 天" },
+    { key: 30, label: "30 天" },
+    { key: 0, label: "全部" }
+  ];
+
+  const state = {
+    detail: null,
+    status: null,
+    range: Number(localStorage.getItem("codex.range") || 14) || 14,
+    theme: localStorage.getItem("codex.theme") || "auto",
+    hover: -1
+  };
+
+  const $ = id => document.getElementById(id);
+
+  // ---------------------------------------------------------------------
+  // 格式化
+  // ---------------------------------------------------------------------
+  function fmtTokens(value) {
+    const n = Number(value) || 0;
+    if (n >= 1e9) return (n / 1e9).toFixed(n >= 1e10 ? 1 : 2).replace(/\.0+$/, "") + "B";
+    if (n >= 1e6) return (n / 1e6).toFixed(n >= 1e8 ? 0 : 1).replace(/\.0$/, "") + "M";
+    if (n >= 1e3) return (n / 1e3).toFixed(1).replace(/\.0$/, "") + "K";
+    return String(Math.round(n));
+  }
+
+  function fmtCount(value) {
+    return (Number(value) || 0).toLocaleString("zh-CN");
+  }
+
+  function fmtPercent(value, digits) {
+    const n = Number(value) || 0;
+    return n.toFixed(digits === undefined ? 0 : digits) + "%";
+  }
+
+  function fmtDuration(ms) {
+    if (!Number.isFinite(ms) || ms <= 0) return "—";
+    const minutes = Math.floor(ms / 60000);
+    if (minutes < 1) return "<1 分钟";
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+    if (days >= 1) return days + " 天 " + (hours % 24) + " 小时";
+    if (hours >= 1) return hours + " 小时 " + (minutes % 60) + " 分";
+    return minutes + " 分钟";
+  }
+
+  function relTime(iso) {
+    if (!iso) return "—";
+    const stamp = new Date(iso).getTime();
+    if (Number.isNaN(stamp)) return "—";
+    const diff = Date.now() - stamp;
+    if (diff < 60e3) return "刚刚";
+    if (diff < 3600e3) return Math.floor(diff / 60e3) + " 分钟前";
+    if (diff < 86400e3) return Math.floor(diff / 3600e3) + " 小时前";
+    const days = Math.floor(diff / 86400e3);
+    if (days === 1) return "昨天";
+    if (days < 7) return days + " 天前";
+    const date = new Date(iso);
+    return (date.getMonth() + 1) + " 月 " + date.getDate() + " 日";
+  }
+
+  function dayLabel(key) {
+    const [, month, day] = String(key).split("-");
+    return Number(month) + "/" + Number(day);
+  }
+
+  function localDayKey(date) {
+    const pad = n => String(n).padStart(2, "0");
+    return date.getFullYear() + "-" + pad(date.getMonth() + 1) + "-" + pad(date.getDate());
+  }
+
+  // ---------------------------------------------------------------------
+  // 主题
+  // ---------------------------------------------------------------------
+  function applyTheme() {
+    const dark = state.theme === "dark" || (state.theme === "auto" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
+  }
+
+  // ---------------------------------------------------------------------
+  // 区间数据
+  // ---------------------------------------------------------------------
+  function rangeDays() {
+    return state.range > 0 ? state.range : 0;
+  }
+
+  /** 取区间内的每日序列，补齐没有用量的空白日 */
+  function rangeSeries() {
+    const detail = state.detail;
+    if (!detail) return [];
+    if (rangeDays() === 0) return detail.series.slice();
+
+    const byDay = new Map(detail.series.map(item => [item.day, item]));
+    const out = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    for (let offset = rangeDays() - 1; offset >= 0; offset -= 1) {
+      const date = new Date(today);
+      date.setDate(date.getDate() - offset);
+      const key = localDayKey(date);
+      const found = byDay.get(key);
+      out.push(found || {
+        day: key,
+        totalTokens: 0,
+        inputTokens: 0,
+        cachedInputTokens: 0,
+        outputTokens: 0,
+        records: 0
+      });
+    }
+    return out;
+  }
+
+  /** 区间内的模型汇总（用 天×模型 维度重算，而不是全量占比） */
+  function rangeModels() {
+    const detail = state.detail;
+    if (!detail) return [];
+    const days = rangeDays();
+    const keys = days === 0
+      ? Object.keys(detail.modelDays || {})
+      : rangeSeries().map(item => item.day);
+
+    const totals = new Map();
+    let grand = 0;
+    for (const day of keys) {
+      const byModel = (detail.modelDays || {})[day];
+      if (!byModel) continue;
+      for (const [model, bucket] of Object.entries(byModel)) {
+        const current = totals.get(model) || { model, totalTokens: 0, outputTokens: 0, records: 0 };
+        current.totalTokens += bucket.totalTokens || 0;
+        current.outputTokens += bucket.outputTokens || 0;
+        current.records += bucket.records || 0;
+        totals.set(model, current);
+        grand += bucket.totalTokens || 0;
+      }
+    }
+    return [...totals.values()]
+      .map(item => ({ ...item, share: grand ? item.totalTokens / grand : 0 }))
+      .sort((a, b) => b.totalTokens - a.totalTokens);
+  }
+
+  /** 区间内的项目汇总 */
+  function rangeProjects() {
+    const detail = state.detail;
+    if (!detail) return [];
+    const days = rangeDays();
+    const keys = days === 0
+      ? Object.keys(detail.projectDays || {})
+      : rangeSeries().map(item => item.day);
+
+    const totals = new Map();
+    let grand = 0;
+    for (const day of keys) {
+      const byProject = (detail.projectDays || {})[day];
+      if (!byProject) continue;
+      for (const [project, bucket] of Object.entries(byProject)) {
+        const current = totals.get(project) || { project, totalTokens: 0, records: 0, sessions: 0 };
+        current.totalTokens += bucket.totalTokens || 0;
+        current.records += bucket.records || 0;
+        totals.set(project, current);
+        grand += bucket.totalTokens || 0;
+      }
+    }
+    return [...totals.values()]
+      .map(item => ({ ...item, share: grand ? item.totalTokens / grand : 0 }))
+      .sort((a, b) => b.totalTokens - a.totalTokens);
+  }
+
+  // ---------------------------------------------------------------------
+  // 渲染：额度
+  // ---------------------------------------------------------------------
+  function quotaPace(window_) {
+    if (!window_ || !window_.windowMinutes || !window_.resetsAt) return null;
+    const totalMs = window_.windowMinutes * 60 * 1000;
+    const resetAt = window_.resetsAt * 1000;
+    const elapsedMs = totalMs - (resetAt - Date.now());
+    const elapsedPercent = Math.max(0, Math.min(100, (elapsedMs / totalMs) * 100));
+    const delta = window_.usedPercent - elapsedPercent;
+    let tone = "muted";
+    let text = "节奏正常";
+    if (delta > 5) {
+      tone = "warn";
+      text = "快于时间进度 +" + Math.round(delta) + "% · 可能提前用尽";
+    } else if (delta < -5) {
+      tone = "ok";
+      text = "慢于时间进度 " + Math.round(delta) + "% · 可撑到重置";
+    }
+    return { tone, text, remaining: resetAt - Date.now() };
+  }
+
+  function meterLevel(percent) {
+    if (percent >= 95) return "full";
+    if (percent >= 75) return "high";
+    return "ok";
+  }
+
+  function renderStats() {
+    const detail = state.detail;
+    const status = state.status;
+    const quota = (status && status.quota) || null;
+    const today = detail && detail.today ? detail.today : (status && status.today) || null;
+
+    const cards = [];
+
+    const session = quota && quota.session;
+    const sessionPace = quotaPace(session);
+    cards.push({
+      label: "会话额度",
+      window: session && session.windowMinutes ? Math.round(session.windowMinutes / 60) + " 小时窗口" : "5 小时",
+      num: session ? fmtPercent(session.usedPercent) : "—",
+      unit: session ? "已用" : "",
+      percent: session ? session.usedPercent : 0,
+      foot: session
+        ? [
+            '<span class="dot" data-tone="' + (sessionPace ? sessionPace.tone : "muted") + '"></span>',
+            sessionPace ? sessionPace.text : "等待采样"
+          ].join("")
+        : "暂无配额数据",
+      hint: sessionPace ? fmtDuration(sessionPace.remaining) + " 后重置" : ""
+    });
+
+    const weekly = quota && quota.weekly;
+    const weeklyPace = quotaPace(weekly);
+    cards.push({
+      label: "每周额度",
+      window: weekly && weekly.windowMinutes ? Math.round(weekly.windowMinutes / 1440) + " 天窗口" : "7 天",
+      num: weekly ? fmtPercent(weekly.usedPercent) : "—",
+      unit: weekly ? "已用" : "",
+      percent: weekly ? weekly.usedPercent : 0,
+      foot: weekly
+        ? [
+            '<span class="dot" data-tone="' + (weeklyPace ? weeklyPace.tone : "muted") + '"></span>',
+            weeklyPace ? weeklyPace.text : "等待采样"
+          ].join("")
+        : "暂无配额数据",
+      hint: weeklyPace ? fmtDuration(weeklyPace.remaining) + " 后重置" : ""
+    });
+
+    const todayTotal = today ? today.totalTokens : 0;
+    const cacheRate = today && today.inputTokens ? (today.cachedInputTokens / today.inputTokens) * 100 : 0;
+    // 用「昨日同一时刻之前」的用量做基准：今天还没过完，拿全天比会严重失真
+    const nowHour = new Date().getHours();
+    const yesterdayHours = detail && detail.dailyHours ? detail.dailyHours[previousDayKey()] : null;
+    const yesterdaySameTime = Array.isArray(yesterdayHours)
+      ? yesterdayHours.slice(0, nowHour + 1).reduce((acc, value) => acc + (value || 0), 0)
+      : 0;
+    let deltaText = "昨日同期无数据";
+    if (yesterdaySameTime > 0) {
+      const delta = ((todayTotal - yesterdaySameTime) / yesterdaySameTime) * 100;
+      deltaText = "较昨日同期 " + (delta >= 0 ? "+" : "") + Math.round(delta) + "%";
+    }
+    cards.push({
+      label: "今日用量",
+      window: "本地日",
+      num: today ? fmtTokens(todayTotal) : "—",
+      unit: "tokens",
+      percent: yesterdaySameTime > 0
+        ? Math.min(100, (todayTotal / Math.max(yesterdaySameTime, todayTotal)) * 100)
+        : 0,
+      foot: today
+        ? [
+            '<b>' + fmtCount(today.records) + '</b> 次请求 · 缓存 <b>' + fmtPercent(cacheRate) + '</b>'
+          ].join("")
+        : "今天还没有记录",
+      hint: deltaText,
+      hideMeter: true
+    });
+
+    const row = $("stat-row");
+    row.innerHTML = cards.map(card => {
+      const level = meterLevel(card.percent);
+      return [
+        '<div class="stat">',
+        '  <div class="stat-top">',
+        '    <span class="stat-label">' + card.label + '</span>',
+        '    <span class="stat-window">' + card.window + '</span>',
+        '  </div>',
+        '  <div class="stat-value">',
+        '    <span class="stat-num">' + card.num + '</span>',
+        '    <span class="stat-unit">' + card.unit + '</span>',
+        '  </div>',
+        card.hideMeter ? '' : '<div class="meter"><i data-level="' + level + '" style="width:' + Math.max(2, Math.min(100, card.percent)) + '%"></i></div>',
+        '  <div class="stat-foot">' + card.foot + '</div>',
+        card.hint ? '<div class="stat-foot muted">' + card.hint + '</div>' : '',
+        '</div>'
+      ].join("");
+    }).join("");
+  }
+
+  function previousDayKey() {
+    const date = new Date();
+    date.setDate(date.getDate() - 1);
+    return localDayKey(date);
+  }
+
+  // ---------------------------------------------------------------------
+  // 渲染：趋势图
+  // ---------------------------------------------------------------------
+  function niceCeil(value) {
+    if (value <= 0) return 1;
+    const magnitude = Math.pow(10, Math.floor(Math.log10(value)));
+    const scaled = value / magnitude;
+    const steps = [1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10];
+    for (const step of steps) {
+      if (scaled <= step) return step * magnitude;
+    }
+    return 10 * magnitude;
+  }
+
+  function renderChart() {
+    const svg = $("chart");
+    const wrap = svg.parentElement;
+    const width = Math.max(320, wrap.clientWidth);
+    const height = 232;
+    const padL = 42, padR = 10, padT = 12, padB = 26;
+    const innerW = width - padL - padR;
+    const innerH = height - padT - padB;
+
+    const series = rangeSeries();
+    if (!series.length) {
+      svg.setAttribute("viewBox", "0 0 " + width + " " + height);
+      svg.innerHTML = '<text x="' + (width / 2) + '" y="' + (height / 2) + '" text-anchor="middle" class="axis-text">暂无数据</text>';
+      return;
+    }
+
+    let max = 0;
+    for (const item of series) max = Math.max(max, item.totalTokens);
+    const ceiling = niceCeil(max || 1);
+
+    const slot = innerW / series.length;
+    const barW = Math.max(2.5, Math.min(30, slot - Math.max(3, slot * 0.28)));
+    const todayKey = localDayKey(new Date());
+
+    const parts = [];
+    parts.push('<g>');
+    for (let i = 0; i <= 4; i += 1) {
+      const y = padT + innerH - (innerH * i) / 4;
+      const value = (ceiling * i) / 4;
+      parts.push('<line class="grid-line" x1="' + padL + '" y1="' + y.toFixed(1) + '" x2="' + (padL + innerW) + '" y2="' + y.toFixed(1) + '"/>');
+      parts.push('<text class="axis-text" x="' + (padL - 8) + '" y="' + (y + 3.5).toFixed(1) + '" text-anchor="end">' + fmtTokens(value) + '</text>');
+    }
+    parts.push('</g>');
+
+    // 悬停高亮底
+    if (state.hover >= 0 && state.hover < series.length) {
+      const hx = padL + state.hover * slot;
+      parts.push('<rect x="' + (hx + 1).toFixed(1) + '" y="' + padT + '" width="' + Math.max(2, slot - 2).toFixed(1) + '" height="' + innerH + '" fill="currentColor" opacity="0.045" rx="4"/>');
+    }
+    parts.push('<g style="color: var(--text)">');
+
+    series.forEach((item, index) => {
+      const cached = Math.max(0, item.cachedInputTokens);
+      const uncached = Math.max(0, (item.inputTokens || 0) - cached);
+      const output = Math.max(0, item.outputTokens || 0);
+      const total = cached + uncached + output;
+      const isToday = item.day === todayKey;
+
+      const x = padL + index * slot + (slot - barW) / 2;
+      let y = padT + innerH;
+
+      const segments = [
+        { value: cached, color: "var(--c-cached)", opacity: isToday ? 0.55 : 1 },
+        { value: uncached, color: "var(--c-input)", opacity: isToday ? 0.6 : 1 },
+        { value: output, color: "var(--c-output)", opacity: isToday ? 0.6 : 1 }
+      ];
+
+      if (total <= 0) {
+        parts.push('<rect x="' + x.toFixed(1) + '" y="' + (padT + innerH - 2) + '" width="' + barW.toFixed(1) + '" height="2" rx="1" fill="var(--line)"/>');
+      } else {
+        for (const seg of segments) {
+          if (seg.value <= 0) continue;
+          const segH = Math.max(0.8, (seg.value / ceiling) * innerH);
+          y -= segH;
+          parts.push('<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + barW.toFixed(1) + '" height="' + segH.toFixed(1) + '" fill="' + seg.color + '" opacity="' + seg.opacity + '" rx="' + (segH > 4 ? 2 : 1) + '"/>');
+        }
+      }
+    });
+    parts.push('</g>');
+
+    // X 轴标签：最多 8 个
+    const labelStep = Math.max(1, Math.ceil(series.length / 8));
+    series.forEach((item, index) => {
+      const isLast = index === series.length - 1;
+      if (!isLast && index % labelStep !== 0) return;
+      const cx = padL + index * slot + slot / 2;
+      parts.push('<text class="axis-text" x="' + cx.toFixed(1) + '" y="' + (height - 8) + '" text-anchor="middle">' + dayLabel(item.day) + '</text>');
+    });
+
+    svg.setAttribute("viewBox", "0 0 " + width + " " + height);
+    svg.setAttribute("preserveAspectRatio", "none");
+    svg.innerHTML = parts.join("");
+
+    // 概要文字
+    const sumRange = series.reduce((acc, item) => acc + item.totalTokens, 0);
+    const sumRecords = series.reduce((acc, item) => acc + item.records, 0);
+    const avg = sumRange / series.length;
+    const detail = state.detail;
+    const grandTotal = detail && detail.totals ? detail.totals.totalTokens : sumRange;
+    $("chart-sub").textContent = "区间合计 " + fmtTokens(sumRange) + " · " + fmtCount(sumRecords) + " 次请求 · 日均 " + fmtTokens(avg) +
+      " · 累计 " + fmtTokens(grandTotal);
+
+    const note = $("chart-note");
+    const legacy = detail && detail.baseline;
+    if (legacy && legacy.records > 0) {
+      note.hidden = false;
+      note.innerHTML = "累计值已并入旧版索引沉淀的 <b>" + fmtCount(legacy.records) + "</b> 条历史记录（" +
+        fmtCount(legacy.days) + " 天 · " + fmtTokens(legacy.totalTokens) + " tokens）。" +
+        "这部分原始 rollout 已被 Codex 清理，若不合并，看板只会显示磁盘上剩下的最近一段，累计会明显偏小。";
+    } else {
+      note.hidden = true;
+    }
+    const peak = series.reduce((acc, item) => (item.totalTokens > (acc ? acc.totalTokens : -1) ? item : acc), null);
+    $("chart-badge").textContent = peak && peak.totalTokens > 0 ? "峰值 " + dayLabel(peak.day) + " · " + fmtTokens(peak.totalTokens) : "—";
+  }
+
+  // 悬停提示
+  function bindChartHover() {
+    const svg = $("chart");
+    const tip = $("tip");
+
+    svg.addEventListener("mousemove", event => {
+      const series = rangeSeries();
+      if (!series.length) return;
+      const rect = svg.getBoundingClientRect();
+      const padL = 42, padR = 10;
+      const innerW = rect.width - padL - padR;
+      const slot = innerW / series.length;
+      const x = event.clientX - rect.left - padL;
+      const index = Math.max(0, Math.min(series.length - 1, Math.floor(x / slot)));
+      if (index !== state.hover) {
+        state.hover = index;
+        renderChart();
+      }
+      const item = series[index];
+      const cached = Math.max(0, item.cachedInputTokens);
+      const uncached = Math.max(0, (item.inputTokens || 0) - cached);
+      tip.innerHTML = [
+        '<div class="tip-title">' + item.day + (item.day === localDayKey(new Date()) ? " · 今天" : "") + '</div>',
+        '<div class="tip-row"><span>合计</span><b>' + fmtTokens(item.totalTokens) + '</b></div>',
+        '<div class="tip-row"><span>缓存命中</span><b>' + fmtTokens(cached) + '</b></div>',
+        '<div class="tip-row"><span>输入</span><b>' + fmtTokens(uncached) + '</b></div>',
+        '<div class="tip-row"><span>输出</span><b>' + fmtTokens(item.outputTokens) + '</b></div>',
+        '<div class="tip-row"><span>请求</span><b>' + fmtCount(item.records) + '</b></div>'
+      ].join("");
+      const px = padL + index * slot + slot / 2;
+      tip.style.left = Math.min(Math.max(px, 90), rect.width - 90) + "px";
+      tip.style.top = (event.clientY - rect.top - 12) + "px";
+      tip.classList.add("show");
+    });
+
+    svg.addEventListener("mouseleave", () => {
+      tip.classList.remove("show");
+      if (state.hover !== -1) {
+        state.hover = -1;
+        renderChart();
+      }
+    });
+  }
+
+  // ---------------------------------------------------------------------
+  // 渲染：分布
+  // ---------------------------------------------------------------------
+  function renderBars(container, items, options) {
+    const limit = options.limit || 6;
+    const nameKey = options.nameKey;
+    const emptyText = options.empty;
+
+    if (!items.length) {
+      container.innerHTML = '<div class="empty">' + emptyText + '</div>';
+      return;
+    }
+
+    const head = items.slice(0, limit);
+    const rest = items.slice(limit);
+    const rows = head.slice();
+
+    if (rest.length) {
+      rows.push({
+        [nameKey]: "其他 " + rest.length + " 项",
+        totalTokens: rest.reduce((acc, item) => acc + item.totalTokens, 0),
+        share: rest.reduce((acc, item) => acc + item.share, 0),
+        muted: true
+      });
+    }
+
+    const max = Math.max.apply(null, rows.map(item => item.share).concat([0.0001]));
+
+    container.innerHTML = rows.map(item => {
+      const width = Math.max(1.5, (item.share / max) * 100);
+      return [
+        '<div class="bar-row">',
+        '  <span class="bar-name"' + (item.muted ? ' style="color: var(--text-3)"' : '') + '>' + escapeHtml(item[nameKey]) + '</span>',
+        '  <span class="bar-val"><b>' + fmtPercent(item.share * 100, 1) + '</b> · ' + fmtTokens(item.totalTokens) + '</span>',
+        '  <span class="bar-track"><i style="width:' + width.toFixed(1) + '%"></i></span>',
+        '</div>'
+      ].join("");
+    }).join("");
+  }
+
+  function escapeHtml(value) {
+    return String(value == null ? "" : value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function renderModels() {
+    const models = rangeModels();
+    renderBars($("models"), models, { nameKey: "model", limit: 6, empty: "此区间没有模型数据" });
+    $("model-badge").textContent = rangeDays() === 0 ? "全部时间" : "最近 " + rangeDays() + " 天";
+  }
+
+  function renderProjects() {
+    const projects = rangeProjects();
+    renderBars($("projects"), projects, { nameKey: "project", limit: 6, empty: "此区间没有项目数据" });
+    $("project-badge").textContent = rangeDays() === 0 ? "全部时间" : "最近 " + rangeDays() + " 天";
+  }
+
+  function renderHours() {
+    const detail = state.detail;
+    const container = $("hours");
+    const values = (detail && detail.hourly) || new Array(24).fill(0);
+    const max = Math.max.apply(null, values.concat([1]));
+    container.innerHTML = values.map((value, hour) => {
+      const height = value > 0 ? Math.max(3, (value / max) * 72) : 2;
+      const showLabel = hour % 3 === 0;
+      return [
+        '<div class="hour-col" title="' + hour + ':00 · ' + fmtTokens(value) + ' tokens">',
+        '  <div class="hour-bar" style="height:' + height.toFixed(1) + 'px' + (value > 0 ? '' : ';background: var(--line)') + '"></div>',
+        '  <div class="hour-label">' + (showLabel ? hour : "") + '</div>',
+        '</div>'
+      ].join("");
+    }).join("");
+  }
+
+  function renderSessions() {
+    const detail = state.detail;
+    const body = $("session-body");
+    if (!detail || !detail.sessionList.length) {
+      body.innerHTML = '<tr><td colspan="6" class="empty">暂无会话记录</td></tr>';
+      $("session-badge").textContent = "0";
+      return;
+    }
+
+    const rows = detail.sessionList.slice(0, 60);
+    body.innerHTML = rows.map(item => {
+      const models = item.models && item.models.length ? item.models : ["—"];
+      const span = item.firstAt && item.lastAt ? new Date(item.lastAt).getTime() - new Date(item.firstAt).getTime() : 0;
+      return [
+        '<tr>',
+        '  <td class="muted" title="' + escapeHtml(item.lastAt || "") + '">' + relTime(item.lastAt) + '</td>',
+        '  <td class="proj" title="' + escapeHtml(item.cwd || "") + '">' + escapeHtml(item.project) + '</td>',
+        '  <td><span class="chip">' + escapeHtml(models[0]) + '</span>' + (models.length > 1 ? ' <span class="muted">+' + (models.length - 1) + '</span>' : '') + '</td>',
+        '  <td class="num">' + fmtTokens(item.totalTokens) + '</td>',
+        '  <td class="num">' + fmtCount(item.records) + '</td>',
+        '  <td class="num muted">' + fmtDuration(span) + '</td>',
+        '</tr>'
+      ].join("");
+    }).join("");
+    $("session-badge").textContent = detail.sessions + " 个会话";
+  }
+
+  function renderStatus() {
+    const detail = state.detail;
+    const dot = $("status-dot");
+    if (!detail) {
+      $("status-text").textContent = "正在读取本地会话日志…";
+      return;
+    }
+    dot.setAttribute("data-tone", detail.builtAt ? "" : "muted");
+    $("status-text").textContent =
+      "已扫描 " + detail.scannedFiles + " 个日志文件 · " + detail.sessions + " 个会话 · 更新于 " +
+      (detail.builtAt ? new Date(detail.builtAt).toLocaleString("zh-CN", { hour12: false }) : "—");
+    const legacyNote = detail.baseline && detail.baseline.days
+      ? " · 含 " + fmtCount(detail.baseline.days) + " 天历史索引"
+      : "";
+    $("brand-sub").textContent = "本地用量看板 · 累计 " + fmtTokens(detail.totals.totalTokens) + " tokens" + legacyNote;
+  }
+
+  function renderAll() {
+    renderStats();
+    renderChart();
+    renderModels();
+    renderProjects();
+    renderHours();
+    renderSessions();
+    renderStatus();
+  }
+
+  // ---------------------------------------------------------------------
+  // 交互
+  // ---------------------------------------------------------------------
+  function buildRangeTabs() {
+    const container = $("range");
+    container.innerHTML = RANGES.map(item =>
+      '<button type="button" data-key="' + item.key + '" aria-pressed="' + (item.key === state.range) + '">' + item.label + '</button>'
+    ).join("");
+    container.addEventListener("click", event => {
+      const button = event.target.closest("button[data-key]");
+      if (!button) return;
+      state.range = Number(button.dataset.key);
+      localStorage.setItem("codex.range", String(state.range));
+      for (const node of container.querySelectorAll("button")) {
+        node.setAttribute("aria-pressed", String(Number(node.dataset.key) === state.range));
+      }
+      renderChart();
+      renderModels();
+      renderProjects();
+    });
+  }
+
+  async function load({ refresh } = {}) {
+    const button = $("btn-refresh");
+    button.dataset.busy = "1";
+    try {
+      if (refresh) {
+        state.detail = await window.dashboard.refresh();
+      } else {
+        state.detail = await window.dashboard.getDetail();
+      }
+      state.status = await window.dashboard.getStatus();
+      $("app").hidden = false;
+      renderAll();
+      hideBoot();
+    } catch (error) {
+      $("boot-text").textContent = "读取失败：" + (error && error.message ? error.message : error);
+      $("boot-hint").textContent = "请确认 ~/.codex/sessions 目录存在且有日志文件";
+    } finally {
+      button.dataset.busy = "0";
+    }
+  }
+
+  function hideBoot() {
+    const boot = $("boot");
+    if (boot.classList.contains("done")) return;
+    boot.classList.add("done");
+    setTimeout(() => { boot.style.display = "none"; }, 320);
+  }
+
+  function bindButtons() {
+    $("btn-refresh").addEventListener("click", () => load({ refresh: true }));
+    $("btn-theme").addEventListener("click", () => {
+      state.theme = state.theme === "dark" ? "light" : state.theme === "light" ? "auto" : "dark";
+      localStorage.setItem("codex.theme", state.theme);
+      applyTheme();
+      renderAll();
+    });
+    $("btn-sessions").addEventListener("click", () => window.dashboard.openSessions());
+    $("btn-legacy").addEventListener("click", () => window.dashboard.openLegacy());
+  }
+
+  let resizeTimer;
+  window.addEventListener("resize", () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      if (state.detail) renderChart();
+    }, 120);
+  });
+
+  // ---------------------------------------------------------------------
+  // 启动
+  // ---------------------------------------------------------------------
+  applyTheme();
+  buildRangeTabs();
+  bindButtons();
+  bindChartHover();
+
+  if (window.dashboard) {
+    window.dashboard.onProgress(progress => {
+      if (!progress || !progress.total) return;
+      const percent = Math.max(6, Math.round((progress.index / progress.total) * 100));
+      $("boot-fill").style.width = percent + "%";
+      $("boot-text").textContent = "正在解析日志 " + progress.index + " / " + progress.total;
+    });
+    window.dashboard.getStatus().then(status => {
+      state.status = status;
+      if (status) renderStats();
+    }).catch(() => {});
+    load().catch(() => {});
+  } else {
+    $("boot-text").textContent = "桥接未加载：请通过桌面应用启动";
+  }
+})();
+</script>
+</body>
+</html>

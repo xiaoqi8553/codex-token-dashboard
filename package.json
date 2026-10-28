@@ -12,6 +12,8 @@
     "desktop:test": "node --test tests/desktop-status-api.test.js",
     "desktop:smoke": "node scripts/desktop-smoke.js",
     "popover:shot": "electron scripts/dev-popover-shot.cjs",
+    "usage:audit": "node scripts/dev-audit-usage.cjs",
+    "usage:verify": "node scripts/verify-usage-merge.cjs",
     "desktop:dir": "npm run desktop:icon && electron-builder --win --x64 --dir --config desktop/builder.config.cjs",
     "desktop:build": "npm run desktop:icon && electron-builder --win nsis --x64 --config desktop/builder.config.cjs",
     "dev": "node server.js",

@@ -488,6 +488,7 @@
   </button>
   <div class="detail" id="detail" hidden>
     <div class="line"><span>累计 tokens</span><b id="d-total">—</b></div>
+    <div class="line"><span>其中历史索引</span><b id="d-attributed">—</b></div>
     <div class="line"><span>输入 / 其中缓存</span><b id="d-input">—</b></div>
     <div class="line"><span>输出 / 其中推理</span><b id="d-output">—</b></div>
     <div class="line"><span>会话数 / 请求数</span><b id="d-count">—</b></div>
@@ -637,7 +638,14 @@
   function renderDetail(status) {
     const totals = status.totals || {};
     const today = status.today || {};
+    const legacy = status.baseline;
     $("d-total").textContent = `${formatTokens(totals.totalTokens)} tokens`;
+    const attributed = $("d-attributed");
+    if (attributed) {
+      attributed.textContent = legacy && legacy.totalTokens
+        ? `${formatTokens(legacy.totalTokens)} / ${legacy.days} 天`
+        : "—";
+    }
     $("d-input").textContent = `${formatTokens(totals.inputTokens)} / ${formatTokens(totals.cachedInputTokens)}`;
     $("d-output").textContent = `${formatTokens(today.outputTokens)} / ${formatTokens(today.reasoningOutputTokens)}`;
     $("d-count").textContent = `${(status.sessions || 0).toLocaleString("zh-CN")} / ${(totals.records || 0).toLocaleString("zh-CN")}`;

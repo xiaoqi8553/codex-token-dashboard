@@ -24,10 +24,26 @@ async function writeRealSnapshot() {
   if (!USE_REAL) return;
   try {
     const { CodexStore } = require(path.join(ROOT, "desktop", "data", "codex-store.cjs"));
+    const { buildBaseline, baselineIsFresh, loadBaseline, saveBaseline } = require(path.join(ROOT, "desktop", "data", "history-baseline.cjs"));
     const os = require("node:os");
+    // 截图必须和真机口径一致：带上历史基线，否则累计会少一大半。
+    // 注意 `electron <script>` 直接跑脚本时 app.getPath("userData") 会退回 Electron 默认目录，
+    // 这里按应用名显式拼，才能读到真机上旧版看板留下的索引。
+    const dataDir = path.join(app.getPath("appData"), "codex-token-dashboard", "data");
+    const indexPath = path.join(dataDir, "usage-index.json");
+    const baselinePath = path.join(dataDir, "history-baseline.json");
+    let baseline = null;
+    if (fs.existsSync(indexPath)) {
+      baseline = loadBaseline(baselinePath);
+      if (!baseline || !baselineIsFresh(baseline, indexPath)) {
+        baseline = buildBaseline(indexPath);
+        saveBaseline(baselinePath, baseline);
+      }
+    }
     const store = new CodexStore({
       sessionsDir: path.join(os.homedir(), ".codex", "sessions"),
-      cacheFile: path.join(app.getPath("temp"), "codex-popover-shot-cache.json")
+      cacheFile: path.join(app.getPath("temp"), "codex-popover-shot-cache.json"),
+      baseline
     });
     store.loadCache();
     // 截图要反映完整版式，近 14 天曲线需要全量索引
@@ -35,7 +51,7 @@ async function writeRealSnapshot() {
     const snapshot = store.snapshot();
     fs.mkdirSync(path.dirname(SNAPSHOT_FILE), { recursive: true });
     fs.writeFileSync(SNAPSHOT_FILE, JSON.stringify(snapshot, null, 2), "utf8");
-    process.stdout.write(`snapshot: 今日 ${snapshot.today.totalTokens} · 会话 ${snapshot.quota?.session?.usedPercent}%\n`);
+    process.stdout.write(`snapshot: 累计 ${(snapshot.totals.totalTokens / 1e9).toFixed(2)}B · 今日 ${snapshot.today.totalTokens} · 会话 ${snapshot.quota?.session?.usedPercent}%\n`);
   } catch (error) {
     process.stdout.write(`snapshot 生成失败，回退样例数据：${error.message}\n`);
   }
