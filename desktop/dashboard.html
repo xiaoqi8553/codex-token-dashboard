@@ -63,7 +63,7 @@
   body {
     background: var(--bg);
     color: var(--text);
-    font: 14px/1.55 "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, "Microsoft YaHei UI", sans-serif;
+    font: 15px/1.55 "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, "Microsoft YaHei UI", sans-serif;
     font-variant-numeric: tabular-nums;
     -webkit-font-smoothing: antialiased;
     overflow: hidden;
@@ -114,8 +114,8 @@
     box-shadow: 0 8px 24px rgba(63, 110, 240, .32);
   }
 
-  .boot-text { color: var(--text-2); font-size: 13.5px; }
-  .boot-hint { color: var(--text-3); font-size: 12.5px; }
+  .boot-text { color: var(--text-2); font-size: 14.5px; }
+  .boot-hint { color: var(--text-3); font-size: 13.5px; }
 
   .boot-bar {
     width: 210px;
@@ -177,8 +177,8 @@
     flex: none;
   }
 
-  .brand-title { font-size: 15.5px; font-weight: 640; letter-spacing: -.2px; }
-  .brand-sub { font-size: 12.5px; color: var(--text-3); }
+  .brand-title { font-size: 17px; font-weight: 640; letter-spacing: -.3px; }
+  .brand-sub { font-size: 13.5px; color: var(--text-3); }
 
   .spacer { flex: 1; }
 
@@ -195,7 +195,7 @@
     background: transparent;
     color: var(--text-2);
     font: inherit;
-    font-size: 13px;
+    font-size: 14px;
     padding: 5px 12px;
     border-radius: 7px;
     cursor: pointer;
@@ -211,7 +211,7 @@
   }
 
   /* 卡片内的小号切换器 */
-  .range.mini button { font-size: 12px; padding: 3px 9px; border-radius: 6px; }
+  .range.mini button { font-size: 12.5px; padding: 3px 9px; border-radius: 6px; }
 
   .icon-btn {
     width: 30px;
@@ -256,14 +256,14 @@
 
   .card-head h2 {
     margin: 0;
-    font-size: 14.5px;
+    font-size: 16px;
     font-weight: 620;
-    letter-spacing: -.1px;
+    letter-spacing: -.2px;
   }
 
   .card-head .sub {
     margin: 3px 0 0;
-    font-size: 12.5px;
+    font-size: 13.5px;
     color: var(--text-3);
   }
 
@@ -271,7 +271,7 @@
 
   .badge {
     margin-left: auto;
-    font-size: 12px;
+    font-size: 13px;
     color: var(--text-3);
     padding: 3px 8px;
     border-radius: 6px;
@@ -284,7 +284,7 @@
   .stat-row {
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 12px;
+    gap: 10px;
   }
 
   .stat {
@@ -292,10 +292,10 @@
     border: 1px solid var(--line);
     border-radius: var(--radius);
     box-shadow: var(--shadow);
-    padding: 14px 16px;
+    padding: 13px 14px;
     display: flex;
     flex-direction: column;
-    gap: 9px;
+    gap: 8px;
     min-width: 0;
   }
 
@@ -306,14 +306,14 @@
   }
 
   .stat-label {
-    font-size: 13.5px;
+    font-size: 14.5px;
     color: var(--text-2);
     font-weight: 560;
   }
 
   .stat-window {
     margin-left: auto;
-    font-size: 11.5px;
+    font-size: 12px;
     color: var(--text-3);
     padding: 2px 6px;
     border-radius: 5px;
@@ -327,13 +327,13 @@
   }
 
   .stat-num {
-    font-size: 30px;
+    font-size: 33px;
     font-weight: 640;
     letter-spacing: -1px;
     line-height: 1.1;
   }
 
-  .stat-unit { font-size: 13px; color: var(--text-3); }
+  .stat-unit { font-size: 14px; color: var(--text-3); }
 
   .meter {
     height: 5px;
@@ -357,7 +357,7 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    font-size: 12.5px;
+    font-size: 13.5px;
     color: var(--text-3);
     min-height: 17px;
   }
@@ -386,7 +386,7 @@
   }
 
   .stat-hint {
-    font-size: 12px;
+    font-size: 13px;
     color: var(--text-3);
     line-height: 1.3;
     margin-top: -3px;
@@ -394,7 +394,7 @@
 
   /* 版本徽标 */
   .ver {
-    font-size: 11.5px;
+    font-size: 12px;
     font-weight: 520;
     color: var(--text-3);
     background: var(--line-soft);
@@ -411,7 +411,7 @@
   .stat-num.money, .bar-money {
     font-variant-numeric: tabular-nums;
   }
-  .stat-num.money { font-size: 28px; letter-spacing: -1.3px; }
+  .stat-num.money { font-size: 31px; letter-spacing: -1.5px; }
 
   .price-link {
     color: var(--text-3);
@@ -433,14 +433,14 @@
     overflow: hidden;
   }
   .summary > div {
-    padding: 8px 12px;
+    padding: 8px 10px;
     border-left: 1px solid var(--line-soft);
     min-width: 0;
   }
   .summary > div:first-child { border-left: 0; }
-  .summary .k { font-size: 11.5px; color: var(--text-3); }
+  .summary .k { font-size: 12.5px; color: var(--text-3); }
   .summary .v {
-    font-size: 16.5px;
+    font-size: 18px;
     font-weight: 620;
     letter-spacing: -.3px;
     margin-top: 1px;
@@ -448,7 +448,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  .summary .v small { font-size: 12px; font-weight: 500; color: var(--text-3); margin-left: 5px; }
+  .summary .v small { font-size: 12.5px; font-weight: 500; color: var(--text-3); margin-left: 5px; }
 
   /* ---------------- 趋势图 ---------------- */
 
@@ -462,7 +462,7 @@
 
   .axis-text {
     fill: var(--text-3);
-    font-size: 11.5px;
+    font-size: 12.5px;
     font-family: inherit;
   }
 
@@ -477,7 +477,7 @@
     align-items: center;
     gap: 16px;
     margin-top: 10px;
-    font-size: 11.5px;
+    font-size: 12.5px;
     color: var(--text-3);
   }
 
@@ -487,13 +487,13 @@
   .tip {
     position: absolute;
     z-index: 5;
-    min-width: 148px;
+    min-width: 164px;
     padding: 9px 11px;
     background: color-mix(in srgb, var(--panel) 96%, transparent);
     border: 1px solid var(--line);
     border-radius: 9px;
     box-shadow: 0 8px 24px rgba(19, 24, 40, .16);
-    font-size: 11.5px;
+    font-size: 12.5px;
     pointer-events: none;
     opacity: 0;
     transform: translate(-50%, -100%);
@@ -507,7 +507,7 @@
 
   .note {
     margin: 8px 0 0;
-    font-size: 11.5px;
+    font-size: 12.5px;
     line-height: 1.6;
     color: var(--text-3);
     padding: 7px 10px;
@@ -531,14 +531,14 @@
   .bar-row { display: grid; grid-template-columns: 1fr auto; gap: 3px 10px; }
 
   .bar-name {
-    font-size: 13.5px;
+    font-size: 14.5px;
     color: var(--text-2);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
-  .bar-val { font-size: 12.5px; color: var(--text-3); }
+  .bar-val { font-size: 13.5px; color: var(--text-3); }
   .bar-val b { color: var(--text); font-weight: 560; }
   .bar-extra { color: var(--text-3); }
 
@@ -560,7 +560,7 @@
 
   .empty {
     color: var(--text-3);
-    font-size: 13px;
+    font-size: 14px;
     padding: 10px 0;
   }
 
@@ -594,9 +594,10 @@
   .hour-col:hover .hour-bar { background: var(--accent); }
 
   .hour-label {
-    font-size: 10.5px;
+    font-size: 11.5px;
     color: var(--text-3);
-    height: 12px;
+    height: 14px;
+    line-height: 1;
   }
 
   /* ---------------- 会话表 ---------------- */
@@ -608,7 +609,7 @@
     border: 1px solid var(--line-soft);
   }
 
-  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
 
   thead th {
     position: sticky;
@@ -617,7 +618,7 @@
     background: var(--panel-soft);
     color: var(--text-3);
     font-weight: 560;
-    font-size: 12px;
+    font-size: 13px;
     text-align: left;
     padding: 8px 12px;
     border-bottom: 1px solid var(--line);
@@ -645,7 +646,7 @@
     border-radius: 5px;
     background: var(--accent-3);
     color: var(--accent);
-    font-size: 11.5px;
+    font-size: 12.5px;
     font-weight: 540;
   }
 
@@ -658,7 +659,7 @@
     padding: 9px 18px;
     border-top: 1px solid var(--line);
     background: color-mix(in srgb, var(--panel) 82%, transparent);
-    font-size: 12.5px;
+    font-size: 13.5px;
     color: var(--text-3);
   }
 
@@ -787,7 +788,7 @@
             <tr>
               <th style="width: 90px">最近活动</th>
               <th>项目</th>
-              <th style="width: 146px">模型</th>
+              <th style="width: 172px">模型</th>
               <th style="width: 80px; text-align: right">用量</th>
               <th style="width: 60px; text-align: right">请求</th>
               <th style="width: 76px; text-align: right">花费</th>
@@ -1596,7 +1597,7 @@
     const cells = [
       ["区间用量", fmtTokens(sumRange), series.length + " 天"],
       ["区间花费", fmtMoney(costRange), fmtUsd(costRange / costRate) + " · 刊例价"],
-      ["日均", fmtTokens(avg), activeDays + " 天有记录 · " + fmtCount(sumRecords) + " 次请求"],
+      ["日均", fmtTokens(avg), activeDays + " 天 · " + fmtCount(sumRecords) + " 次请求"],
       ["单日峰值", peak ? fmtTokens(peak.totalTokens) : "—", peak ? dayLabel(peak.day) : ""],
       ["环比", compareValue, compareNote]
     ];

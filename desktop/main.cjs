@@ -789,6 +789,22 @@ if (!gotLock) {
           // 等首次明细扫描 + 渲染完成
           await new Promise(resolve => setTimeout(resolve, Number(process.env.CODEX_TOKEN_DASHBOARD_SHOT_DELAY) || 14000));
           if (!mainWindow || mainWindow.isDestroyed()) return;
+          // 排查用：截图前把窗口固定成指定尺寸（如 1180x860），保证截图和真实窗口一致
+          if (process.env.CODEX_TOKEN_DASHBOARD_SHOT_SIZE) {
+            const [width, height] = String(process.env.CODEX_TOKEN_DASHBOARD_SHOT_SIZE)
+              .split("x")
+              .map(value => Number(value) || 0);
+            if (width >= 820 && height >= 620) {
+              // Windows 上 unmaximize 是异步的，紧接着 setSize 会被还原尺寸覆盖，必须等一帧
+              if (mainWindow.isMaximized()) {
+                mainWindow.unmaximize();
+                await new Promise(resolve => setTimeout(resolve, 350));
+              }
+              mainWindow.setSize(width, height);
+              mainWindow.center();
+              await new Promise(resolve => setTimeout(resolve, 900));
+            }
+          }
           // 排查用：先切到指定数据源（codex / workbuddy）再截图
           if (process.env.CODEX_TOKEN_DASHBOARD_SHOT_SOURCE) {
             const source = String(process.env.CODEX_TOKEN_DASHBOARD_SHOT_SOURCE).replace(/[^a-z]/gi, "");
