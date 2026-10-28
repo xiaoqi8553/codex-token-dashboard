@@ -492,6 +492,7 @@
     <div class="line"><span>输入 / 其中缓存</span><b id="d-input">—</b></div>
     <div class="line"><span>输出 / 其中推理</span><b id="d-output">—</b></div>
     <div class="line"><span>会话数 / 请求数</span><b id="d-count">—</b></div>
+    <div class="line"><span>WorkBuddy 今日 / 累计</span><b id="d-wb">—</b></div>
   </div>
 
   <div class="actions">
@@ -649,6 +650,17 @@
     $("d-input").textContent = `${formatTokens(totals.inputTokens)} / ${formatTokens(totals.cachedInputTokens)}`;
     $("d-output").textContent = `${formatTokens(today.outputTokens)} / ${formatTokens(today.reasoningOutputTokens)}`;
     $("d-count").textContent = `${(status.sessions || 0).toLocaleString("zh-CN")} / ${(totals.records || 0).toLocaleString("zh-CN")}`;
+
+    const wb = status.workbuddy;
+    const wbNode = $("d-wb");
+    if (wbNode) {
+      wbNode.textContent = wb && wb.totals && wb.totals.totalTokens
+        ? `${formatTokens(wb.today ? wb.today.totalTokens : 0)} / ${formatTokens(wb.totals.totalTokens)}`
+        : "—";
+      wbNode.title = wb && wb.totals
+        ? `WorkBuddy ${wb.sessions || 0} 个会话 · ${(wb.totals.records || 0).toLocaleString("zh-CN")} 次调用 · 积分 ${wb.credits ? wb.credits.total.toFixed(0) : 0}`
+        : "未检测到 WorkBuddy 日志";
+    }
   }
 
   function render(status) {

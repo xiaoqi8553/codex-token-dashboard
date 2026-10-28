@@ -49,6 +49,16 @@ async function writeRealSnapshot() {
     // 截图要反映完整版式，近 14 天曲线需要全量索引
     await store.buildFull();
     const snapshot = store.snapshot();
+    // 弹窗现在也显示 WorkBuddy 用量：这里补一份摘要，截图才反映真实版式
+    try {
+      const { WorkBuddyStore } = require(path.join(ROOT, "desktop", "data", "workbuddy-store.cjs"));
+      const wb = new WorkBuddyStore({ cacheFile: path.join(app.getPath("temp"), "workbuddy-popover-cache.json") });
+      wb.loadCache();
+      await wb.build();
+      snapshot.workbuddy = wb.summary();
+    } catch (error) {
+      process.stdout.write(`workbuddy 摘要失败：${error.message}\n`);
+    }
     fs.mkdirSync(path.dirname(SNAPSHOT_FILE), { recursive: true });
     fs.writeFileSync(SNAPSHOT_FILE, JSON.stringify(snapshot, null, 2), "utf8");
     process.stdout.write(`snapshot: 累计 ${(snapshot.totals.totalTokens / 1e9).toFixed(2)}B · 今日 ${snapshot.today.totalTokens} · 会话 ${snapshot.quota?.session?.usedPercent}%\n`);

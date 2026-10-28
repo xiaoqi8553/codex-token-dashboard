@@ -44,6 +44,7 @@ OpenAI Sites 生产站与仓库中已经推送的版本保持同步；默认采�
 - 明细表支持搜索、筛选、排序、分页、多选、选中导出 CSV / JSON。
 - 支持脱敏快照 JSON / HTML，适合公开分享。
 - 支持本地 Node 模式、浏览器导入模式、Netlify 静态演示版。
+- 桌面看板可切换 **Codex / WorkBuddy** 两个数据源；WorkBuddy 用量直接读 `~/.workbuddy/projects` 下的会话日志，统计缓存命中、推理 token 与积分。
 
 ## 快速开始
 
@@ -350,6 +351,28 @@ dist
 - `config.json`
 - `.env`
 - 真实 `.codex/sessions`
+
+## WorkBuddy 用量口径
+
+桌面看板的 `WorkBuddy` 标签读的是 `~/.workbuddy/projects/<工作区>/<会话id>.jsonl`，每条模型调用都带一份
+`providerData.usage`：
+
+```text
+inputTokens        输入 token（含缓存命中）
+outputTokens       输出 token
+totalTokens        totalTokens，缺失时用 input + output
+inputTokensDetails[0].cached_tokens        缓存命中的输入
+outputTokensDetails[0].reasoning_tokens   思考 token
+rawUsage.credit    本次调用消耗的积分
+model / requestModelName / traceId / stepSeq / conversationRequestId
+```
+
+两个容易踩的坑：
+
+- **不能按 `conversationRequestId` 去重**。一次会话请求会被拆成十几个 step，每个 step 都是一次独立的模型调用、各带一份 usage；按请求 ID 去重会把一条会话压成一次调用（本机实测 985 次 → 27 次）。去重键用 `traceId|stepSeq`。
+- **输入含缓存**。WorkBuddy 的 `inputTokens` 已包含缓存命中，`新增输入 = input - cached`。本机实测缓存命中约占 98%，讨论用量时应同时看缓存项。
+
+日志里还有 `durationMs`/`ttft` 之类的文本，但不在 `providerData` 结构里，所以 WorkBuddy 视图不显示 tok/s；那里的「速度」列换成「积分」。
 
 ## 数据字段和统计口径
 

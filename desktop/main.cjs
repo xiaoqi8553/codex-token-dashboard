@@ -3,6 +3,7 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const { CodexStore } = require("./data/codex-store.cjs");
+const { WorkBuddyStore } = require("./data/workbuddy-store.cjs");
 const { buildBaseline, baselineIsFresh, loadBaseline, saveBaseline } = require("./data/history-baseline.cjs");
 
 const PRODUCT_NAME = "Codex Token";
@@ -43,6 +44,8 @@ if (!gotLock) {
   let preferences = { launchAtLogin: false, startMode: "popover", popoverOnly: true };
   /** @type {CodexStore|null} 独立数据层：直接读 ~/.codex/sessions，不经过本地 HTTP 服务 */
   let store = null;
+  /** @type {WorkBuddyStore|null} WorkBuddy 用量：读 ~/.workbuddy/projects 下的会话日志 */
+  let wbStore = null;
   /** 启动诊断日志的落盘位置，start() 阶段才确定 */
   let logFile = null;
 
@@ -78,7 +81,8 @@ if (!gotLock) {
       usageCache: path.join(userData, "data", "codex-usage-cache.json"),
       detailCache: path.join(userData, "data", "codex-detail-cache.json"),
       legacyIndex: path.join(userData, "data", "usage-index.json"),
-      baseline: path.join(userData, "data", "history-baseline.json")
+      baseline: path.join(userData, "data", "history-baseline.json"),
+      workbuddyCache: path.join(userData, "data", "workbuddy-detail-cache.json")
     };
   }
 
@@ -488,6 +492,18 @@ if (!gotLock) {
     mainWindow.webContents.send("dashboard:progress", progress);
   }
 
+  /** 把 WorkBuddy 的当日/累计摘要挂到最新快照上，弹窗与托盘共用 */
+  function attachWorkBuddySummary() {
+    if (!wbStore || !latestStatus) return;
+    try {
+      latestStatus.workbuddy = wbStore.summary();
+    } catch {
+      return;
+    }
+    updateTray();
+    pushStatusToPopover();
+  }
+
   function registerDashboardHandlers() {
     ipcMain.handle("dashboard:status", () => latestStatus || (store ? store.snapshot() : null));
 
@@ -510,8 +526,31 @@ if (!gotLock) {
       return detail;
     });
 
+    // WorkBuddy 用量：与 Codex 完全独立的第二个数据源，切到该标签时按需构建
+    ipcMain.handle("dashboard:workbuddy-detail", async () => {
+      if (!wbStore) return null;
+      const detail = await wbStore.build({ onProgress: pushDetailProgress });
+      attachWorkBuddySummary();
+      return detail;
+    });
+
+    ipcMain.handle("dashboard:workbuddy-refresh", async () => {
+      if (!wbStore) return null;
+      const detail = await wbStore.build({ onProgress: pushDetailProgress, force: true });
+      attachWorkBuddySummary();
+      return detail;
+    });
+
+    ipcMain.handle("dashboard:meta", () => ({
+      name: PRODUCT_NAME,
+      version: app.getVersion(),
+      repo: "https://github.com/xiaoqi8553/codex-token-dashboard",
+      packaged: app.isPackaged
+    }));
+
     ipcMain.handle("dashboard:open-legacy", () => openLegacyDashboard());
     ipcMain.handle("dashboard:open-sessions", () => shell.openPath(sessionsDir()));
+    ipcMain.handle("dashboard:open-workbuddy", () => shell.openPath(path.join(os.homedir(), ".workbuddy", "projects")));
     ipcMain.handle("dashboard:open-external", (_event, url) => {
       if (typeof url === "string" && /^https:\/\//i.test(url)) shell.openExternal(url);
       return true;
@@ -543,6 +582,7 @@ if (!gotLock) {
       { label: quota && quota.weekly ? `每周额度：${Math.round(quota.weekly.usedPercent)}% 已用` : "每周额度：暂无数据", enabled: false },
       { label: `今日用量：${formatTokens(data?.today?.totalTokens)} tokens`, enabled: false },
       { label: `累计用量：${formatTokens(data?.totals?.totalTokens)} tokens`, enabled: false },
+      { label: `WorkBuddy 今日：${formatTokens(data?.workbuddy?.today?.totalTokens)} tokens`, enabled: false },
       { type: "separator" },
       { label: "立即同步数据", click: () => { refreshTrayStatus(true); } },
       {
@@ -579,6 +619,14 @@ if (!gotLock) {
       startupError = "";
     } catch (error) {
       startupError = `读取用量失败：${error.message}`;
+    }
+    // 快照是全新的对象，WorkBuddy 摘要要重新挂上
+    if (latestStatus && wbStore) {
+      try {
+        latestStatus.workbuddy = wbStore.summary();
+      } catch {
+        /* 摘要失败不影响主数据 */
+      }
     }
     updateTray();
     pushStatusToPopover();
@@ -636,6 +684,17 @@ if (!gotLock) {
     });
     // 明细缓存先读盘：看板第二次打开可以秒出
     store.loadDetailCache();
+
+    wbStore = new WorkBuddyStore({ cacheFile: paths.workbuddyCache });
+    wbStore.loadCache();
+    // WorkBuddy 日志量小（本机 25MB / 千条请求），并行构建，几十毫秒
+    wbStore.build()
+      .then(() => {
+        log(`workbuddy: ${wbStore.files.size} files, ${(wbStore.summary().totals.totalTokens / 1e6).toFixed(1)}M tokens`);
+        attachWorkBuddySummary();
+      })
+      .catch(error => log(`workbuddy scan failed: ${error.message}`));
+
     const snapshot = await store.init({ full: false });
     latestStatus = snapshot;
     updateTray();
@@ -713,6 +772,14 @@ if (!gotLock) {
           // 等首次明细扫描 + 渲染完成
           await new Promise(resolve => setTimeout(resolve, Number(process.env.CODEX_TOKEN_DASHBOARD_SHOT_DELAY) || 14000));
           if (!mainWindow || mainWindow.isDestroyed()) return;
+          // 排查用：先切到指定数据源（codex / workbuddy）再截图
+          if (process.env.CODEX_TOKEN_DASHBOARD_SHOT_SOURCE) {
+            const source = String(process.env.CODEX_TOKEN_DASHBOARD_SHOT_SOURCE).replace(/[^a-z]/gi, "");
+            await mainWindow.webContents.executeJavaScript(
+              `(() => { const el = document.querySelector('#source button[data-source="${source}"]'); if (el) el.click(); return !!el; })()`
+            );
+            await new Promise(resolve => setTimeout(resolve, 2200));
+          }
           const shotPath = process.env.CODEX_TOKEN_DASHBOARD_SHOT;
           // 明确先回到顶部，避免捕获到上一次滚动位置
           await mainWindow.webContents.executeJavaScript('(() => { const el = document.querySelector("main"); if (el) el.scrollTop = 0; return true; })()');

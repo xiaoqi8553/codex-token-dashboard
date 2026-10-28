@@ -324,11 +324,11 @@ test("usage trend has no persistent numeric overlays or summaries", () => {
   assert.doesNotMatch(cacheSource, /峰值 active|缓存 \$\{formatToken|命中率 \$\{avgHit\}% \/ active/);
 });
 
-test("1.0.2 uses the engineering workspace shell and CodexBar usage board", () => {
-  assert.equal(packageJson.version, "1.0.2");
+test("1.1.0 uses the engineering workspace shell and CodexBar usage board", () => {
+  assert.equal(packageJson.version, "1.1.0");
   assert.match(indexSource, /class="side-rail shell"/);
   assert.match(indexSource, /id="viewTitle"/);
-  assert.match(indexSource, /v1\.0\.2/);
+  assert.match(indexSource, /v1\.1\.0/);
   assert.match(indexSource, /<strong>CodexBar<\/strong>/);
   assert.match(indexSource, /近 5 小时/);
   assert.match(indexSource, /近 7 天/);

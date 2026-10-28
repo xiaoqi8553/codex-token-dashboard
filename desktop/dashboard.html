@@ -53,6 +53,7 @@
   }
 
   * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
 
   html, body {
     margin: 0;
@@ -373,6 +374,67 @@
   .dot[data-tone="warn"] { background: var(--warn); }
   .dot[data-tone="muted"] { background: var(--text-3); }
 
+  /* 额度条上的时间进度刻度：柱子是「已用」，竖线是「时间过了多少」 */
+  .meter { position: relative; overflow: visible; }
+  .meter .pace {
+    position: absolute;
+    top: -3px;
+    bottom: -3px;
+    width: 2px;
+    border-radius: 2px;
+    background: color-mix(in srgb, var(--text-3) 62%, transparent);
+  }
+
+  .stat-hint {
+    font-size: 11px;
+    color: var(--text-3);
+    line-height: 1.3;
+    margin-top: -3px;
+  }
+
+  /* 版本徽标 */
+  .ver {
+    font-size: 10.5px;
+    font-weight: 520;
+    color: var(--text-3);
+    background: var(--line-soft);
+    border-radius: 5px;
+    padding: 1px 6px;
+    margin-left: 6px;
+    text-decoration: none;
+    vertical-align: 2px;
+    cursor: pointer;
+  }
+  .ver:hover { color: var(--accent); background: var(--accent-3); }
+
+  /* 区间概要条：把「一行小字」换成可读的四个指标 */
+  .summary {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    border: 1px solid var(--line-soft);
+    border-radius: 10px;
+    background: var(--panel-soft);
+    margin-bottom: 12px;
+    overflow: hidden;
+  }
+  .summary > div {
+    padding: 8px 12px;
+    border-left: 1px solid var(--line-soft);
+    min-width: 0;
+  }
+  .summary > div:first-child { border-left: 0; }
+  .summary .k { font-size: 10.5px; color: var(--text-3); }
+  .summary .v {
+    font-size: 14px;
+    font-weight: 620;
+    letter-spacing: -.3px;
+    margin-top: 1px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .summary .v small { font-size: 11px; font-weight: 500; color: var(--text-3); margin-left: 4px; }
+
   /* ---------------- 趋势图 ---------------- */
 
   .chart-wrap {
@@ -616,7 +678,7 @@
     <div class="boot-mark">&gt;_</div>
     <div class="boot-text" id="boot-text">正在读取本地会话日志…</div>
     <div class="boot-bar"><i id="boot-fill"></i></div>
-    <div class="boot-hint" id="boot-hint">数据来自 ~/.codex/sessions，不联网</div>
+    <div class="boot-hint" id="boot-hint">数据来自 ~/.codex/sessions 与 ~/.workbuddy/projects，不联网</div>
   </div>
 </div>
 
@@ -625,9 +687,13 @@
     <div class="brand">
       <div class="brand-mark">&gt;_</div>
       <div>
-        <div class="brand-title">Codex Token</div>
+        <div class="brand-title">Token 看板<a class="ver" id="app-ver" title="查看 GitHub 仓库">v—</a></div>
         <div class="brand-sub" id="brand-sub">本地用量看板</div>
       </div>
+    </div>
+    <div class="range source" id="source" role="group" aria-label="数据源">
+      <button type="button" data-source="codex" aria-pressed="true">Codex</button>
+      <button type="button" data-source="workbuddy" aria-pressed="false">WorkBuddy</button>
     </div>
     <div class="spacer"></div>
     <div class="range" id="range" role="group" aria-label="时间范围"></div>
@@ -654,6 +720,7 @@
         </div>
         <span class="badge" id="chart-badge">—</span>
       </div>
+      <div class="summary" id="chart-summary"></div>
       <div class="chart-wrap">
         <svg id="chart" role="img" aria-label="每日 token 用量"></svg>
         <div class="tip" id="tip"></div>
@@ -702,7 +769,7 @@
               <th style="width: 146px">模型</th>
               <th style="width: 80px; text-align: right">用量</th>
               <th style="width: 60px; text-align: right">请求</th>
-              <th style="width: 66px; text-align: right">速度</th>
+              <th style="width: 66px; text-align: right" id="th-speed">速度</th>
               <th style="width: 74px; text-align: right">时长</th>
             </tr>
           </thead>
@@ -736,8 +803,13 @@
   ];
 
   const state = {
+    /** 当前展示的数据源明细（等于 data[source]） */
     detail: null,
+    /** 两个数据源各自缓存一份，切换时不用重新扫描 */
+    data: { codex: null, workbuddy: null },
+    source: localStorage.getItem("codex.source") === "workbuddy" ? "workbuddy" : "codex",
     status: null,
+    meta: null,
     range: Number(localStorage.getItem("codex.range") || 14) || 14,
     hourMetric: localStorage.getItem("codex.hourMetric") || "tokens",
     theme: localStorage.getItem("codex.theme") || "auto",
@@ -959,50 +1031,95 @@
     return "ok";
   }
 
-  function renderStats() {
+  /** 某个时间窗口内实际消耗的 tokens：用小时桶累加，避免再扫一遍日志 */
+  function windowTokens(startMs, endMs) {
+    const hours = state.detail && state.detail.dailyHours;
+    if (!hours || !Number.isFinite(startMs)) return null;
+    const end = Number.isFinite(endMs) ? endMs : Date.now();
+    const cursor = new Date(startMs);
+    cursor.setMinutes(0, 0, 0);
+    let total = 0;
+    let seen = false;
+    while (cursor.getTime() <= end) {
+      const row = hours[localDayKey(cursor)];
+      if (row) {
+        total += row[cursor.getHours()] || 0;
+        seen = true;
+      }
+      cursor.setHours(cursor.getHours() + 1);
+    }
+    return seen ? total : null;
+  }
+
+  function fmtClock(stamp) {
+    const date = new Date(stamp);
+    if (Number.isNaN(date.getTime())) return "—";
+    const pad = value => String(value).padStart(2, "0");
+    const clock = pad(date.getHours()) + ":" + pad(date.getMinutes());
+    if (localDayKey(date) === localDayKey(new Date())) return clock;
+    return (date.getMonth() + 1) + "/" + date.getDate() + " " + clock;
+  }
+
+  /**
+   * 额度卡：已用百分比 + 剩余 + 本窗口真实消耗 + 重置时刻 + 节奏。
+   * 只给一个百分比太单薄，看不出「这个窗口里到底花了多少」。
+   */
+  function quotaCard(title, fallbackWindow, quotaWindow) {
+    const windowLabel = quotaWindow && quotaWindow.windowMinutes
+      ? (quotaWindow.windowMinutes >= 1440
+        ? Math.round(quotaWindow.windowMinutes / 1440) + " 天窗口"
+        : Math.round(quotaWindow.windowMinutes / 60) + " 小时窗口")
+      : fallbackWindow;
+
+    if (!quotaWindow) {
+      return {
+        label: title,
+        window: windowLabel,
+        num: "—",
+        unit: "",
+        hideMeter: true,
+        foot: "暂无配额快照",
+        hints: ["跑一次 Codex 就能拿到额度"]
+      };
+    }
+
+    const used = Math.max(0, Math.min(100, quotaWindow.usedPercent));
+    const remaining = Math.max(0, 100 - used);
+    const pace = quotaPace(quotaWindow);
+    const totalMs = quotaWindow.windowMinutes ? quotaWindow.windowMinutes * 60000 : 0;
+    const resetMs = quotaWindow.resetsAt ? quotaWindow.resetsAt * 1000 : null;
+    const startMs = resetMs && totalMs ? resetMs - totalMs : null;
+    const tokens = startMs ? windowTokens(startMs, Date.now()) : null;
+    const elapsedPercent = startMs && resetMs
+      ? Math.max(0, Math.min(100, ((totalMs - (resetMs - Date.now())) / totalMs) * 100))
+      : null;
+
+    const hints = [];
+    if (tokens !== null) hints.push("窗口内 " + fmtTokens(tokens) + " tokens");
+    if (resetMs) hints.push(fmtClock(resetMs) + " 重置");
+
+    return {
+      label: title,
+      window: windowLabel,
+      num: fmtPercent(used),
+      unit: "已用",
+      percent: used,
+      pace: elapsedPercent,
+      foot: [
+        '<span class="dot" data-tone="' + (pace ? pace.tone : "muted") + '"></span>',
+        "剩余 <b>" + fmtPercent(remaining) + "</b>",
+        pace ? " · " + escapeHtml(pace.text) : ""
+      ].join(""),
+      hints
+    };
+  }
+
+  function todayCard() {
     const detail = state.detail;
-    const status = state.status;
-    const quota = (status && status.quota) || null;
-    const today = detail && detail.today ? detail.today : (status && status.today) || null;
-
-    const cards = [];
-
-    const session = quota && quota.session;
-    const sessionPace = quotaPace(session);
-    cards.push({
-      label: "会话额度",
-      window: session && session.windowMinutes ? Math.round(session.windowMinutes / 60) + " 小时" : "5 小时",
-      num: session ? fmtPercent(session.usedPercent) : "—",
-      unit: session ? "已用" : "",
-      percent: session ? session.usedPercent : 0,
-      foot: session
-        ? [
-            '<span class="dot" data-tone="' + (sessionPace ? sessionPace.tone : "muted") + '"></span>',
-            sessionPace ? sessionPace.text : "等待采样"
-          ].join("")
-        : "暂无配额数据",
-      hint: sessionPace ? fmtDuration(sessionPace.remaining) + " 后重置" : ""
-    });
-
-    const weekly = quota && quota.weekly;
-    const weeklyPace = quotaPace(weekly);
-    cards.push({
-      label: "每周额度",
-      window: weekly && weekly.windowMinutes ? Math.round(weekly.windowMinutes / 1440) + " 天" : "7 天",
-      num: weekly ? fmtPercent(weekly.usedPercent) : "—",
-      unit: weekly ? "已用" : "",
-      percent: weekly ? weekly.usedPercent : 0,
-      foot: weekly
-        ? [
-            '<span class="dot" data-tone="' + (weeklyPace ? weeklyPace.tone : "muted") + '"></span>',
-            weeklyPace ? weeklyPace.text : "等待采样"
-          ].join("")
-        : "暂无配额数据",
-      hint: weeklyPace ? fmtDuration(weeklyPace.remaining) + " 后重置" : ""
-    });
-
-    const todayTotal = today ? today.totalTokens : 0;
+    const today = detail && detail.today ? detail.today : null;
+    const total = today ? today.totalTokens : 0;
     const cacheRate = today && today.inputTokens ? (today.cachedInputTokens / today.inputTokens) * 100 : 0;
+
     // 用「昨日同一时刻之前」的用量做基准：今天还没过完，拿全天比会严重失真
     const nowHour = new Date().getHours();
     const yesterdayHours = detail && detail.dailyHours ? detail.dailyHours[previousDayKey()] : null;
@@ -1011,27 +1128,28 @@
       : 0;
     let deltaText = "昨日同期无数据";
     if (yesterdaySameTime > 0) {
-      const delta = ((todayTotal - yesterdaySameTime) / yesterdaySameTime) * 100;
+      const delta = ((total - yesterdaySameTime) / yesterdaySameTime) * 100;
       deltaText = "较昨日同期 " + (delta >= 0 ? "+" : "") + Math.round(delta) + "%";
     }
-    cards.push({
-      label: "今日用量",
-      window: "",
-      num: today ? fmtTokens(todayTotal) : "—",
-      unit: "tokens",
-      percent: yesterdaySameTime > 0
-        ? Math.min(100, (todayTotal / Math.max(yesterdaySameTime, todayTotal)) * 100)
-        : 0,
-      foot: today
-        ? [
-            '<b>' + fmtCount(today.records) + '</b> 次请求 · 缓存 <b>' + fmtPercent(cacheRate) + '</b>'
-          ].join("")
-        : "今天还没有记录",
-      hint: deltaText,
-      hideMeter: true
-    });
 
-    // 输出速度：整轮耗时口径（含工具调用与等待），不是纯流式解码速度
+    const freshInput = today ? Math.max(0, today.inputTokens - today.cachedInputTokens) : 0;
+    return {
+      label: "今日用量",
+      window: "00:00 起",
+      num: today ? fmtTokens(total) : "—",
+      unit: "tokens",
+      hideMeter: true,
+      foot: today
+        ? "<b>" + fmtCount(today.records) + "</b> 次请求 · 缓存命中 <b>" + fmtPercent(cacheRate) + "</b>"
+        : "今天还没有记录",
+      hints: today
+        ? [deltaText, "新增输入 " + fmtTokens(freshInput) + " · 输出 " + fmtTokens(today.outputTokens)]
+        : []
+    };
+  }
+
+  function speedCard() {
+    const detail = state.detail;
     const speed = detail && detail.throughput;
     const todaySpeed = speed && speed.days ? speed.days[localDayKey(new Date())] : null;
     const recentSpeed = speed && detail.series
@@ -1049,35 +1167,110 @@
         })()
       : null;
 
-    cards.push({
+    const hints = [];
+    if (recentSpeed) hints.push("近 14 天 " + recentSpeed.tps.toFixed(1) + " tok/s");
+    if (todaySpeed && todaySpeed.ttftMs) hints.push("首字 " + fmtSpeed(todaySpeed.ttftMs));
+
+    return {
       label: "输出速度",
-      window: "",
+      window: "整轮耗时口径",
       num: todaySpeed ? todaySpeed.tps.toFixed(1) : "—",
       unit: todaySpeed ? "tok/s" : "",
-      percent: 0,
+      hideMeter: true,
       foot: todaySpeed
-        ? '<b>' + fmtCount(todaySpeed.turns) + '</b> 轮完成'
+        ? "<b>" + fmtCount(todaySpeed.turns) + "</b> 轮完成"
         : "今天还没有完成的轮次",
-      hint: recentSpeed ? "近 14 天 " + recentSpeed.tps.toFixed(1) + " tok/s" : "",
-      hideMeter: true
-    });
+      hints
+    };
+  }
+
+  function workbuddyCards() {
+    const detail = state.detail;
+    const totals = detail.totals;
+    const today = detail.today;
+    const cacheRate = totals.inputTokens ? (totals.cachedInputTokens / totals.inputTokens) * 100 : 0;
+    const todayRate = today && today.inputTokens ? (today.cachedInputTokens / today.inputTokens) * 100 : 0;
+    const credits = detail.credits || { total: 0 };
+
+    return [
+      {
+        label: "今日用量",
+        window: "00:00 起",
+        num: today ? fmtTokens(today.totalTokens) : "—",
+        unit: "tokens",
+        hideMeter: true,
+        foot: today
+          ? "<b>" + fmtCount(today.records) + "</b> 次调用 · 缓存 <b>" + fmtPercent(todayRate) + "</b>"
+          : "今天还没有记录",
+        hints: today
+          ? ["输出 " + fmtTokens(today.outputTokens) + " · 推理 " + fmtTokens(today.reasoningOutputTokens)]
+          : []
+      },
+      {
+        label: "累计用量",
+        window: detail.series.length + " 天",
+        num: fmtTokens(totals.totalTokens),
+        unit: "tokens",
+        hideMeter: true,
+        foot: "<b>" + fmtCount(totals.sessions) + "</b> 个会话 · <b>" + fmtCount(totals.records) + "</b> 次调用",
+        hints: ["来源 ~/.workbuddy/projects"]
+      },
+      {
+        label: "积分消耗",
+        window: "按调用累加",
+        num: credits.total ? credits.total.toFixed(0) : "—",
+        unit: "积分",
+        hideMeter: true,
+        foot: "今日 <b>" + (credits.today ? credits.today.toFixed(0) : "0") + "</b> 积分",
+        hints: ["WorkBuddy 自己的计费口径"]
+      },
+      {
+        label: "缓存命中率",
+        window: "输入口径",
+        num: fmtPercent(cacheRate, 1),
+        unit: "命中",
+        percent: cacheRate,
+        level: "ok",
+        foot: "命中 <b>" + fmtTokens(totals.cachedInputTokens) + "</b> · 输入 <b>" + fmtTokens(totals.inputTokens) + "</b>",
+        hints: ["每轮重发上下文，命中越高越省"]
+      }
+    ];
+  }
+
+  function renderStats() {
+    const detail = state.detail;
+    if (!detail && state.source === "workbuddy") return;
+
+    let cards;
+    if (state.source === "workbuddy") {
+      cards = workbuddyCards();
+    } else {
+      const quota = (state.status && state.status.quota) || null;
+      cards = [
+        quotaCard("5 小时额度", "5 小时窗口", quota && quota.session),
+        quotaCard("7 天额度", "7 天窗口", quota && quota.weekly),
+        todayCard(),
+        speedCard()
+      ];
+    }
 
     const row = $("stat-row");
     row.innerHTML = cards.map(card => {
-      const level = meterLevel(card.percent);
+      const level = card.level || meterLevel(card.percent);
+      const pace = Number.isFinite(card.pace) ? '<b class="pace" style="left:' + Math.max(0, Math.min(100, card.pace)).toFixed(1) + '%"></b>' : '';
       return [
         '<div class="stat">',
         '  <div class="stat-top">',
-        '    <span class="stat-label">' + card.label + '</span>',
-        card.window ? '    <span class="stat-window">' + card.window + '</span>' : '',
+        '    <span class="stat-label">' + escapeHtml(card.label) + '</span>',
+        card.window ? '    <span class="stat-window">' + escapeHtml(card.window) + '</span>' : '',
         '  </div>',
         '  <div class="stat-value">',
         '    <span class="stat-num">' + card.num + '</span>',
-        '    <span class="stat-unit">' + card.unit + '</span>',
+        '    <span class="stat-unit">' + (card.unit || "") + '</span>',
         '  </div>',
-        card.hideMeter ? '' : '<div class="meter"><i data-level="' + level + '" style="width:' + Math.max(2, Math.min(100, card.percent)) + '%"></i></div>',
+        card.hideMeter ? '' : '<div class="meter"><i data-level="' + level + '" style="width:' + Math.max(2, Math.min(100, card.percent)) + '%"></i>' + pace + '</div>',
         '  <div class="stat-foot">' + card.foot + '</div>',
-        card.hint ? '<div class="stat-foot muted">' + card.hint + '</div>' : '',
+        (card.hints || []).filter(Boolean).map(text => '  <div class="stat-hint">' + escapeHtml(text) + '</div>').join(''),
         '</div>'
       ].join("");
     }).join("");
@@ -1202,14 +1395,57 @@
     svg.removeAttribute("preserveAspectRatio");
     svg.innerHTML = parts.join("");
 
-    // 概要文字：只留最有用的三项
+    // ------------------------------------------------------------------
+    // 概要：四个指标横排，不再压成一行小字
+    // ------------------------------------------------------------------
     const sumRange = series.reduce((acc, item) => acc + item.totalTokens, 0);
     const sumRecords = series.reduce((acc, item) => acc + item.records, 0);
-    const avg = series.length ? sumRange / series.length : 0;
-    $("chart-sub").textContent = fmtTokens(sumRange) + " · " + fmtCount(sumRecords) + " 次请求 · 日均 " + fmtTokens(avg);
+    const activeDays = series.filter(item => item.totalTokens > 0).length || series.length;
+    const avg = activeDays ? sumRange / activeDays : 0;
+    const peak = series.reduce((acc, item) => (!acc || item.totalTokens > acc.totalTokens ? item : acc), null);
 
-    const peak = series.reduce((acc, item) => (item.totalTokens > (acc ? acc.totalTokens : -1) ? item : acc), null);
-    $("chart-badge").textContent = peak && peak.totalTokens > 0 ? "峰值 " + fmtTokens(peak.totalTokens) : "—";
+    const days = rangeDays();
+    const firstDay = series[0].day;
+    const lastDay = series[series.length - 1].day;
+    $("chart-sub").textContent = (days === 0 ? "全部时间" : "最近 " + days + " 天") +
+      " · " + dayLabel(firstDay) + " – " + dayLabel(lastDay) + " · " + series.length + " 天有记录";
+
+    // 环比：跟紧挨着的前一段等长区间比
+    let compareValue = "—";
+    let compareNote = "缺少上一周期数据";
+    const detail = state.detail;
+    if (detail && detail.series) {
+      if (days > 0) {
+        const all = detail.series;
+        const index = all.findIndex(item => item.day === firstDay);
+        const prev = all.slice(Math.max(0, index - days), Math.max(0, index));
+        const prevSum = prev.reduce((acc, item) => acc + item.totalTokens, 0);
+        if (prevSum > 0) {
+          const ratio = sumRange / prevSum;
+          const delta = (ratio - 1) * 100;
+          compareValue = delta >= 300 || delta <= -90
+            ? "×" + ratio.toFixed(ratio >= 10 ? 0 : 1)
+            : (delta >= 0 ? "+" : "") + Math.round(delta) + "%";
+          compareNote = "上一周期 " + fmtTokens(prevSum) + " · 含历史索引";
+        }
+      } else {
+        compareValue = series.length + " 天";
+        compareNote = "最早 " + dayLabel(firstDay);
+      }
+    }
+
+    const cells = [
+      ["区间用量", fmtTokens(sumRange), series.length + " 天"],
+      ["日均", fmtTokens(avg), activeDays + " 天有记录 · " + fmtCount(sumRecords) + " 次请求"],
+      ["单日峰值", peak ? fmtTokens(peak.totalTokens) : "—", peak ? dayLabel(peak.day) : ""],
+      ["环比", compareValue, compareNote]
+    ];
+    $("chart-summary").innerHTML = cells.map(([label, value, note]) =>
+      '<div><div class="k">' + label + '</div><div class="v">' + value +
+      (note ? '<small>' + note + '</small>' : '') + '</div></div>'
+    ).join("");
+
+    $("chart-badge").textContent = state.source === "workbuddy" ? "WorkBuddy · 本地日志" : "Codex · 本地日志";
   }
 
   // 悬停提示
@@ -1329,7 +1565,9 @@
       container.innerHTML = "";
       return;
     }
-    const speedMode = state.hourMetric === "speed";
+    const hasSpeed = Boolean(detail.throughput);
+    const speedMode = hasSpeed && state.hourMetric === "speed";
+    $("hour-tabs").hidden = !hasSpeed;
     $("hour-title").textContent = speedMode ? "活跃时段 · tok/s" : "活跃时段";
     const days = rangeSeries().map(item => item.day);
     const values = new Array(24).fill(0);
@@ -1390,6 +1628,10 @@
       return;
     }
 
+    const isWorkBuddy = detail.source === "workbuddy";
+    $("th-speed").textContent = isWorkBuddy ? "积分" : "速度";
+    $("session-badge").textContent = detail.sessions + " 个会话";
+
     const rows = detail.sessionList.slice(0, 60);
     body.innerHTML = rows.map(item => {
       const models = item.models && item.models.length ? item.models : ["—"];
@@ -1401,12 +1643,13 @@
         '  <td><span class="chip">' + escapeHtml(models[0]) + '</span>' + (models.length > 1 ? ' <span class="muted">+' + (models.length - 1) + '</span>' : '') + '</td>',
         '  <td class="num">' + fmtTokens(item.totalTokens) + '</td>',
         '  <td class="num">' + fmtCount(item.records) + '</td>',
-        '  <td class="num">' + (item.tps ? item.tps.toFixed(1) : '<span class="muted">—</span>') + '</td>',
+        '  <td class="num">' + (isWorkBuddy
+          ? (item.credit ? item.credit.toFixed(1) : '<span class="muted">—</span>')
+          : (item.tps ? item.tps.toFixed(1) : '<span class="muted">—</span>')) + '</td>',
         '  <td class="num muted">' + fmtDuration(span) + '</td>',
         '</tr>'
       ].join("");
     }).join("");
-    $("session-badge").textContent = detail.sessions + " 个会话";
   }
 
   function renderStatus() {
@@ -1418,12 +1661,22 @@
     }
     dot.setAttribute("data-tone", detail.builtAt ? "" : "muted");
     $("status-text").textContent =
+      (detail.source === "workbuddy" ? "WorkBuddy · " : "Codex · ") +
       detail.scannedFiles + " 个日志 · " + detail.sessions + " 个会话 · " +
       (detail.builtAt ? new Date(detail.builtAt).toLocaleString("zh-CN", { hour12: false }) : "—");
-    // 顶部只留一行累计，其余信息交给各卡片
-    const legacyDays = detail.baseline && detail.baseline.days ? detail.baseline.days : 0;
-    $("brand-sub").textContent = "累计 " + fmtTokens(detail.totals.totalTokens) +
-      (legacyDays ? " · " + legacyDays + " 天" : "");
+
+    const legacyDays = detail.baseline && detail.baseline.days ? detail.baseline.days : detail.series.length;
+    if (detail.source === "workbuddy") {
+      const todayTokens = detail.today ? detail.today.totalTokens : 0;
+      $("brand-sub").textContent = "累计 " + fmtTokens(detail.totals.totalTokens) +
+        " · " + legacyDays + " 天" +
+        (legacyDays > 1 && todayTokens > 0 ? " · 今日 " + fmtTokens(todayTokens) : "");
+    } else {
+      const wbToday = workbuddyTodayTokens();
+      $("brand-sub").textContent = "累计 " + fmtTokens(detail.totals.totalTokens) +
+        (legacyDays ? " · " + legacyDays + " 天" : "") +
+        (wbToday > 0 ? " · WorkBuddy " + fmtTokens(wbToday) + " 今日" : "");
+    }
   }
 
   function renderAll() {
@@ -1476,22 +1729,92 @@
     });
   }
 
+  /** WorkBuddy 今日用量：优先用弹窗快照，没有就退回明细 */
+  function workbuddyTodayTokens() {
+    const fromStatus = state.status && state.status.workbuddy && state.status.workbuddy.today;
+    if (fromStatus && fromStatus.totalTokens) return fromStatus.totalTokens;
+    const detail = state.data.workbuddy;
+    return detail && detail.today ? detail.today.totalTokens : 0;
+  }
+
+  function applySourceTabs() {
+    for (const node of $("source").querySelectorAll("button")) {
+      node.setAttribute("aria-pressed", String(node.dataset.source === state.source));
+    }
+  }
+
+  function buildSourceTabs() {
+    applySourceTabs();
+    $("source").addEventListener("click", event => {
+      const button = event.target.closest("button[data-source]");
+      if (!button || button.dataset.source === state.source) return;
+      state.source = button.dataset.source;
+      localStorage.setItem("codex.source", state.source);
+      applySourceTabs();
+      state.hover = -1;
+      if (state.data[state.source]) {
+        state.detail = state.data[state.source];
+        renderAll();
+        return;
+      }
+      $("status-text").textContent = state.source === "workbuddy" ? "正在读取 WorkBuddy 日志…" : "正在读取 Codex 日志…";
+      loadSource(state.source).then(() => {
+        state.detail = state.data[state.source];
+        renderAll();
+      }).catch(error => {
+        $("status-text").textContent = "读取失败：" + (error && error.message ? error.message : error);
+      });
+    });
+  }
+
+  async function loadSource(source, { refresh } = {}) {
+    const api = window.dashboard;
+    let detail;
+    if (source === "workbuddy") {
+      if (!api.workbuddyDetail) throw new Error("当前版本不支持 WorkBuddy 数据源");
+      detail = refresh && api.workbuddyRefresh ? await api.workbuddyRefresh() : await api.workbuddyDetail();
+      if (!detail) throw new Error("WorkBuddy 数据层尚未初始化");
+      state.data.workbuddy = detail;
+    } else {
+      detail = refresh ? await api.refresh() : await api.getDetail();
+      state.data.codex = detail;
+    }
+    return detail;
+  }
+
   async function load({ refresh } = {}) {
     const button = $("btn-refresh");
     button.dataset.busy = "1";
     try {
-      if (refresh) {
-        state.detail = await window.dashboard.refresh();
-      } else {
-        state.detail = await window.dashboard.getDetail();
+      await loadSource("codex", { refresh });
+      if (state.source === "workbuddy") {
+        $("status-text").textContent = "正在读取 WorkBuddy 日志…";
+        await loadSource("workbuddy", { refresh }).catch(() => {});
       }
-      state.status = await window.dashboard.getStatus();
+      try {
+        state.status = await window.dashboard.getStatus();
+      } catch {
+        /* 配额快照拿不到不影响其余部分 */
+      }
+      state.detail = state.data[state.source] || state.data.codex;
       $("app").hidden = false;
       renderAll();
       hideBoot();
+      // 后台预热另一个数据源，切换时不用等扫描
+      const other = state.source === "workbuddy" ? "codex" : "workbuddy";
+      if (!state.data[other]) {
+        loadSource(other).then(() => {
+          if (state.source === other) {
+            state.detail = state.data[other];
+            renderAll();
+          } else {
+            renderStatus();
+          }
+        }).catch(() => {});
+      }
     } catch (error) {
       $("boot-text").textContent = "读取失败：" + (error && error.message ? error.message : error);
-      $("boot-hint").textContent = "请确认 ~/.codex/sessions 目录存在且有日志文件";
+      $("boot-hint").textContent = "请确认 ~/.codex/sessions 与 ~/.workbuddy/projects 目录存在";
     } finally {
       button.dataset.busy = "0";
     }
@@ -1512,8 +1835,16 @@
       applyTheme();
       renderAll();
     });
-    $("btn-sessions").addEventListener("click", () => window.dashboard.openSessions());
+    $("btn-sessions").addEventListener("click", () => {
+      if (state.source === "workbuddy" && window.dashboard.openWorkBuddy) window.dashboard.openWorkBuddy();
+      else window.dashboard.openSessions();
+    });
     $("btn-legacy").addEventListener("click", () => window.dashboard.openLegacy());
+    // 版本号可点：直接在浏览器打开仓库，方便确认「这是哪一版」
+    $("app-ver").addEventListener("click", () => {
+      const repo = state.meta && state.meta.repo;
+      if (repo && window.dashboard.openExternal) window.dashboard.openExternal(repo);
+    });
   }
 
   let resizeTimer;
@@ -1530,6 +1861,7 @@
   applyTheme();
   buildRangeTabs();
   buildHourTabs();
+  buildSourceTabs();
   bindButtons();
   bindChartHover();
 
@@ -1540,6 +1872,10 @@
       $("boot-fill").style.width = percent + "%";
       $("boot-text").textContent = "正在解析日志 " + progress.index + " / " + progress.total;
     });
+    window.dashboard.getMeta().then(meta => {
+      state.meta = meta;
+      if (meta && meta.version) $("app-ver").textContent = "v" + meta.version;
+    }).catch(() => {});
     window.dashboard.getStatus().then(status => {
       state.status = status;
       if (status) renderStats();

@@ -14,6 +14,13 @@ contextBridge.exposeInMainWorld("dashboard", {
   refresh: () => ipcRenderer.invoke("dashboard:refresh"),
   /** 轻量快照：配额、今日，用于首屏先显示 */
   getStatus: () => ipcRenderer.invoke("dashboard:status"),
+  /** 版本号与仓库地址：界面右上角显示版本徽标 */
+  getMeta: () => ipcRenderer.invoke("dashboard:meta"),
+  /** WorkBuddy 明细（第二个数据源，结构与 Codex 明细一致） */
+  workbuddyDetail: () => ipcRenderer.invoke("dashboard:workbuddy-detail"),
+  workbuddyRefresh: () => ipcRenderer.invoke("dashboard:workbuddy-refresh"),
+  /** 打开 ~/.workbuddy/projects */
+  openWorkBuddy: () => ipcRenderer.invoke("dashboard:open-workbuddy"),
   /** 扫描进度与状态推送 */
   onProgress: callback => {
     const handler = (_event, payload) => callback(payload);
