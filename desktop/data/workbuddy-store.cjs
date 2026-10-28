@@ -22,6 +22,7 @@
 const fs = require("node:fs");
 const fsp = require("node:fs/promises");
 const path = require("node:path");
+const { normalizeTable, costOfModels, describeTable } = require("./pricing.cjs");
 
 const CACHE_VERSION = 1;
 const SCAN_CHUNK_BYTES = 4 * 1024 * 1024;
@@ -61,6 +62,8 @@ class WorkBuddyStore {
    */
   constructor(options = {}) {
     this.root = options.root || path.join(require("node:os").homedir(), ".workbuddy");
+    /** 模型价格表：和 Codex 共用一份，口径见 pricing.cjs */
+    this.pricing = normalizeTable(options.pricing || {});
     this.projectsDir = path.join(this.root, "projects");
     this.cacheFile = options.cacheFile || null;
     /** @type {Map<string, {size:number,mtimeMs:number,detail:object}>} */
@@ -318,6 +321,7 @@ class WorkBuddyStore {
     const dailyHours = {};
     const sum = zeroBucket();
     const seenKeys = new Set();
+    const priceTable = this.pricing;
     let credits = 0;
 
     for (const entry of this.files.values()) {
@@ -341,11 +345,17 @@ class WorkBuddyStore {
           lastAt: detail.lastAt,
           ...zeroBucket(),
           credit: 0,
-          models: new Set()
+          models: new Set(),
+          /** 会话内「模型 → 桶」，按各自单价折算成本 */
+          modelBuckets: {}
         };
         sessionsById.set(sessionKey, session);
       }
       addBucket(session, detail.tokens);
+      for (const [model, bucket] of Object.entries(detail.models || {})) {
+        if (!session.modelBuckets[model]) session.modelBuckets[model] = zeroBucket();
+        addBucket(session.modelBuckets[model], bucket);
+      }
       session.credit += detail.credits || 0;
       if (detail.firstAt && (!session.firstAt || detail.firstAt < session.firstAt)) session.firstAt = detail.firstAt;
       if (detail.lastAt && (!session.lastAt || detail.lastAt > session.lastAt)) session.lastAt = detail.lastAt;
@@ -391,6 +401,11 @@ class WorkBuddyStore {
       .map(item => ({ ...item }))
       .sort((a, b) => a.day.localeCompare(b.day));
 
+    // 每天花费：按「天 → 模型」桶各自单价折算，区间筛选后能重算
+    for (const item of series) {
+      item.cost = costOfModels(modelDays[item.day] || {}, priceTable).cny;
+    }
+
     const modelTotals = {};
     for (const byModel of Object.values(modelDays)) {
       for (const [model, bucket] of Object.entries(byModel)) {
@@ -398,8 +413,20 @@ class WorkBuddyStore {
         addBucket(modelTotals[model], bucket);
       }
     }
+    const modelCost = costOfModels(modelTotals, priceTable);
     const models = Object.values(modelTotals)
-      .map(item => ({ ...item, share: merged.totalTokens ? item.totalTokens / merged.totalTokens : 0, turns: 0, tps: null }))
+      .map(item => {
+        const cell = modelCost.perModel[item.model] || {};
+        return {
+          ...item,
+          share: merged.totalTokens ? item.totalTokens / merged.totalTokens : 0,
+          cost: cell.unit ? cell.cny : null,
+          unit: cell.unit || null,
+          estimated: Boolean(cell.estimated),
+          turns: 0,
+          tps: null
+        };
+      })
       .sort((a, b) => b.totalTokens - a.totalTokens);
 
     const projectTotals = {};
@@ -417,8 +444,14 @@ class WorkBuddyStore {
     const sessionList = [...sessionsById.values()]
       .filter(item => item.records > 0 && item.totalTokens > 0)
       .map(item => {
-        const { models: modelSet, ...rest } = item;
-        return { ...rest, models: [...modelSet], turns: 0, tps: null };
+        const { models: modelSet, modelBuckets, ...rest } = item;
+        return {
+          ...rest,
+          models: [...modelSet],
+          cost: costOfModels(modelBuckets || {}, priceTable).cny,
+          turns: 0,
+          tps: null
+        };
       })
       .sort((a, b) => String(b.lastAt || "").localeCompare(String(a.lastAt || "")));
 
@@ -431,7 +464,18 @@ class WorkBuddyStore {
       baseline: null,
       throughput: null,
       credits: { total: credits, today: sessionList.reduce((acc, item) => acc + (item.credit || 0), 0) },
-      totals: { ...merged, sessions: sessionList.length },
+      totals: { ...merged, sessions: sessionList.length, cost: modelCost.cny },
+      cost: {
+        cny: modelCost.cny,
+        usd: modelCost.cny / priceTable.usdCny,
+        todayCny: (series.find(item => item.day === todayKey) || {}).cost || 0,
+        estimatedTokens: modelCost.estimatedTokens,
+        rate: priceTable.usdCny,
+        updatedAt: priceTable.updatedAt,
+        note: priceTable.note,
+        sources: priceTable.sources
+      },
+      pricing: describeTable(priceTable, models.map(item => item.model)),
       series,
       models,
       projects,
@@ -452,8 +496,9 @@ class WorkBuddyStore {
       sessions: snap.sessions,
       days: snap.series.length,
       today: snap.today ? { day: snap.today.day, totalTokens: snap.today.totalTokens, records: snap.today.records, outputTokens: snap.today.outputTokens, cachedInputTokens: snap.today.cachedInputTokens, inputTokens: snap.today.inputTokens } : null,
-      totals: { totalTokens: snap.totals.totalTokens, records: snap.totals.records, inputTokens: snap.totals.inputTokens, cachedInputTokens: snap.totals.cachedInputTokens, outputTokens: snap.totals.outputTokens },
-      credits: snap.credits
+      totals: { totalTokens: snap.totals.totalTokens, records: snap.totals.records, inputTokens: snap.totals.inputTokens, cachedInputTokens: snap.totals.cachedInputTokens, outputTokens: snap.totals.outputTokens, cost: snap.totals.cost },
+      credits: snap.credits,
+      cost: snap.cost ? { cny: snap.cost.cny, usd: snap.cost.usd, todayCny: snap.cost.todayCny } : null
     };
   }
 }

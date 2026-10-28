@@ -63,7 +63,7 @@
   body {
     background: var(--bg);
     color: var(--text);
-    font: 13px/1.5 "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, "Microsoft YaHei UI", sans-serif;
+    font: 14px/1.55 "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, "Microsoft YaHei UI", sans-serif;
     font-variant-numeric: tabular-nums;
     -webkit-font-smoothing: antialiased;
     overflow: hidden;
@@ -114,8 +114,8 @@
     box-shadow: 0 8px 24px rgba(63, 110, 240, .32);
   }
 
-  .boot-text { color: var(--text-2); font-size: 12.5px; }
-  .boot-hint { color: var(--text-3); font-size: 11.5px; }
+  .boot-text { color: var(--text-2); font-size: 13.5px; }
+  .boot-hint { color: var(--text-3); font-size: 12.5px; }
 
   .boot-bar {
     width: 210px;
@@ -172,13 +172,13 @@
     color: #fff;
     display: grid;
     place-items: center;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 650;
     flex: none;
   }
 
-  .brand-title { font-size: 13.5px; font-weight: 620; letter-spacing: -.1px; }
-  .brand-sub { font-size: 11px; color: var(--text-3); }
+  .brand-title { font-size: 15.5px; font-weight: 640; letter-spacing: -.2px; }
+  .brand-sub { font-size: 12.5px; color: var(--text-3); }
 
   .spacer { flex: 1; }
 
@@ -195,8 +195,8 @@
     background: transparent;
     color: var(--text-2);
     font: inherit;
-    font-size: 12px;
-    padding: 5px 11px;
+    font-size: 13px;
+    padding: 5px 12px;
     border-radius: 7px;
     cursor: pointer;
     transition: background .16s ease, color .16s ease;
@@ -211,7 +211,7 @@
   }
 
   /* 卡片内的小号切换器 */
-  .range.mini button { font-size: 11px; padding: 3px 9px; border-radius: 6px; }
+  .range.mini button { font-size: 12px; padding: 3px 9px; border-radius: 6px; }
 
   .icon-btn {
     width: 30px;
@@ -256,14 +256,14 @@
 
   .card-head h2 {
     margin: 0;
-    font-size: 12.5px;
+    font-size: 14.5px;
     font-weight: 620;
     letter-spacing: -.1px;
   }
 
   .card-head .sub {
     margin: 3px 0 0;
-    font-size: 11.5px;
+    font-size: 12.5px;
     color: var(--text-3);
   }
 
@@ -271,7 +271,7 @@
 
   .badge {
     margin-left: auto;
-    font-size: 11px;
+    font-size: 12px;
     color: var(--text-3);
     padding: 3px 8px;
     border-radius: 6px;
@@ -283,7 +283,7 @@
 
   .stat-row {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 12px;
   }
 
@@ -306,14 +306,14 @@
   }
 
   .stat-label {
-    font-size: 12px;
+    font-size: 13.5px;
     color: var(--text-2);
     font-weight: 560;
   }
 
   .stat-window {
     margin-left: auto;
-    font-size: 10.5px;
+    font-size: 11.5px;
     color: var(--text-3);
     padding: 2px 6px;
     border-radius: 5px;
@@ -327,13 +327,13 @@
   }
 
   .stat-num {
-    font-size: 26px;
+    font-size: 30px;
     font-weight: 640;
     letter-spacing: -1px;
     line-height: 1.1;
   }
 
-  .stat-unit { font-size: 12px; color: var(--text-3); }
+  .stat-unit { font-size: 13px; color: var(--text-3); }
 
   .meter {
     height: 5px;
@@ -357,7 +357,7 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    font-size: 11.5px;
+    font-size: 12.5px;
     color: var(--text-3);
     min-height: 17px;
   }
@@ -386,7 +386,7 @@
   }
 
   .stat-hint {
-    font-size: 11px;
+    font-size: 12px;
     color: var(--text-3);
     line-height: 1.3;
     margin-top: -3px;
@@ -394,7 +394,7 @@
 
   /* 版本徽标 */
   .ver {
-    font-size: 10.5px;
+    font-size: 11.5px;
     font-weight: 520;
     color: var(--text-3);
     background: var(--line-soft);
@@ -407,10 +407,25 @@
   }
   .ver:hover { color: var(--accent); background: var(--accent-3); }
 
-  /* 区间概要条：把「一行小字」换成可读的四个指标 */
+  /* 金额：数字用等宽表格数字，避免「¥」和数字抖动 */
+  .stat-num.money, .bar-money {
+    font-variant-numeric: tabular-nums;
+  }
+  .stat-num.money { font-size: 28px; letter-spacing: -1.3px; }
+
+  .price-link {
+    color: var(--text-3);
+    text-decoration: underline;
+    text-decoration-color: color-mix(in srgb, var(--text-3) 45%, transparent);
+    text-underline-offset: 2px;
+    cursor: pointer;
+  }
+  .price-link:hover { color: var(--accent); }
+
+  /* 区间概要条：把「一行小字」换成可读的指标 */
   .summary {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     border: 1px solid var(--line-soft);
     border-radius: 10px;
     background: var(--panel-soft);
@@ -423,9 +438,9 @@
     min-width: 0;
   }
   .summary > div:first-child { border-left: 0; }
-  .summary .k { font-size: 10.5px; color: var(--text-3); }
+  .summary .k { font-size: 11.5px; color: var(--text-3); }
   .summary .v {
-    font-size: 14px;
+    font-size: 16.5px;
     font-weight: 620;
     letter-spacing: -.3px;
     margin-top: 1px;
@@ -433,7 +448,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  .summary .v small { font-size: 11px; font-weight: 500; color: var(--text-3); margin-left: 4px; }
+  .summary .v small { font-size: 12px; font-weight: 500; color: var(--text-3); margin-left: 5px; }
 
   /* ---------------- 趋势图 ---------------- */
 
@@ -447,7 +462,7 @@
 
   .axis-text {
     fill: var(--text-3);
-    font-size: 10px;
+    font-size: 11.5px;
     font-family: inherit;
   }
 
@@ -516,14 +531,14 @@
   .bar-row { display: grid; grid-template-columns: 1fr auto; gap: 3px 10px; }
 
   .bar-name {
-    font-size: 12px;
+    font-size: 13.5px;
     color: var(--text-2);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
-  .bar-val { font-size: 11.5px; color: var(--text-3); }
+  .bar-val { font-size: 12.5px; color: var(--text-3); }
   .bar-val b { color: var(--text); font-weight: 560; }
   .bar-extra { color: var(--text-3); }
 
@@ -545,7 +560,7 @@
 
   .empty {
     color: var(--text-3);
-    font-size: 12px;
+    font-size: 13px;
     padding: 10px 0;
   }
 
@@ -579,7 +594,7 @@
   .hour-col:hover .hour-bar { background: var(--accent); }
 
   .hour-label {
-    font-size: 9.5px;
+    font-size: 10.5px;
     color: var(--text-3);
     height: 12px;
   }
@@ -593,7 +608,7 @@
     border: 1px solid var(--line-soft);
   }
 
-  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
 
   thead th {
     position: sticky;
@@ -602,7 +617,7 @@
     background: var(--panel-soft);
     color: var(--text-3);
     font-weight: 560;
-    font-size: 11px;
+    font-size: 12px;
     text-align: left;
     padding: 8px 12px;
     border-bottom: 1px solid var(--line);
@@ -630,7 +645,7 @@
     border-radius: 5px;
     background: var(--accent-3);
     color: var(--accent);
-    font-size: 10.5px;
+    font-size: 11.5px;
     font-weight: 540;
   }
 
@@ -643,7 +658,7 @@
     padding: 9px 18px;
     border-top: 1px solid var(--line);
     background: color-mix(in srgb, var(--panel) 82%, transparent);
-    font-size: 11.5px;
+    font-size: 12.5px;
     color: var(--text-3);
   }
 
@@ -661,13 +676,19 @@
 
   .statusbar .link:hover { color: var(--accent); }
 
-  @media (max-width: 1080px) {
-    .stat-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  @media (max-width: 1120px) {
+    .stat-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .summary { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   }
 
   @media (max-width: 860px) {
-    .stat-row { grid-template-columns: 1fr; }
+    .stat-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .cols { grid-template-columns: 1fr; }
+  }
+
+  @media (max-width: 620px) {
+    .stat-row { grid-template-columns: 1fr; }
   }
 </style>
 </head>
@@ -769,6 +790,7 @@
               <th style="width: 146px">模型</th>
               <th style="width: 80px; text-align: right">用量</th>
               <th style="width: 60px; text-align: right">请求</th>
+              <th style="width: 76px; text-align: right">花费</th>
               <th style="width: 66px; text-align: right" id="th-speed">速度</th>
               <th style="width: 74px; text-align: right">时长</th>
             </tr>
@@ -783,6 +805,7 @@
     <span class="dot" id="status-dot"></span>
     <span id="status-text">—</span>
     <span style="flex:1"></span>
+    <button class="link" id="btn-pricing">价格表</button>
     <button class="link" id="btn-sessions">日志目录</button>
     <button class="link" id="btn-legacy">旧版网页看板</button>
   </footer>
@@ -832,6 +855,74 @@
 
   function fmtCount(value) {
     return (Number(value) || 0).toLocaleString("zh-CN");
+  }
+
+  /**
+   * 金额：人民币为主。
+   * 小额给两位小数（单次调用几毛钱时四舍五入会变 0），上万用「万」，
+   * 中间用千分位整数，读起来比 6 位数字快。
+   */
+  function fmtMoney(cny) {
+    const n = Number(cny);
+    if (!Number.isFinite(n) || n <= 0) return "¥0";
+    if (n < 1) return "¥" + n.toFixed(2);
+    if (n < 10) return "¥" + n.toFixed(2).replace(/0$/, "");
+    if (n < 1000) return "¥" + n.toFixed(0);
+    if (n < 100000) return "¥" + Math.round(n).toLocaleString("zh-CN");
+    return "¥" + (n / 10000).toFixed(n >= 1000000 ? 0 : 1) + "万";
+  }
+
+  /** 美元：和人民币的口径是同一个数按汇率折算 */
+  function fmtUsd(usd) {
+    const n = Number(usd);
+    if (!Number.isFinite(n) || n <= 0) return "$0";
+    if (n < 1) return "$" + n.toFixed(2);
+    if (n < 1000) return "$" + n.toFixed(n < 10 ? 2 : 0);
+    if (n < 1000000) return "$" + Math.round(n).toLocaleString("en-US");
+    return "$" + (n / 1000000).toFixed(2) + "M";
+  }
+
+  /** 某模型的每百万 tokens 单价（人民币），拿不到就用兜底价 */
+  function unitFor(model) {
+    const pricing = state.detail && state.detail.pricing;
+    if (!pricing) return null;
+    const cell = pricing.models && pricing.models[model];
+    if (cell && cell.unit) return cell.unit;
+    return pricing.fallback ? pricing.fallback.unit : null;
+  }
+
+  /** 单个桶按单价折算成人民币 */
+  function bucketCost(bucket, unit) {
+    if (!bucket || !unit) return 0;
+    const input = Math.max(0, bucket.inputTokens || 0);
+    const cached = Math.min(input, Math.max(0, bucket.cachedInputTokens || 0));
+    const output = Math.max(0, bucket.outputTokens || 0);
+    return ((input - cached) * unit.input + cached * unit.cached + output * unit.output) / 1e6;
+  }
+
+  /** 当前区间内、按模型单价逐天累加的花费 */
+  function rangeCost() {
+    const detail = state.detail;
+    if (!detail || !detail.modelDays) return 0;
+    const days = rangeDays();
+    const keys = days === 0 ? Object.keys(detail.modelDays) : rangeSeries().map(item => item.day);
+    let total = 0;
+    for (const day of keys) {
+      const byModel = detail.modelDays[day];
+      if (!byModel) continue;
+      for (const [model, bucket] of Object.entries(byModel)) {
+        total += bucketCost(bucket, unitFor(model));
+      }
+    }
+    return total;
+  }
+
+  /** 单价说明：鼠标停在模型行上能看到「输入 / 命中 / 输出」三档 */
+  function unitText(model) {
+    const unit = unitFor(model);
+    if (!unit) return "";
+    return "输入 ¥" + unit.input.toFixed(2) + " · 命中 ¥" + unit.cached.toFixed(2) +
+      " · 输出 ¥" + unit.output.toFixed(2) + " / 百万 tokens";
   }
 
   function fmtPercent(value, digits) {
@@ -939,8 +1030,17 @@
       const byModel = (detail.modelDays || {})[day];
       if (!byModel) continue;
       for (const [model, bucket] of Object.entries(byModel)) {
-        const current = totals.get(model) || { model, totalTokens: 0, outputTokens: 0, records: 0 };
+        const current = totals.get(model) || {
+          model,
+          totalTokens: 0,
+          inputTokens: 0,
+          cachedInputTokens: 0,
+          outputTokens: 0,
+          records: 0
+        };
         current.totalTokens += bucket.totalTokens || 0;
+        current.inputTokens += bucket.inputTokens || 0;
+        current.cachedInputTokens += bucket.cachedInputTokens || 0;
         current.outputTokens += bucket.outputTokens || 0;
         current.records += bucket.records || 0;
         totals.set(model, current);
@@ -1184,6 +1284,43 @@
     };
   }
 
+  /** 累计花费卡：token 折算成钱，回答「这些用量等于花了多少」 */
+  function costCard() {
+    const detail = state.detail;
+    const cost = detail && detail.cost;
+    if (!cost) {
+      return {
+        label: "等价花费",
+        window: "API 刊例价",
+        num: "—",
+        unit: "",
+        hideMeter: true,
+        foot: "还没算过价格",
+        hints: []
+      };
+    }
+    const rate = Number(cost.rate) || 7.2;
+    const days = detail.baseline && detail.baseline.days ? detail.baseline.days : detail.series.length;
+    const totalTokens = detail.totals ? detail.totals.totalTokens : 0;
+    const estimatedShare = totalTokens ? (cost.estimatedTokens || 0) / totalTokens : 0;
+
+    return {
+      label: "等价花费",
+      window: "累计 " + days + " 天",
+      num: fmtMoney(cost.cny),
+      money: true,
+      unit: "",
+      hideMeter: true,
+      // 详情都收进 tooltip：卡片上只留「多少钱 + 今日多少」
+      title: fmtUsd(cost.usd) + " · 按 1 美元 ≈ " + rate.toFixed(2) + " 元折算" +
+        (estimatedShare >= 0.005 ? " · 含 " + fmtPercent(estimatedShare * 100, 1) + " 估算用量" : ""),
+      foot: "今日 <b>" + fmtMoney(cost.todayCny) + "</b> · " + fmtTokens(totalTokens) + " tokens",
+      hints: detail.totals && detail.totals.records
+        ? ["单次请求均摊 " + fmtMoney(cost.cny / detail.totals.records)]
+        : []
+    };
+  }
+
   function workbuddyCards() {
     const detail = state.detail;
     const totals = detail.totals;
@@ -1214,6 +1351,18 @@
         hideMeter: true,
         foot: "<b>" + fmtCount(totals.sessions) + "</b> 个会话 · <b>" + fmtCount(totals.records) + "</b> 次调用",
         hints: ["来源 ~/.workbuddy/projects"]
+      },
+      {
+        label: "等价花费",
+        window: "累计",
+        num: fmtMoney(detail.cost ? detail.cost.cny : 0),
+        money: true,
+        unit: "",
+        hideMeter: true,
+        title: fmtUsd(detail.cost ? detail.cost.usd : 0) + " · 按 1 美元 ≈ " +
+          ((detail.cost && detail.cost.rate) || 7.2).toFixed(2) + " 元折算",
+        foot: "今日 <b>" + fmtMoney(detail.cost ? detail.cost.todayCny : 0) + "</b> · " + fmtTokens(totals.totalTokens) + " tokens",
+        hints: []
       },
       {
         label: "积分消耗",
@@ -1250,6 +1399,7 @@
         quotaCard("5 小时额度", "5 小时窗口", quota && quota.session),
         quotaCard("7 天额度", "7 天窗口", quota && quota.weekly),
         todayCard(),
+        costCard(),
         speedCard()
       ];
     }
@@ -1259,18 +1409,19 @@
       const level = card.level || meterLevel(card.percent);
       const pace = Number.isFinite(card.pace) ? '<b class="pace" style="left:' + Math.max(0, Math.min(100, card.pace)).toFixed(1) + '%"></b>' : '';
       return [
-        '<div class="stat">',
+        '<div class="stat"' + (card.title ? ' title="' + escapeHtml(card.title) + '"' : '') + '>',
         '  <div class="stat-top">',
         '    <span class="stat-label">' + escapeHtml(card.label) + '</span>',
         card.window ? '    <span class="stat-window">' + escapeHtml(card.window) + '</span>' : '',
         '  </div>',
         '  <div class="stat-value">',
-        '    <span class="stat-num">' + card.num + '</span>',
+        '    <span class="stat-num' + (card.money ? ' money' : '') + '">' + card.num + '</span>',
         '    <span class="stat-unit">' + (card.unit || "") + '</span>',
         '  </div>',
         card.hideMeter ? '' : '<div class="meter"><i data-level="' + level + '" style="width:' + Math.max(2, Math.min(100, card.percent)) + '%"></i>' + pace + '</div>',
         '  <div class="stat-foot">' + card.foot + '</div>',
         (card.hints || []).filter(Boolean).map(text => '  <div class="stat-hint">' + escapeHtml(text) + '</div>').join(''),
+        card.hintHtml ? '  <div class="stat-hint">' + card.hintHtml + '</div>' : '',
         '</div>'
       ].join("");
     }).join("");
@@ -1386,9 +1537,13 @@
 
     // X 轴：首、中、尾
     const labelIndexes = new Set([0, series.length - 1, Math.round((series.length - 1) / 2)]);
+    const lastIndex = series.length - 1;
     series.forEach((item, index) => {
       if (!labelIndexes.has(index)) return;
-      parts.push('<text class="axis-text" x="' + xAt(index).toFixed(1) + '" y="' + (height - 6) + '" text-anchor="middle">' + dayLabel(item.day) + '</text>');
+      // 首尾对齐到绘图区边界：字号放大后居中会把日期切掉一半
+      const anchor = series.length === 1 ? "middle" : index === 0 ? "start" : index === lastIndex ? "end" : "middle";
+      const x = series.length === 1 ? xAt(index) : index === 0 ? padL : index === lastIndex ? padL + innerW : xAt(index);
+      parts.push('<text class="axis-text" x="' + x.toFixed(1) + '" y="' + (height - 6) + '" text-anchor="' + anchor + '">' + dayLabel(item.day) + '</text>');
     });
 
     svg.setAttribute("viewBox", "0 0 " + width + " " + height);
@@ -1434,8 +1589,13 @@
       }
     }
 
+    // 区间花费：按区间内每天、每个模型各自的单价现算
+    const costRange = rangeCost();
+    const costRate = (detail && detail.cost && detail.cost.rate) || 7.2;
+
     const cells = [
       ["区间用量", fmtTokens(sumRange), series.length + " 天"],
+      ["区间花费", fmtMoney(costRange), fmtUsd(costRange / costRate) + " · 刊例价"],
       ["日均", fmtTokens(avg), activeDays + " 天有记录 · " + fmtCount(sumRecords) + " 次请求"],
       ["单日峰值", peak ? fmtTokens(peak.totalTokens) : "—", peak ? dayLabel(peak.day) : ""],
       ["环比", compareValue, compareNote]
@@ -1525,7 +1685,7 @@
     container.innerHTML = rows.map(item => {
       const width = Math.max(1.5, (item.share / max) * 100);
       return [
-        '<div class="bar-row">',
+        '<div class="bar-row"' + (item.label ? ' title="' + escapeHtml(item.label) + '"' : '') + '>',
         '  <span class="bar-name"' + (item.muted ? ' style="color: var(--text-3)"' : '') + '>' + escapeHtml(item[nameKey]) + '</span>',
         '  <span class="bar-val"><b>' + fmtPercent(item.share * 100, 1) + '</b> · ' + fmtTokens(item.totalTokens) +
           (item.extra ? ' · <span class="bar-extra">' + escapeHtml(item.extra) + '</span>' : '') + '</span>',
@@ -1546,10 +1706,16 @@
   function renderModels() {
     const models = rangeModels();
     for (const item of models) {
-      if (item.tps) item.extra = item.tps.toFixed(1) + " tok/s";
+      const cost = bucketCost(item, unitFor(item.model));
+      item.cost = cost;
+      // 行尾先给钱（这是最想看的），速度并入 tooltip，避免撑爆一行
+      item.extra = fmtMoney(cost);
+      item.label = (item.tps ? item.tps.toFixed(1) + " tok/s · " : "") + unitText(item.model);
     }
     renderBars($("models"), models, { nameKey: "model", limit: 6, empty: "此区间没有模型数据" });
-    $("model-badge").textContent = rangeDays() === 0 ? "全部时间" : "最近 " + rangeDays() + " 天";
+    const totalCost = models.reduce((acc, item) => acc + (item.cost || 0), 0);
+    $("model-badge").textContent = fmtMoney(totalCost) + " · " +
+      (rangeDays() === 0 ? "全部时间" : "最近 " + rangeDays() + " 天");
   }
 
   function renderProjects() {
@@ -1623,7 +1789,7 @@
     const detail = state.detail;
     const body = $("session-body");
     if (!detail || !detail.sessionList.length) {
-      body.innerHTML = '<tr><td colspan="7" class="empty">暂无会话记录</td></tr>';
+      body.innerHTML = '<tr><td colspan="8" class="empty">暂无会话记录</td></tr>';
       $("session-badge").textContent = "0";
       return;
     }
@@ -1643,6 +1809,7 @@
         '  <td><span class="chip">' + escapeHtml(models[0]) + '</span>' + (models.length > 1 ? ' <span class="muted">+' + (models.length - 1) + '</span>' : '') + '</td>',
         '  <td class="num">' + fmtTokens(item.totalTokens) + '</td>',
         '  <td class="num">' + fmtCount(item.records) + '</td>',
+        '  <td class="num bar-money">' + (item.cost ? fmtMoney(item.cost) : '<span class="muted">—</span>') + '</td>',
         '  <td class="num">' + (isWorkBuddy
           ? (item.credit ? item.credit.toFixed(1) : '<span class="muted">—</span>')
           : (item.tps ? item.tps.toFixed(1) : '<span class="muted">—</span>')) + '</td>',
@@ -1669,11 +1836,13 @@
     if (detail.source === "workbuddy") {
       const todayTokens = detail.today ? detail.today.totalTokens : 0;
       $("brand-sub").textContent = "累计 " + fmtTokens(detail.totals.totalTokens) +
+        (detail.cost ? " ≈ " + fmtMoney(detail.cost.cny) : "") +
         " · " + legacyDays + " 天" +
         (legacyDays > 1 && todayTokens > 0 ? " · 今日 " + fmtTokens(todayTokens) : "");
     } else {
       const wbToday = workbuddyTodayTokens();
       $("brand-sub").textContent = "累计 " + fmtTokens(detail.totals.totalTokens) +
+        (detail.cost ? " ≈ " + fmtMoney(detail.cost.cny) : "") +
         (legacyDays ? " · " + legacyDays + " 天" : "") +
         (wbToday > 0 ? " · WorkBuddy " + fmtTokens(wbToday) + " 今日" : "");
     }
@@ -1840,6 +2009,10 @@
       else window.dashboard.openSessions();
     });
     $("btn-legacy").addEventListener("click", () => window.dashboard.openLegacy());
+    // 价格表：直接在系统默认编辑器里打开 pricing.json，改完重开看板即生效
+    $("btn-pricing").addEventListener("click", () => {
+      if (window.dashboard.openPricing) window.dashboard.openPricing();
+    });
     // 版本号可点：直接在浏览器打开仓库，方便确认「这是哪一版」
     $("app-ver").addEventListener("click", () => {
       const repo = state.meta && state.meta.repo;

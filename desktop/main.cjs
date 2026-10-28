@@ -4,6 +4,7 @@ const os = require("node:os");
 const path = require("node:path");
 const { CodexStore } = require("./data/codex-store.cjs");
 const { WorkBuddyStore } = require("./data/workbuddy-store.cjs");
+const { loadTable, ensureTableFile } = require("./data/pricing.cjs");
 const { buildBaseline, baselineIsFresh, loadBaseline, saveBaseline } = require("./data/history-baseline.cjs");
 
 const PRODUCT_NAME = "Codex Token";
@@ -82,7 +83,8 @@ if (!gotLock) {
       detailCache: path.join(userData, "data", "codex-detail-cache.json"),
       legacyIndex: path.join(userData, "data", "usage-index.json"),
       baseline: path.join(userData, "data", "history-baseline.json"),
-      workbuddyCache: path.join(userData, "data", "workbuddy-detail-cache.json")
+      workbuddyCache: path.join(userData, "data", "workbuddy-detail-cache.json"),
+      pricing: path.join(userData, "data", "pricing.json")
     };
   }
 
@@ -511,6 +513,8 @@ if (!gotLock) {
       if (!store) throw new Error("用量数据层尚未初始化，请稍候重试");
       const detail = await store.buildDetail({ onProgress: pushDetailProgress });
       latestStatus = store.snapshot();
+      // 新快照是干净的：WorkBuddy 摘要要重新挂上，弹窗那一行才不会变回「—」
+      attachWorkBuddySummary();
       updateTray();
       pushStatusToPopover();
       return detail;
@@ -521,6 +525,7 @@ if (!gotLock) {
       await store.refresh({ full: true });
       const detail = await store.buildDetail({ onProgress: pushDetailProgress });
       latestStatus = store.snapshot();
+      attachWorkBuddySummary();
       updateTray();
       pushStatusToPopover();
       return detail;
@@ -551,6 +556,12 @@ if (!gotLock) {
     ipcMain.handle("dashboard:open-legacy", () => openLegacyDashboard());
     ipcMain.handle("dashboard:open-sessions", () => shell.openPath(sessionsDir()));
     ipcMain.handle("dashboard:open-workbuddy", () => shell.openPath(path.join(os.homedir(), ".workbuddy", "projects")));
+    // 价格表就在 userData 里，点开就能改单价
+    ipcMain.handle("dashboard:open-pricing", () => {
+      const file = userDataPaths().pricing;
+      ensureTableFile(file);
+      return shell.openPath(file);
+    });
     ipcMain.handle("dashboard:open-external", (_event, url) => {
       if (typeof url === "string" && /^https:\/\//i.test(url)) shell.openExternal(url);
       return true;
@@ -676,16 +687,22 @@ if (!gotLock) {
   }
 
   async function initStore(paths, baseline) {
+    // 价格表：首次运行把内置表写到 userData，之后用户改文件即可更新价格
+    ensureTableFile(paths.pricing);
+    const pricing = loadTable(paths.pricing);
+    log(`pricing: ${pricing.entries.length} models, USD→CNY ${pricing.usdCny}`);
+
     store = new CodexStore({
       sessionsDir: sessionsDir(),
       cacheFile: paths.usageCache,
       detailCacheFile: paths.detailCache,
-      baseline
+      baseline,
+      pricing
     });
     // 明细缓存先读盘：看板第二次打开可以秒出
     store.loadDetailCache();
 
-    wbStore = new WorkBuddyStore({ cacheFile: paths.workbuddyCache });
+    wbStore = new WorkBuddyStore({ cacheFile: paths.workbuddyCache, pricing });
     wbStore.loadCache();
     // WorkBuddy 日志量小（本机 25MB / 千条请求），并行构建，几十毫秒
     wbStore.build()

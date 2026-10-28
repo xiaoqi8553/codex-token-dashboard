@@ -16,9 +16,10 @@
 const fs = require("node:fs");
 const fsp = require("node:fs/promises");
 const path = require("node:path");
+const { normalizeTable, costOfModels, costOfBucket, describeTable, unitPriceCny, priceEntry } = require("./pricing.cjs");
 
 const CACHE_VERSION = 3;
-const DETAIL_CACHE_VERSION = 5;
+const DETAIL_CACHE_VERSION = 6;
 const TAIL_BYTES = 8 * 1024 * 1024;
 const FAST_FILE_COUNT = 3;
 /** 明细扫描的分块大小：大文件流式读，不整块进内存 */
@@ -152,6 +153,8 @@ class CodexStore {
     this._detailPromise = null;
     /** 旧版索引沉淀下来的历史（日志已被清理的那部分），按天聚合 */
     this.baseline = options.baseline || null;
+    /** 模型价格表：把 token 折算成钱，口径见 pricing.cjs */
+    this.pricing = normalizeTable(options.pricing || {});
     /** @type {Map<string, {size:number,mtimeMs:number,offset:number,sessionTotal:object|null,days:Map<string,object>,full:boolean}>} */
     this.files = new Map();
     /** @type {Map<string, object>} */
@@ -607,6 +610,8 @@ class CodexStore {
       yesterday,
       series,
       quota: this.rateLimits ? { ...this.rateLimits, sampledAt: this.rateLimitsAt } : null,
+      // 花费要按模型单价折算：明细扫描过就用明细的，否则用缓存里的文件聚合
+      cost: this._detailCost || this.costSummary(),
       providers: [],
       scannedFiles: this.files.size
     };
@@ -987,6 +992,71 @@ class CodexStore {
     }
   }
 
+  /**
+   * 花费摘要：只做聚合，不生成完整明细。
+   * 弹窗在明细扫描之前也要能显示「等价花费」，所以单独给一条轻量路径。
+   */
+  costSummary() {
+    if (!this.detailFiles.size && !this.baseline) return null;
+
+    /** 天 → { totalTokens, models: 模型 → 桶 } */
+    const days = new Map();
+    for (const entry of this.detailFiles.values()) {
+      const detail = entry && entry.detail;
+      if (!detail) continue;
+      for (const [day, byModel] of Object.entries(detail.modelDays || {})) {
+        let cell = days.get(day);
+        if (!cell) {
+          cell = { totalTokens: 0, models: {} };
+          days.set(day, cell);
+        }
+        for (const [model, bucket] of Object.entries(byModel)) {
+          if (!cell.models[model]) cell.models[model] = zeroBucket();
+          const target = cell.models[model];
+          for (const key of Object.keys(zeroBucket())) target[key] += bucket[key] || 0;
+          cell.totalTokens += bucket.totalTokens || 0;
+        }
+      }
+    }
+
+    // 与历史索引按天取大者：Codex 清理掉的旧 rollout 只在索引里
+    const baseline = this.baseline;
+    if (baseline && baseline.days) {
+      for (const [day, baseDay] of Object.entries(baseline.days)) {
+        if (!baseDay || !baseDay.totalTokens) continue;
+        const local = days.get(day);
+        if (local && local.totalTokens >= baseDay.totalTokens) continue;
+        const models = {};
+        for (const [model, bucket] of Object.entries(baseDay.models || {})) {
+          models[model] = { ...zeroBucket(), ...bucket };
+        }
+        days.set(day, { totalTokens: baseDay.totalTokens, models });
+      }
+    }
+
+    const all = {};
+    const todayKey = dayKeyOf(new Date());
+    let todayCny = 0;
+    for (const [day, cell] of days) {
+      for (const [model, bucket] of Object.entries(cell.models)) {
+        if (!all[model]) all[model] = zeroBucket();
+        const target = all[model];
+        for (const key of Object.keys(zeroBucket())) target[key] += bucket[key] || 0;
+      }
+      if (day === todayKey) todayCny = costOfModels(cell.models, this.pricing).cny;
+    }
+
+    const total = costOfModels(all, this.pricing);
+    if (!total.cny) return null;
+    return {
+      cny: total.cny,
+      usd: total.cny / this.pricing.usdCny,
+      todayCny,
+      estimatedTokens: total.estimatedTokens,
+      rate: this.pricing.usdCny
+    };
+  }
+
   detailSnapshot() {
     /** 按 session_id 合并：续跑会为同一会话生成多个 rollout 文件 */
     const sessionsById = new Map();
@@ -1030,6 +1100,8 @@ class CodexStore {
           files: 0,
           sessionTotal: 0,
           modelSet: new Set(),
+          /** 会话内「模型 → 桶」：各家单价不同，成本必须按模型分别折算 */
+          modelBuckets: {},
           quota: null
         };
         sessionsById.set(sessionKey, session);
@@ -1041,7 +1113,12 @@ class CodexStore {
       session.cachedInputTokens += detail.tokens.cachedInputTokens;
       session.outputTokens += detail.tokens.outputTokens;
       session.records += detail.tokens.records;
-      for (const name of Object.keys(detail.models)) session.modelSet.add(name);
+      for (const [name, bucket] of Object.entries(detail.models)) {
+        session.modelSet.add(name);
+        if (!session.modelBuckets[name]) session.modelBuckets[name] = zeroBucket();
+        const dest = session.modelBuckets[name];
+        for (const key of Object.keys(zeroBucket())) dest[key] += bucket[key] || 0;
+      }
 
       // 输出速度：会话级也留一份，会话表里能直接看每轮快慢
       const fileSpeed = detail.throughput;
@@ -1195,6 +1272,9 @@ class CodexStore {
           files: 0,
           sessionTotal: baseSession.totalTokens,
           modelSet: new Set(Object.keys(baseSession.models || {})),
+          modelBuckets: Object.fromEntries(
+            Object.entries(baseSession.models || {}).map(([name, bucket]) => [name, { ...zeroBucket(), ...bucket }])
+          ),
           quota: null
         });
       }
@@ -1210,13 +1290,17 @@ class CodexStore {
       merged.records += bucket.records || 0;
     }
 
+    const priceTable = this.pricing;
+
     const sessions = [...sessionsById.values()]
       .map(item => {
-        const { modelSet, speedTurns, speedOutput, speedDuration, ...rest } = item;
+        const { modelSet, modelBuckets, speedTurns, speedOutput, speedDuration, ...rest } = item;
         return {
           ...rest,
           models: [...modelSet],
           turns: speedTurns || 0,
+          // 会话成本：按会话内各模型各自的单价折算
+          cost: costOfModels(modelBuckets || {}, priceTable).cny,
           // 会话级加权速度：总输出 ÷ 总耗时，避免被单个极快/极慢的轮次带偏
           tps: speedDuration > 0 ? (speedOutput || 0) * 1000 / speedDuration : null
         };
@@ -1234,6 +1318,11 @@ class CodexStore {
       }))
       .sort((a, b) => a.day.localeCompare(b.day));
 
+    // 每天花费：按「天 → 模型」的桶各自单价折算，这样区间花费能跟着筛选重算
+    for (const item of series) {
+      item.cost = costOfModels(modelDays[item.day] || {}, priceTable).cny;
+    }
+
     const modelList = Object.entries(modelDays).reduce((acc, [, byModel]) => {
       for (const [model, bucket] of Object.entries(byModel)) {
         if (!acc[model]) acc[model] = { model, ...zeroBucket() };
@@ -1247,8 +1336,18 @@ class CodexStore {
       return acc;
     }, {});
 
+    const modelCost = costOfModels(modelList, priceTable);
     const modelListArray = Object.values(modelList)
-      .map(item => ({ ...item, share: merged.totalTokens ? item.totalTokens / merged.totalTokens : 0 }))
+      .map(item => {
+        const cell = modelCost.perModel[item.model] || {};
+        return {
+          ...item,
+          share: merged.totalTokens ? item.totalTokens / merged.totalTokens : 0,
+          cost: cell.unit ? cell.cny : null,
+          unit: cell.unit || null,
+          estimated: Boolean(cell.estimated)
+        };
+      })
       .sort((a, b) => b.totalTokens - a.totalTokens);
 
     const projectTotals = Object.entries(projectDays).reduce((acc, [, byProject]) => {
@@ -1320,6 +1419,12 @@ class CodexStore {
     // 供 snapshot() 复用：弹窗与看板从此共用这一份日聚合
     this._detailDays = days;
     this._detailSessions = sessions.length;
+    this._detailCost = {
+      cny: modelCost.cny,
+      usd: modelCost.cny / priceTable.usdCny,
+      todayCny: (series.find(item => item.day === todayKey) || {}).cost || 0,
+      rate: priceTable.usdCny
+    };
 
     return {
       ok: true,
@@ -1334,8 +1439,20 @@ class CodexStore {
         outputTokens: merged.outputTokens,
         totalTokens: merged.totalTokens,
         records: merged.records,
-        sessions: sessions.length
+        sessions: sessions.length,
+        cost: modelCost.cny
       },
+      cost: {
+        cny: modelCost.cny,
+        usd: modelCost.cny / priceTable.usdCny,
+        todayCny: (series.find(item => item.day === todayKey) || {}).cost || 0,
+        estimatedTokens: modelCost.estimatedTokens,
+        rate: priceTable.usdCny,
+        updatedAt: priceTable.updatedAt,
+        note: priceTable.note,
+        sources: priceTable.sources
+      },
+      pricing: describeTable(priceTable, modelListArray.map(item => item.model)),
       series,
       models: modelListArray,
       projects: projectList,

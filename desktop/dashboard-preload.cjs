@@ -21,6 +21,8 @@ contextBridge.exposeInMainWorld("dashboard", {
   workbuddyRefresh: () => ipcRenderer.invoke("dashboard:workbuddy-refresh"),
   /** 打开 ~/.workbuddy/projects */
   openWorkBuddy: () => ipcRenderer.invoke("dashboard:open-workbuddy"),
+  /** 打开价格表 pricing.json（改单价即生效） */
+  openPricing: () => ipcRenderer.invoke("dashboard:open-pricing"),
   /** 扫描进度与状态推送 */
   onProgress: callback => {
     const handler = (_event, payload) => callback(payload);

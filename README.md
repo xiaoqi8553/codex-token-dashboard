@@ -45,6 +45,7 @@ OpenAI Sites 生产站与仓库中已经推送的版本保持同步；默认采�
 - 支持脱敏快照 JSON / HTML，适合公开分享。
 - 支持本地 Node 模式、浏览器导入模式、Netlify 静态演示版。
 - 桌面看板可切换 **Codex / WorkBuddy** 两个数据源；WorkBuddy 用量直接读 `~/.workbuddy/projects` 下的会话日志，统计缓存命中、推理 token 与积分。
+- 支持把 token **折算成钱**：内置各家官方 API 刊例价（输入 / 缓存命中 / 输出三档），按模型逐个折算人民币与美元，价格表可直接编辑。
 
 ## 快速开始
 
@@ -351,6 +352,49 @@ dist
 - `config.json`
 - `.env`
 - 真实 `.codex/sessions`
+
+## 花费口径（等价花费）
+
+看板里的「等价花费」是**按官方 API 刊例价折算的等价金额**，不是订阅实扣金额。订阅（Plus / Max）是包月制，
+实际并没有为这些 token 逐笔付款；这个数字回答的是「如果这些用量走 API，要花多少钱」。
+
+计费公式与各家官方一致：
+
+```text
+cost = 新增输入 / 1e6 × 输入价
+     + 缓存命中 / 1e6 × 缓存价
+     + 输出     / 1e6 × 输出价
+
+新增输入 = inputTokens - cachedInputTokens
+```
+
+三个容易算错的地方：
+
+- **输入价不能直接乘 `inputTokens`**。两家的 `inputTokens` 都包含缓存命中部分，命中通常占 95% 以上；
+  直接按输入价乘会把成本放大好几倍。必须拆成「新增输入」和「缓存命中」两档。
+- **思考 token 不单列**。各家都把 reasoning 计入 `output_tokens`，再乘一遍就是重复计费。
+- **美元模型要按汇率折成人民币**。表里 `currency: "USD"` 的项（OpenAI、Kimi）先按 `usdCny`
+  （默认 7.2）折成人民币，再参与合计，这样 Codex 与 WorkBuddy 的钱才能直接相加。
+
+模型名用**最长前缀匹配**：`glm-5.3-flashx` 优先命中自己那一项，其次 `glm-5.3-flash`，最后才是 `glm-5.3`。
+表里没有的型号按兜底价（输入 ¥4 / 命中 ¥0.4 / 输出 ¥12 每百万）估算，并在界面上标「估算」——
+丢掉成本只会让总额偏小，所以宁可估算也不记 0。
+
+价格表首次启动会写到 `%APPDATA%/Codex Token/data/pricing.json`，底栏「价格表」按钮直接打开，
+改完单价重开看板即生效。文件里 `entries` 按 `match` 覆盖内置项，也可以新增：
+
+```json
+{
+  "usdCny": 7.2,
+  "entries": [
+    { "match": "my-model", "label": "我的模型", "vendor": "自建", "currency": "CNY",
+      "input": 2, "cached": 0.2, "output": 8 }
+  ],
+  "fallback": { "match": "unknown", "currency": "CNY", "input": 4, "cached": 0.4, "output": 12 }
+}
+```
+
+单位统一是**每 100 万 tokens**。内置价目来源写在 `pricing.json` 的 `sources` 里。
 
 ## WorkBuddy 用量口径
 

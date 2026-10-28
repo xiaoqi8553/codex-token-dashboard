@@ -493,6 +493,7 @@
     <div class="line"><span>输出 / 其中推理</span><b id="d-output">—</b></div>
     <div class="line"><span>会话数 / 请求数</span><b id="d-count">—</b></div>
     <div class="line"><span>WorkBuddy 今日 / 累计</span><b id="d-wb">—</b></div>
+    <div class="line"><span>等价花费（刊例价）</span><b id="d-cost">—</b></div>
   </div>
 
   <div class="actions">
@@ -528,6 +529,16 @@
   const $ = id => document.getElementById(id);
 
   // ------------------------------------------------------------------ utils
+  function formatMoney(cny) {
+    const n = Number(cny);
+    if (!Number.isFinite(n) || n <= 0) return "¥0";
+    if (n < 1) return "¥" + n.toFixed(2);
+    if (n < 10) return "¥" + n.toFixed(2).replace(/0$/, "");
+    if (n < 1000) return "¥" + n.toFixed(0);
+    if (n < 100000) return "¥" + Math.round(n).toLocaleString("zh-CN");
+    return "¥" + (n / 10000).toFixed(n >= 1000000 ? 0 : 1) + "万";
+  }
+
   function formatTokens(value) {
     const n = Number(value) || 0;
     if (n >= 1e9) return (n / 1e9).toFixed(n >= 1e10 ? 1 : 2) + "B";
@@ -660,6 +671,26 @@
       wbNode.title = wb && wb.totals
         ? `WorkBuddy ${wb.sessions || 0} 个会话 · ${(wb.totals.records || 0).toLocaleString("zh-CN")} 次调用 · 积分 ${wb.credits ? wb.credits.total.toFixed(0) : 0}`
         : "未检测到 WorkBuddy 日志";
+    }
+
+    // 等价花费：Codex 与 WorkBuddy 都是按 API 刊例价折算，不是实际扣费
+    const costNode = $("d-cost");
+    if (costNode) {
+      const codexCost = status.cost;
+      const wbCost = wb && wb.cost;
+      if (codexCost || wbCost) {
+        const parts = [];
+        if (codexCost) parts.push(`Codex ${formatMoney(codexCost.cny)}`);
+        if (wbCost) parts.push(`WorkBuddy ${formatMoney(wbCost.cny)}`);
+        costNode.textContent = parts.join(" + ");
+        const totalCny = (codexCost ? codexCost.cny : 0) + (wbCost ? wbCost.cny : 0);
+        costNode.title = `合计 ${formatMoney(totalCny)} · 今日 ${formatMoney(
+          (codexCost ? codexCost.todayCny : 0) + (wbCost ? wbCost.todayCny : 0)
+        )} · 按官方 API 刊例价折算，非订阅实扣`;
+      } else {
+        costNode.textContent = "—";
+        costNode.title = "打开完整看板后按价格表折算";
+      }
     }
   }
 
