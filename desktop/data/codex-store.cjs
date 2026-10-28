@@ -18,7 +18,7 @@ const fsp = require("node:fs/promises");
 const path = require("node:path");
 
 const CACHE_VERSION = 3;
-const DETAIL_CACHE_VERSION = 2;
+const DETAIL_CACHE_VERSION = 3;
 const TAIL_BYTES = 8 * 1024 * 1024;
 const FAST_FILE_COUNT = 3;
 /** 明细扫描的分块大小：大文件流式读，不整块进内存 */
@@ -712,6 +712,10 @@ class CodexStore {
       modelDays: {},
       days: {},
       hours: {},
+      /** turn_id -> 该轮 output tokens（取 turn_token_usage 的累计值） */
+      turnOutput: new Map(),
+      /** turn_id -> task_complete 的耗时与首字延迟 */
+      turnDone: new Map(),
       quota: null
     };
     let currentModel = null;
@@ -745,6 +749,47 @@ class CodexStore {
             const model = payload && (payload.model || (settings && settings.model));
             if (model) currentModel = model;
             if (payload && payload.cwd && !detail.cwd) detail.cwd = payload.cwd;
+          } catch {
+            /* ignore */
+          }
+          continue;
+        }
+
+        // 输出速度：task_complete 给了每轮的 duration_ms，token_usage_record 给了每轮的
+        // output tokens，两者按 turn_id 配对就能算出真实的完成轮吞吐（tokens/s）。
+        // 注意这是「整轮耗时」口径：包含了工具调用与等待，不是纯流式解码速度。
+        if (line.indexOf('"task_complete"') !== -1) {
+          try {
+            const event = JSON.parse(line);
+            const payload = event && event.payload;
+            const duration = Number(payload && payload.duration_ms);
+            if (payload && payload.type === "task_complete" && payload.turn_id && duration > 0) {
+              const completedMs = Number(payload.completed_at) > 0
+                ? Number(payload.completed_at) * 1000
+                : Date.parse(event.timestamp || "");
+              const ttft = Number(payload.time_to_first_token_ms);
+              detail.turnDone.set(payload.turn_id, {
+                durationMs: duration,
+                ttftMs: Number.isFinite(ttft) && ttft >= 0 && ttft <= duration ? ttft : null,
+                completedAt: Number.isFinite(completedMs) ? new Date(completedMs).toISOString() : null
+              });
+            }
+          } catch {
+            /* ignore */
+          }
+          continue;
+        }
+
+        if (line.indexOf('"token_usage_record"') !== -1) {
+          try {
+            const payload = JSON.parse(line).payload;
+            const turnId = payload && payload.turn_id;
+            if (turnId) {
+              const usage = payload.turn_token_usage || payload.usage || {};
+              const output = Number(usage.output_tokens) || 0;
+              // turn_token_usage 是轮内累计值，取最大值可避免续跑时重复文件把它叠高
+              if (output > (detail.turnOutput.get(turnId) || 0)) detail.turnOutput.set(turnId, output);
+            }
           } catch {
             /* ignore */
           }
@@ -810,6 +855,28 @@ class CodexStore {
       feed,
       finish() {
         detail.project = projectNameOf(detail.cwd);
+
+        // 输出速度：把每轮的 output tokens 与 task_complete 的耗时配对
+        const throughput = { turns: 0, outputTokens: 0, durationMs: 0, ttft: [], days: {} };
+        for (const [turnId, done] of detail.turnDone) {
+          const output = detail.turnOutput.get(turnId) || 0;
+          if (!output || !done.durationMs) continue;
+          throughput.turns += 1;
+          throughput.outputTokens += output;
+          throughput.durationMs += done.durationMs;
+          if (done.ttftMs !== null) throughput.ttft.push(done.ttftMs);
+          if (done.completedAt) {
+            const day = done.completedAt.slice(0, 10);
+            const cell = throughput.days[day] || (throughput.days[day] = { turns: 0, outputTokens: 0, durationMs: 0, ttft: [] });
+            cell.turns += 1;
+            cell.outputTokens += output;
+            cell.durationMs += done.durationMs;
+            if (done.ttftMs !== null) cell.ttft.push(done.ttftMs);
+          }
+        }
+        detail.turnOutput = null;
+        detail.turnDone = null;
+        detail.throughput = throughput;
         return detail;
       }
     };
@@ -866,6 +933,8 @@ class CodexStore {
     /** @type {Record<string, number[]>} 天 → 24 小时桶，用于「昨日同期」这类对比 */
     const dailyHours = {};
     const sum = zeroBucket();
+    /** 输出速度汇总：turns/outputTokens/durationMs 三项累加后算加权 tps */
+    const speed = { turns: 0, outputTokens: 0, durationMs: 0, ttft: [], days: {} };
 
     const todayKey = dayKeyOf(new Date());
     const hourFloor = Date.now() - 7 * 24 * 60 * 60 * 1000;
@@ -905,6 +974,25 @@ class CodexStore {
       session.outputTokens += detail.tokens.outputTokens;
       session.records += detail.tokens.records;
       for (const name of Object.keys(detail.models)) session.modelSet.add(name);
+
+      // 输出速度：会话级也留一份，会话表里能直接看每轮快慢
+      const fileSpeed = detail.throughput;
+      if (fileSpeed && fileSpeed.turns) {
+        session.speedTurns = (session.speedTurns || 0) + fileSpeed.turns;
+        session.speedOutput = (session.speedOutput || 0) + fileSpeed.outputTokens;
+        session.speedDuration = (session.speedDuration || 0) + fileSpeed.durationMs;
+        speed.turns += fileSpeed.turns;
+        speed.outputTokens += fileSpeed.outputTokens;
+        speed.durationMs += fileSpeed.durationMs;
+        if (fileSpeed.ttft) for (const value of fileSpeed.ttft) speed.ttft.push(value);
+        for (const [day, cell] of Object.entries(fileSpeed.days || {})) {
+          const target = speed.days[day] || (speed.days[day] = { turns: 0, outputTokens: 0, durationMs: 0, ttft: [] });
+          target.turns += cell.turns;
+          target.outputTokens += cell.outputTokens;
+          target.durationMs += cell.durationMs;
+          if (cell.ttft) for (const value of cell.ttft) target.ttft.push(value);
+        }
+      }
       if (detail.firstAt && (!session.firstAt || detail.firstAt < session.firstAt)) session.firstAt = detail.firstAt;
       if (detail.lastAt && (!session.lastAt || detail.lastAt > session.lastAt)) session.lastAt = detail.lastAt;
       if (detail.quota && (!session.quota || String(detail.quota.sampledAt || "") > String(session.quota.sampledAt || ""))) {
@@ -1044,8 +1132,14 @@ class CodexStore {
 
     const sessions = [...sessionsById.values()]
       .map(item => {
-        const { modelSet, ...rest } = item;
-        return { ...rest, models: [...modelSet] };
+        const { modelSet, speedTurns, speedOutput, speedDuration, ...rest } = item;
+        return {
+          ...rest,
+          models: [...modelSet],
+          turns: speedTurns || 0,
+          // 会话级加权速度：总输出 ÷ 总耗时，避免被单个极快/极慢的轮次带偏
+          tps: speedDuration > 0 ? (speedOutput || 0) * 1000 / speedDuration : null
+        };
       })
       .sort((a, b) => String(b.lastAt || "").localeCompare(String(a.lastAt || "")));
 
@@ -1098,12 +1192,41 @@ class CodexStore {
     // 这就是「总共用了多少」，不需要再叠加任何线程计数器。
     const legacy = this.baselineMeta();
 
+    /** 中位数：比平均值更抗单次卡顿 */
+    const median = list => {
+      if (!list.length) return null;
+      const sorted = [...list].sort((a, b) => a - b);
+      const mid = Math.floor(sorted.length / 2);
+      return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+    };
+
+    const throughput = speed.durationMs > 0
+      ? {
+        turns: speed.turns,
+        outputTokens: speed.outputTokens,
+        durationMs: speed.durationMs,
+        tps: speed.outputTokens * 1000 / speed.durationMs,
+        ttftMs: median(speed.ttft),
+        days: Object.fromEntries(Object.entries(speed.days).map(([day, cell]) => [
+          day,
+          {
+            turns: cell.turns,
+            outputTokens: cell.outputTokens,
+            durationMs: cell.durationMs,
+            tps: cell.durationMs > 0 ? cell.outputTokens * 1000 / cell.durationMs : null,
+            ttftMs: median(cell.ttft || [])
+          }
+        ]))
+      }
+      : null;
+
     return {
       ok: true,
       builtAt: this.detailBuiltAt || null,
       sessions: sessions.length,
       scannedFiles: this.detailFiles.size,
       baseline: legacy,
+      throughput,
       totals: {
         inputTokens: merged.inputTokens,
         cachedInputTokens: merged.cachedInputTokens,

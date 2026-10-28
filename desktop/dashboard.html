@@ -18,9 +18,10 @@
     --accent: #3f6ef0;
     --accent-2: #a9c0fb;
     --accent-3: #dbe5fe;
-    --c-cached: #bccdfd;
+    --c-cached: #9db6fb;
     --c-input: #3f6ef0;
-    --c-output: #e59a34;
+    --c-output: #f0a33c;
+    --c-bar: #4a71e4;
     --warn: #d9822b;
     --ok: #1f9d63;
     --danger: #d9534f;
@@ -41,9 +42,10 @@
     --accent: #5b84ff;
     --accent-2: #34508f;
     --accent-3: #22304f;
-    --c-cached: #3a568f;
+    --c-cached: #3f5c9e;
     --c-input: #7aa0ff;
-    --c-output: #e0a04c;
+    --c-output: #e8a850;
+    --c-bar: #7392ff;
     --warn: #e0a04c;
     --ok: #38b57e;
     --danger: #e06c68;
@@ -275,8 +277,8 @@
 
   .stat-row {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 14px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
   }
 
   .stat {
@@ -371,7 +373,7 @@
   .chart-wrap {
     position: relative;
     width: 100%;
-    height: 232px;
+    height: 190px;
   }
 
   .chart-wrap svg { display: block; width: 100%; height: 100%; }
@@ -382,7 +384,11 @@
     font-family: inherit;
   }
 
-  .grid-line { stroke: var(--line-soft); stroke-width: 1; }
+  .grid-line {
+    stroke: var(--line-soft);
+    stroke-width: 1;
+    stroke-dasharray: 3 5;
+  }
 
   .legend {
     display: flex;
@@ -587,7 +593,11 @@
 
   .statusbar .link:hover { color: var(--accent); }
 
-  @media (max-width: 900px) {
+  @media (max-width: 1080px) {
+    .stat-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+
+  @media (max-width: 860px) {
     .stat-row { grid-template-columns: 1fr; }
     .cols { grid-template-columns: 1fr; }
   }
@@ -642,12 +652,6 @@
         <svg id="chart" role="img" aria-label="每日 token 用量"></svg>
         <div class="tip" id="tip"></div>
       </div>
-      <div class="legend">
-        <span><i style="background: var(--c-cached)"></i>缓存命中</span>
-        <span><i style="background: var(--c-input)"></i>输入</span>
-        <span><i style="background: var(--c-output)"></i>输出</span>
-      </div>
-      <p class="note" id="chart-note" hidden></p>
     </section>
 
     <div class="cols">
@@ -669,7 +673,7 @@
 
     <section class="card">
       <div class="card-head">
-        <div><h2>活跃时段</h2><p class="sub">按小时聚合，看你的工作节奏</p></div>
+        <div><h2>活跃时段</h2></div>
         <span class="badge">最近 7 天</span>
       </div>
       <div class="hours" id="hours"></div>
@@ -677,19 +681,20 @@
 
     <section class="card">
       <div class="card-head">
-        <div><h2>会话记录</h2><p class="sub">续跑产生的多个文件已按 session 合并</p></div>
+        <div><h2>会话记录</h2></div>
         <span class="badge" id="session-badge">—</span>
       </div>
       <div class="table-wrap">
         <table>
           <thead>
             <tr>
-              <th style="width: 92px">最近活动</th>
+              <th style="width: 90px">最近活动</th>
               <th>项目</th>
-              <th style="width: 150px">模型</th>
-              <th style="width: 84px; text-align: right">用量</th>
-              <th style="width: 64px; text-align: right">请求</th>
-              <th style="width: 82px; text-align: right">时长</th>
+              <th style="width: 146px">模型</th>
+              <th style="width: 80px; text-align: right">用量</th>
+              <th style="width: 60px; text-align: right">请求</th>
+              <th style="width: 66px; text-align: right">速度</th>
+              <th style="width: 74px; text-align: right">时长</th>
             </tr>
           </thead>
           <tbody id="session-body"></tbody>
@@ -762,6 +767,14 @@
     return minutes + " 分钟";
   }
 
+  /** 秒级耗时：首字延迟、每轮耗时这类数字用 */
+  function fmtSpeed(ms) {
+    if (!Number.isFinite(ms) || ms < 0) return "—";
+    if (ms < 1000) return Math.round(ms) + "ms";
+    if (ms < 60000) return (ms / 1000).toFixed(ms < 10000 ? 1 : 0) + "s";
+    return Math.round(ms / 60000) + " 分";
+  }
+
   function relTime(iso) {
     if (!iso) return "—";
     const stamp = new Date(iso).getTime();
@@ -776,7 +789,6 @@
     const date = new Date(iso);
     return (date.getMonth() + 1) + " 月 " + date.getDate() + " 日";
   }
-
   function dayLabel(key) {
     const [, month, day] = String(key).split("-");
     return Number(month) + "/" + Number(day);
@@ -898,10 +910,10 @@
     let text = "节奏正常";
     if (delta > 5) {
       tone = "warn";
-      text = "快于时间进度 +" + Math.round(delta) + "% · 可能提前用尽";
+      text = "快于进度 " + Math.round(delta) + "%";
     } else if (delta < -5) {
       tone = "ok";
-      text = "慢于时间进度 " + Math.round(delta) + "% · 可撑到重置";
+      text = "慢于进度 " + Math.round(-delta) + "%";
     }
     return { tone, text, remaining: resetAt - Date.now() };
   }
@@ -924,7 +936,7 @@
     const sessionPace = quotaPace(session);
     cards.push({
       label: "会话额度",
-      window: session && session.windowMinutes ? Math.round(session.windowMinutes / 60) + " 小时窗口" : "5 小时",
+      window: session && session.windowMinutes ? Math.round(session.windowMinutes / 60) + " 小时" : "5 小时",
       num: session ? fmtPercent(session.usedPercent) : "—",
       unit: session ? "已用" : "",
       percent: session ? session.usedPercent : 0,
@@ -941,7 +953,7 @@
     const weeklyPace = quotaPace(weekly);
     cards.push({
       label: "每周额度",
-      window: weekly && weekly.windowMinutes ? Math.round(weekly.windowMinutes / 1440) + " 天窗口" : "7 天",
+      window: weekly && weekly.windowMinutes ? Math.round(weekly.windowMinutes / 1440) + " 天" : "7 天",
       num: weekly ? fmtPercent(weekly.usedPercent) : "—",
       unit: weekly ? "已用" : "",
       percent: weekly ? weekly.usedPercent : 0,
@@ -969,7 +981,7 @@
     }
     cards.push({
       label: "今日用量",
-      window: "本地日",
+      window: "",
       num: today ? fmtTokens(todayTotal) : "—",
       unit: "tokens",
       percent: yesterdaySameTime > 0
@@ -984,6 +996,37 @@
       hideMeter: true
     });
 
+    // 输出速度：整轮耗时口径（含工具调用与等待），不是纯流式解码速度
+    const speed = detail && detail.throughput;
+    const todaySpeed = speed && speed.days ? speed.days[localDayKey(new Date())] : null;
+    const recentSpeed = speed && detail.series
+      ? (() => {
+          const keys = detail.series.slice(-14).map(item => item.day);
+          let out = 0, dur = 0, turns = 0;
+          for (const key of keys) {
+            const cell = speed.days[key];
+            if (!cell) continue;
+            out += cell.outputTokens;
+            dur += cell.durationMs;
+            turns += cell.turns;
+          }
+          return dur > 0 ? { tps: out * 1000 / dur, turns } : null;
+        })()
+      : null;
+
+    cards.push({
+      label: "输出速度",
+      window: "",
+      num: todaySpeed ? todaySpeed.tps.toFixed(1) : "—",
+      unit: todaySpeed ? "tok/s" : "",
+      percent: 0,
+      foot: todaySpeed
+        ? '<b>' + fmtCount(todaySpeed.turns) + '</b> 轮完成'
+        : "今天还没有完成的轮次",
+      hint: recentSpeed ? "近 14 天 " + recentSpeed.tps.toFixed(1) + " tok/s" : "",
+      hideMeter: true
+    });
+
     const row = $("stat-row");
     row.innerHTML = cards.map(card => {
       const level = meterLevel(card.percent);
@@ -991,7 +1034,7 @@
         '<div class="stat">',
         '  <div class="stat-top">',
         '    <span class="stat-label">' + card.label + '</span>',
-        '    <span class="stat-window">' + card.window + '</span>',
+        card.window ? '    <span class="stat-window">' + card.window + '</span>' : '',
         '  </div>',
         '  <div class="stat-value">',
         '    <span class="stat-num">' + card.num + '</span>',
@@ -1029,8 +1072,8 @@
     const svg = $("chart");
     const wrap = svg.parentElement;
     const width = Math.max(320, wrap.clientWidth);
-    const height = 232;
-    const padL = 42, padR = 10, padT = 12, padB = 26;
+    const height = 190;
+    const padL = 40, padR = 8, padT = 10, padB = 24;
     const innerW = width - padL - padR;
     const innerH = height - padT - padB;
 
@@ -1046,15 +1089,20 @@
     const ceiling = niceCeil(max || 1);
 
     const slot = innerW / series.length;
-    const barW = Math.max(2.5, Math.min(30, slot - Math.max(3, slot * 0.28)));
+    // 细柱：[4, 12] 之间，留白多，接近 CodexBar 的疏朗感
+    const barW = Math.max(4, Math.min(12, slot * 0.42));
     const todayKey = localDayKey(new Date());
+    const bottom = padT + innerH;
 
     const parts = [];
+    // 只画 3 条极淡的参考线，不画整块网格
     parts.push('<g>');
-    for (let i = 0; i <= 4; i += 1) {
-      const y = padT + innerH - (innerH * i) / 4;
-      const value = (ceiling * i) / 4;
-      parts.push('<line class="grid-line" x1="' + padL + '" y1="' + y.toFixed(1) + '" x2="' + (padL + innerW) + '" y2="' + y.toFixed(1) + '"/>');
+    for (let i = 0; i <= 2; i += 1) {
+      const y = bottom - (innerH * i) / 2;
+      const value = (ceiling * i) / 2;
+      if (i > 0) {
+        parts.push('<line class="grid-line" x1="' + padL + '" y1="' + y.toFixed(1) + '" x2="' + (padL + innerW) + '" y2="' + y.toFixed(1) + '"/>');
+      }
       parts.push('<text class="axis-text" x="' + (padL - 8) + '" y="' + (y + 3.5).toFixed(1) + '" text-anchor="end">' + fmtTokens(value) + '</text>');
     }
     parts.push('</g>');
@@ -1062,73 +1110,68 @@
     // 悬停高亮底
     if (state.hover >= 0 && state.hover < series.length) {
       const hx = padL + state.hover * slot;
-      parts.push('<rect x="' + (hx + 1).toFixed(1) + '" y="' + padT + '" width="' + Math.max(2, slot - 2).toFixed(1) + '" height="' + innerH + '" fill="currentColor" opacity="0.045" rx="4"/>');
+      parts.push('<rect x="' + (hx + 1).toFixed(1) + '" y="' + padT + '" width="' + Math.max(2, slot - 2).toFixed(1) + '" height="' + innerH + '" fill="currentColor" opacity="0.035" rx="5"/>');
     }
-    parts.push('<g style="color: var(--text)">');
+
+    parts.push('<defs>');
+    parts.push('<linearGradient id="g-bar" x1="0" y1="0" x2="0" y2="1">' +
+      '<stop offset="0%" stop-color="var(--c-bar)" stop-opacity="1"/>' +
+      '<stop offset="100%" stop-color="var(--c-bar)" stop-opacity="0.74"/>' +
+      '</linearGradient>');
+    parts.push('</defs>');
 
     series.forEach((item, index) => {
-      const cached = Math.max(0, item.cachedInputTokens);
-      const uncached = Math.max(0, (item.inputTokens || 0) - cached);
-      const output = Math.max(0, item.outputTokens || 0);
-      const total = cached + uncached + output;
-      const isToday = item.day === todayKey;
-
+      const total = Math.max(0, item.totalTokens);
       const x = padL + index * slot + (slot - barW) / 2;
-      let y = padT + innerH;
-
-      const segments = [
-        { value: cached, color: "var(--c-cached)", opacity: isToday ? 0.55 : 1 },
-        { value: uncached, color: "var(--c-input)", opacity: isToday ? 0.6 : 1 },
-        { value: output, color: "var(--c-output)", opacity: isToday ? 0.6 : 1 }
-      ];
 
       if (total <= 0) {
-        parts.push('<rect x="' + x.toFixed(1) + '" y="' + (padT + innerH - 2) + '" width="' + barW.toFixed(1) + '" height="2" rx="1" fill="var(--line)"/>');
-      } else {
-        for (const seg of segments) {
-          if (seg.value <= 0) continue;
-          const segH = Math.max(0.8, (seg.value / ceiling) * innerH);
-          y -= segH;
-          parts.push('<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + barW.toFixed(1) + '" height="' + segH.toFixed(1) + '" fill="' + seg.color + '" opacity="' + seg.opacity + '" rx="' + (segH > 4 ? 2 : 1) + '"/>');
-        }
+        parts.push('<rect x="' + x.toFixed(1) + '" y="' + (bottom - 2) + '" width="' + barW.toFixed(1) + '" height="2" rx="1" fill="var(--line)" opacity="0.8"/>');
+        return;
       }
-    });
-    parts.push('</g>');
 
-    // X 轴标签：最多 8 个
-    const labelStep = Math.max(1, Math.ceil(series.length / 8));
+      const barH = Math.max(3, (total / ceiling) * innerH);
+      const top = bottom - barH;
+      // 顶端圆头、底端平贴基线，像 CodexBar 那样细长
+      const r = Math.min(barW / 2, barH);
+      const path = [
+        "M", x.toFixed(2), bottom.toFixed(2),
+        "L", x.toFixed(2), (top + r).toFixed(2),
+        "A", r.toFixed(2), r.toFixed(2), 0, 0, 1, (x + r).toFixed(2), top.toFixed(2),
+        "L", (x + barW - r).toFixed(2), top.toFixed(2),
+        "A", r.toFixed(2), r.toFixed(2), 0, 0, 1, (x + barW).toFixed(2), (top + r).toFixed(2),
+        "L", (x + barW).toFixed(2), bottom.toFixed(2),
+        "Z"
+      ].join(" ");
+
+      const isToday = item.day === todayKey;
+      // 单色柱：当天实色，其余稍淡，扫一眼就知道最新到哪儿
+      parts.push('<path d="' + path + '" fill="url(#g-bar)" opacity="' + (isToday ? 1 : 0.8) + '"/>');
+    });
+
+    // X 轴：首尾必标，中间最多再给 3 个，避免文字挤成一排
+    const labelIndexes = new Set([0, series.length - 1]);
+    const middleCount = Math.min(3, Math.max(0, series.length - 2));
+    for (let i = 1; i <= middleCount; i += 1) {
+      labelIndexes.add(Math.round((series.length - 1) * i / (middleCount + 1)));
+    }
     series.forEach((item, index) => {
-      const isLast = index === series.length - 1;
-      if (!isLast && index % labelStep !== 0) return;
+      if (!labelIndexes.has(index)) return;
       const cx = padL + index * slot + slot / 2;
-      parts.push('<text class="axis-text" x="' + cx.toFixed(1) + '" y="' + (height - 8) + '" text-anchor="middle">' + dayLabel(item.day) + '</text>');
+      parts.push('<text class="axis-text" x="' + cx.toFixed(1) + '" y="' + (height - 6) + '" text-anchor="middle">' + dayLabel(item.day) + '</text>');
     });
 
     svg.setAttribute("viewBox", "0 0 " + width + " " + height);
     svg.setAttribute("preserveAspectRatio", "none");
     svg.innerHTML = parts.join("");
 
-    // 概要文字
+    // 概要文字：只留最有用的三项
     const sumRange = series.reduce((acc, item) => acc + item.totalTokens, 0);
     const sumRecords = series.reduce((acc, item) => acc + item.records, 0);
     const avg = sumRange / series.length;
-    const detail = state.detail;
-    const grandTotal = detail && detail.totals ? detail.totals.totalTokens : sumRange;
-    $("chart-sub").textContent = "区间合计 " + fmtTokens(sumRange) + " · " + fmtCount(sumRecords) + " 次请求 · 日均 " + fmtTokens(avg) +
-      " · 累计 " + fmtTokens(grandTotal);
+    $("chart-sub").textContent = fmtTokens(sumRange) + " · " + fmtCount(sumRecords) + " 次请求 · 日均 " + fmtTokens(avg);
 
-    const note = $("chart-note");
-    const legacy = detail && detail.baseline;
-    if (legacy && legacy.records > 0) {
-      note.hidden = false;
-      note.innerHTML = "累计值已并入旧版索引沉淀的 <b>" + fmtCount(legacy.records) + "</b> 条历史记录（" +
-        fmtCount(legacy.days) + " 天 · " + fmtTokens(legacy.totalTokens) + " tokens）。" +
-        "这部分原始 rollout 已被 Codex 清理，若不合并，看板只会显示磁盘上剩下的最近一段，累计会明显偏小。";
-    } else {
-      note.hidden = true;
-    }
     const peak = series.reduce((acc, item) => (item.totalTokens > (acc ? acc.totalTokens : -1) ? item : acc), null);
-    $("chart-badge").textContent = peak && peak.totalTokens > 0 ? "峰值 " + dayLabel(peak.day) + " · " + fmtTokens(peak.totalTokens) : "—";
+    $("chart-badge").textContent = peak && peak.totalTokens > 0 ? "峰值 " + fmtTokens(peak.totalTokens) : "—";
   }
 
   // 悬停提示
@@ -1140,7 +1183,7 @@
       const series = rangeSeries();
       if (!series.length) return;
       const rect = svg.getBoundingClientRect();
-      const padL = 42, padR = 10;
+      const padL = 40, padR = 8;
       const innerW = rect.width - padL - padR;
       const slot = innerW / series.length;
       const x = event.clientX - rect.left - padL;
@@ -1152,13 +1195,15 @@
       const item = series[index];
       const cached = Math.max(0, item.cachedInputTokens);
       const uncached = Math.max(0, (item.inputTokens || 0) - cached);
+      const speed = state.detail && state.detail.throughput ? state.detail.throughput.days[item.day] : null;
       tip.innerHTML = [
         '<div class="tip-title">' + item.day + (item.day === localDayKey(new Date()) ? " · 今天" : "") + '</div>',
         '<div class="tip-row"><span>合计</span><b>' + fmtTokens(item.totalTokens) + '</b></div>',
         '<div class="tip-row"><span>缓存命中</span><b>' + fmtTokens(cached) + '</b></div>',
         '<div class="tip-row"><span>输入</span><b>' + fmtTokens(uncached) + '</b></div>',
         '<div class="tip-row"><span>输出</span><b>' + fmtTokens(item.outputTokens) + '</b></div>',
-        '<div class="tip-row"><span>请求</span><b>' + fmtCount(item.records) + '</b></div>'
+        '<div class="tip-row"><span>请求</span><b>' + fmtCount(item.records) + '</b></div>',
+        speed && speed.tps ? '<div class="tip-row"><span>速度</span><b>' + speed.tps.toFixed(1) + ' tok/s</b></div>' : ''
       ].join("");
       const px = padL + index * slot + slot / 2;
       tip.style.left = Math.min(Math.max(px, 90), rect.width - 90) + "px";
@@ -1256,7 +1301,7 @@
     const detail = state.detail;
     const body = $("session-body");
     if (!detail || !detail.sessionList.length) {
-      body.innerHTML = '<tr><td colspan="6" class="empty">暂无会话记录</td></tr>';
+      body.innerHTML = '<tr><td colspan="7" class="empty">暂无会话记录</td></tr>';
       $("session-badge").textContent = "0";
       return;
     }
@@ -1272,6 +1317,7 @@
         '  <td><span class="chip">' + escapeHtml(models[0]) + '</span>' + (models.length > 1 ? ' <span class="muted">+' + (models.length - 1) + '</span>' : '') + '</td>',
         '  <td class="num">' + fmtTokens(item.totalTokens) + '</td>',
         '  <td class="num">' + fmtCount(item.records) + '</td>',
+        '  <td class="num">' + (item.tps ? item.tps.toFixed(1) : '<span class="muted">—</span>') + '</td>',
         '  <td class="num muted">' + fmtDuration(span) + '</td>',
         '</tr>'
       ].join("");
@@ -1288,12 +1334,12 @@
     }
     dot.setAttribute("data-tone", detail.builtAt ? "" : "muted");
     $("status-text").textContent =
-      "已扫描 " + detail.scannedFiles + " 个日志文件 · " + detail.sessions + " 个会话 · 更新于 " +
+      detail.scannedFiles + " 个日志 · " + detail.sessions + " 个会话 · " +
       (detail.builtAt ? new Date(detail.builtAt).toLocaleString("zh-CN", { hour12: false }) : "—");
-    const legacyNote = detail.baseline && detail.baseline.days
-      ? " · 含 " + fmtCount(detail.baseline.days) + " 天历史索引"
-      : "";
-    $("brand-sub").textContent = "本地用量看板 · 累计 " + fmtTokens(detail.totals.totalTokens) + " tokens" + legacyNote;
+    // 顶部只留一行累计，其余信息交给各卡片
+    const legacyDays = detail.baseline && detail.baseline.days ? detail.baseline.days : 0;
+    $("brand-sub").textContent = "累计 " + fmtTokens(detail.totals.totalTokens) +
+      (legacyDays ? " · " + legacyDays + " 天" : "");
   }
 
   function renderAll() {
