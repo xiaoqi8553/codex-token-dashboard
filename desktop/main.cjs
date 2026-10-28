@@ -848,6 +848,27 @@ if (!gotLock) {
             fs.writeFileSync(bottomPath, bottom.toPNG());
             process.stdout.write(`dashboard shot saved: ${bottomPath}\n`);
           }
+          // 排查用：按区间逐张截图，验证活跃时段等图表确实跟着 7/14/30/全部 变化
+          if (process.env.CODEX_TOKEN_DASHBOARD_SHOT_RANGE) {
+            const keys = String(process.env.CODEX_TOKEN_DASHBOARD_SHOT_RANGE).split(",");
+            for (const raw of keys) {
+              const rangeKey = Number(raw) || 0;
+              await mainWindow.webContents.executeJavaScript(
+                `(() => {
+                   const btn = document.querySelector('#range button[data-key="${rangeKey}"]');
+                   if (btn) btn.click();
+                   const hours = document.querySelector('#hours');
+                   if (hours) hours.scrollIntoView({ block: 'center' });
+                   return !!btn;
+                 })()`
+              );
+              await new Promise(resolve => setTimeout(resolve, 900));
+              const rangeShot = await shoot();
+              const rangePath = shotPath.replace(/\.png$/i, "-range" + (rangeKey || "all") + ".png");
+              fs.writeFileSync(rangePath, rangeShot.toPNG());
+              process.stdout.write(`dashboard shot saved: ${rangePath}\n`);
+            }
+          }
           // 排查用：切到指定时段指标后再截一张（tokens / speed）
           if (process.env.CODEX_TOKEN_DASHBOARD_SHOT_HOUR) {
             const metric = String(process.env.CODEX_TOKEN_DASHBOARD_SHOT_HOUR).replace(/[^a-z]/gi, "");

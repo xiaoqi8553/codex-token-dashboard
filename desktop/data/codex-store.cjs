@@ -1251,6 +1251,12 @@ class CodexStore {
           target.outputTokens += cell.outputTokens || 0;
           target.records += cell.records || 0;
         }
+
+        // 小时分布：整天被基线接管时，用基线的小时桶覆盖日志的那一份，
+        // 否则活跃时段图只统计得到本机残留日志（约 1/3 量），切区间看着像没反应。
+        if (Array.isArray(baseDay.hours) && baseDay.hours.length === 24) {
+          dailyHours[day] = baseDay.hours.slice();
+        }
       }
 
       // 只存在于历史索引里的会话补进会话列表

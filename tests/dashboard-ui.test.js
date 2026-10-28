@@ -325,10 +325,10 @@ test("usage trend has no persistent numeric overlays or summaries", () => {
 });
 
 test("1.2.1 uses the engineering workspace shell and CodexBar usage board", () => {
-  assert.equal(packageJson.version, "1.2.1");
+  assert.equal(packageJson.version, "1.2.2");
   assert.match(indexSource, /class="side-rail shell"/);
   assert.match(indexSource, /id="viewTitle"/);
-  assert.match(indexSource, /v1\.2\.1/);
+  assert.match(indexSource, /v1\.2\.2/);
   assert.match(indexSource, /<strong>CodexBar<\/strong>/);
   assert.match(indexSource, /近 5 小时/);
   assert.match(indexSource, /近 7 天/);

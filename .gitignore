@@ -32,3 +32,6 @@ Thumbs.db
 
 # 开发截图脚本生成的中间快照
 docs/popover-snapshot.json
+
+# Local screenshot scratch
+tmp/

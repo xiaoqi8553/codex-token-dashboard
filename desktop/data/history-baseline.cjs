@@ -14,10 +14,20 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const BASELINE_VERSION = 1;
+// v2：按本地日期归集，并给每天补 24 小时分布（活跃时段图要能被 7/14/30/全部 切换驱动）
+const BASELINE_VERSION = 2;
 
 function emptyBucket() {
   return { totalTokens: 0, inputTokens: 0, cachedInputTokens: 0, outputTokens: 0, records: 0 };
+}
+
+function pad2(value) {
+  return String(value).padStart(2, "0");
+}
+
+/** 本地日期键，必须与看板/日志侧的 dayKeyOf 完全一致，否则同一天会被拆成两天 */
+function localDayKey(date) {
+  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
 }
 
 function addInto(target, source) {
@@ -99,7 +109,11 @@ function buildBaseline(indexPath, { onProgress } = {}) {
   let processed = 0;
 
   const count = forEachRecord(text, record => {
-    const day = record.date || (record.timestamp || "").slice(0, 10);
+    // 索引里的 date 是 UTC 日期，直接当本地日期用会让跨零点的记录落到错误的「天」，
+    // 与日志侧按本地日期归集的结果对不上，所以优先用 timestamp 转本地时间。
+    const stamp = record.timestamp ? new Date(record.timestamp) : null;
+    const stamped = Boolean(stamp && !Number.isNaN(stamp.getTime()));
+    const day = stamped ? localDayKey(stamp) : (record.date || String(record.timestamp || "").slice(0, 10));
     if (!day) return;
     const bucket = {
       totalTokens: Number(record.totalTokens) || 0,
@@ -118,10 +132,12 @@ function buildBaseline(indexPath, { onProgress } = {}) {
 
     let dayEntry = days[day];
     if (!dayEntry) {
-      dayEntry = { ...emptyBucket(), sessions: {}, models: {} };
+      dayEntry = { ...emptyBucket(), hours: new Array(24).fill(0), sessions: {}, models: {} };
       days[day] = dayEntry;
     }
     addInto(dayEntry, bucket);
+    // 小时分布：没有 timestamp 的老记录无法定位到小时，仍计入当天总量
+    if (stamped) dayEntry.hours[stamp.getHours()] += bucket.totalTokens;
 
     let cell = dayEntry.sessions[sessionId];
     if (!cell) {
@@ -163,6 +179,7 @@ function buildBaseline(indexPath, { onProgress } = {}) {
     sourceSize: stat.size,
     records: processed,
     totalTokens: total,
+    hourTokens: Object.values(days).reduce((acc, day) => acc + (day.hours || []).reduce((a, b) => a + b, 0), 0),
     days,
     sessions,
     models

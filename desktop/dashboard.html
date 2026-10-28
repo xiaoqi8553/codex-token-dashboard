@@ -566,6 +566,17 @@
 
   /* ---------------- 时段图 ---------------- */
 
+  .hour-tools {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .hour-tools .badge { margin-left: 0; }
+
   .hours {
     display: flex;
     align-items: flex-end;
@@ -592,6 +603,14 @@
   }
 
   .hour-col:hover .hour-bar { background: var(--accent); }
+
+  /* 峰值整点单独染色：切区间后一眼看出高峰挪到了几点 */
+  .hour-col.is-peak .hour-bar { box-shadow: inset 0 -2px 0 0 var(--accent); }
+
+  .hour-col.is-peak .hour-label {
+    color: var(--accent);
+    font-weight: 650;
+  }
 
   .hour-label {
     font-size: 11.5px;
@@ -769,9 +788,12 @@
     <section class="card">
       <div class="card-head">
         <div><h2 id="hour-title">活跃时段</h2></div>
-        <div class="range mini" id="hour-tabs" role="group" aria-label="时段指标">
-          <button type="button" data-metric="tokens" aria-pressed="true">用量</button>
-          <button type="button" data-metric="speed" aria-pressed="false">速度</button>
+        <div class="hour-tools">
+          <span class="badge" id="hour-badge">—</span>
+          <div class="range mini" id="hour-tabs" role="group" aria-label="时段指标">
+            <button type="button" data-metric="tokens" aria-pressed="true">用量</button>
+            <button type="button" data-metric="speed" aria-pressed="false">速度</button>
+          </div>
         </div>
       </div>
       <div class="hours" id="hours"></div>
@@ -1739,14 +1761,18 @@
     const days = rangeSeries().map(item => item.day);
     const values = new Array(24).fill(0);
     const turns = new Array(24).fill(0);
+    let sampled = 0;
+    /** 区间内每天的小时数据：tokens 来自日志+历史基线，速度只来自本机日志 */
+    const tokenByDay = detail.dailyHours || {};
+    const speedByDay = (detail.throughput && detail.throughput.dayHours) || {};
 
     if (speedMode) {
       // 每小时的完成轮速度：输出 tokens ÷ 耗时，按当前区间逐天累加
       const acc = Array.from({ length: 24 }, () => ({ output: 0, duration: 0, turns: 0 }));
-      const byDay = (detail.throughput && detail.throughput.dayHours) || {};
       for (const day of days) {
-        const cells = byDay[day];
+        const cells = speedByDay[day];
         if (!cells) continue;
+        sampled += 1;
         cells.forEach((cell, hour) => {
           if (!cell || !cell.durationMs) return;
           acc[hour].output += cell.outputTokens;
@@ -1759,15 +1785,23 @@
         turns[hour] = cell.turns;
       });
     } else {
-      const byDay = detail.dailyHours || {};
       for (const day of days) {
-        const row = byDay[day];
+        const row = tokenByDay[day];
         if (!row) continue;
         for (let hour = 0; hour < 24; hour += 1) values[hour] += row[hour] || 0;
       }
     }
 
     const max = Math.max.apply(null, values.concat([0.0001]));
+    const total = values.reduce((acc, value) => acc + value, 0);
+    const peakHour = values.indexOf(Math.max.apply(null, values));
+    const span = rangeDays() === 0 ? "全部时间" : "最近 " + rangeDays() + " 天";
+    const turnTotal = turns.reduce((acc, value) => acc + value, 0);
+    $("hour-badge").textContent = speedMode
+      // 速度只统计得到日志里还有原始耗时的那些天，样本不足时要说清楚
+      ? span + " · " + turnTotal + " 轮" + (sampled > 0 && sampled < days.length ? " · 有样本 " + sampled + " 天" : "")
+      : span + " · " + fmtTokens(total) + (total > 0 ? " · 峰值 " + peakHour + ":00" : "");
+
     container.innerHTML = values.map((value, hour) => {
       const ratio = max > 0 ? value / max : 0;
       const height = value > 0 ? Math.max(3, ratio * 72) : 2;
@@ -1777,10 +1811,13 @@
       const style = value > 0
         ? "height:" + height.toFixed(1) + "px;opacity:" + (0.4 + ratio * 0.6).toFixed(2)
         : "height:2px;background:var(--line)";
+      const peak = value > 0 && hour === peakHour;
+      // 峰值整点强制显示标签，哪怕它不在 3 的倍数上
+      const label = hour % 3 === 0 || peak ? hour : "";
       return [
-        '<div class="hour-col" title="' + title + '">',
+        '<div class="hour-col' + (peak ? " is-peak" : "") + '" title="' + title + '">',
         '  <div class="hour-bar" style="' + style + '"></div>',
-        '  <div class="hour-label">' + (hour % 3 === 0 ? hour : "") + '</div>',
+        '  <div class="hour-label">' + label + '</div>',
         '</div>'
       ].join("");
     }).join("");
