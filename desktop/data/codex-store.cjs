@@ -18,7 +18,7 @@ const fsp = require("node:fs/promises");
 const path = require("node:path");
 
 const CACHE_VERSION = 3;
-const DETAIL_CACHE_VERSION = 3;
+const DETAIL_CACHE_VERSION = 5;
 const TAIL_BYTES = 8 * 1024 * 1024;
 const FAST_FILE_COUNT = 3;
 /** 明细扫描的分块大小：大文件流式读，不整块进内存 */
@@ -535,9 +535,46 @@ class CodexStore {
     };
   }
 
+  /** 从一份「天 → 桶」映射里取最近 N 天，用于让弹窗与看板共用同一份日聚合 */
+  bucketsFromMap(map, days) {
+    const out = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    for (let offset = days - 1; offset >= 0; offset -= 1) {
+      const date = new Date(today);
+      date.setDate(date.getDate() - offset);
+      const key = dayKeyOf(date);
+      const bucket = map.get(key) || zeroBucket();
+      out.push({
+        day: key,
+        totalTokens: Math.max(0, bucket.totalTokens || 0),
+        inputTokens: Math.max(0, bucket.inputTokens || 0),
+        cachedInputTokens: Math.max(0, bucket.cachedInputTokens || 0),
+        outputTokens: Math.max(0, bucket.outputTokens || 0),
+        reasoningOutputTokens: Math.max(0, bucket.reasoningOutputTokens || 0),
+        records: Math.max(0, bucket.records || 0)
+      });
+    }
+    return out;
+  }
+
   snapshot() {
-    const { totals } = this.totals();
-    const series = this.bucketsSince(14);
+    // 明细扫描就绪后，弹窗也改用它的日聚合。
+    // 否则弹窗走「快扫尾部」、看板走「全量明细」，同一时刻会显示两个今日用量。
+    const detailDays = this._detailDays;
+    let totals;
+    let series;
+    if (detailDays) {
+      const sum = zeroBucket();
+      for (const bucket of detailDays.values()) {
+        for (const key of Object.keys(sum)) sum[key] += Math.max(0, bucket[key] || 0);
+      }
+      totals = { ...sum, sessions: this._detailSessions || this.sessionCount };
+      series = this.bucketsFromMap(detailDays, 14);
+    } else {
+      totals = this.totals().totals;
+      series = this.bucketsSince(14);
+    }
     const todayKey = dayKeyOf(new Date());
     const today = series.find(item => item.day === todayKey) || zeroBucket();
     const yesterdayDate = new Date();
@@ -634,6 +671,14 @@ class CodexStore {
           detail: entry.detail || null
         });
       }
+      // 缓存命中也要先算一遍日聚合，否则弹窗会在 detail 扫描前用快扫口径
+      if (this.detailFiles.size) {
+        try {
+          this.detailSnapshot();
+        } catch {
+          /* 缓存结构异常时交给后续扫描重建 */
+        }
+      }
       return this.detailFiles.size > 0;
     } catch {
       return false;
@@ -716,10 +761,11 @@ class CodexStore {
       turnOutput: new Map(),
       /** turn_id -> task_complete 的耗时与首字延迟 */
       turnDone: new Map(),
+      /** turn_id -> 该轮用的模型，速度要按模型拆开看 */
+      turnModel: new Map(),
       quota: null
     };
     let currentModel = null;
-    const hourFloor = Date.now() - HOUR_WINDOW_DAYS * 24 * 60 * 60 * 1000;
 
     const feed = text => {
       for (const line of text.split("\n")) {
@@ -789,6 +835,7 @@ class CodexStore {
               const output = Number(usage.output_tokens) || 0;
               // turn_token_usage 是轮内累计值，取最大值可避免续跑时重复文件把它叠高
               if (output > (detail.turnOutput.get(turnId) || 0)) detail.turnOutput.set(turnId, output);
+              if (!detail.turnModel.has(turnId)) detail.turnModel.set(turnId, payload.model || currentModel || "unknown");
             }
           } catch {
             /* ignore */
@@ -835,10 +882,9 @@ class CodexStore {
             if (!detail.modelDays[day][model]) detail.modelDays[day][model] = zeroBucket();
             addToBucket(detail.modelDays[day][model], usage, 1);
 
-            if (date.getTime() >= hourFloor) {
-              const hourKey = `${day}T${pad2(date.getHours())}`;
-              detail.hours[hourKey] = (detail.hours[hourKey] || 0) + (usage.total_tokens || 0);
-            }
+            // 全天候保留小时桶：活跃时段图要跟着 7/14/30/全部 区间切换
+            const hourKey = `${day}T${pad2(date.getHours())}`;
+            detail.hours[hourKey] = (detail.hours[hourKey] || 0) + (usage.total_tokens || 0);
           }
         }
 
@@ -856,8 +902,14 @@ class CodexStore {
       finish() {
         detail.project = projectNameOf(detail.cwd);
 
-        // 输出速度：把每轮的 output tokens 与 task_complete 的耗时配对
-        const throughput = { turns: 0, outputTokens: 0, durationMs: 0, ttft: [], days: {} };
+        // 输出速度：把每轮的 output tokens 与 task_complete 的耗时配对。
+        // 同时按「天」「模型」「小时」各留一份，界面才能回答
+        // 「哪个模型快」「什么时段快」，而不只是一个总数。
+        const throughput = { turns: 0, outputTokens: 0, durationMs: 0, ttft: [], days: {}, models: {}, hours: {}, dayHours: {}, modelDays: {} };
+        const cellOf = (target, key) => {
+          if (!target[key]) target[key] = { turns: 0, outputTokens: 0, durationMs: 0, ttft: [] };
+          return target[key];
+        };
         for (const [turnId, done] of detail.turnDone) {
           const output = detail.turnOutput.get(turnId) || 0;
           if (!output || !done.durationMs) continue;
@@ -865,9 +917,24 @@ class CodexStore {
           throughput.outputTokens += output;
           throughput.durationMs += done.durationMs;
           if (done.ttftMs !== null) throughput.ttft.push(done.ttftMs);
+
+          const model = detail.turnModel.get(turnId) || "unknown";
+          const cells = [cellOf(throughput.models, model)];
           if (done.completedAt) {
-            const day = done.completedAt.slice(0, 10);
-            const cell = throughput.days[day] || (throughput.days[day] = { turns: 0, outputTokens: 0, durationMs: 0, ttft: [] });
+            // 按本地日期归集：completedAt 是 ISO(UTC)，直接 slice 会在时区边界错一天
+            const completedAt = new Date(done.completedAt);
+            const day = dayKeyOf(completedAt);
+            cells.push(cellOf(throughput.days, day));
+            if (!throughput.modelDays[day]) throughput.modelDays[day] = {};
+            cells.push(cellOf(throughput.modelDays[day], model));
+            const hour = completedAt.getHours();
+            if (Number.isFinite(hour)) {
+              cells.push(cellOf(throughput.hours, String(hour)));
+              if (!throughput.dayHours[day]) throughput.dayHours[day] = {};
+              cells.push(cellOf(throughput.dayHours[day], String(hour)));
+            }
+          }
+          for (const cell of cells) {
             cell.turns += 1;
             cell.outputTokens += output;
             cell.durationMs += done.durationMs;
@@ -876,6 +943,7 @@ class CodexStore {
         }
         detail.turnOutput = null;
         detail.turnDone = null;
+        detail.turnModel = null;
         detail.throughput = throughput;
         return detail;
       }
@@ -934,7 +1002,7 @@ class CodexStore {
     const dailyHours = {};
     const sum = zeroBucket();
     /** 输出速度汇总：turns/outputTokens/durationMs 三项累加后算加权 tps */
-    const speed = { turns: 0, outputTokens: 0, durationMs: 0, ttft: [], days: {} };
+    const speed = { turns: 0, outputTokens: 0, durationMs: 0, ttft: [], days: {}, models: {}, hours: {}, dayHours: {}, modelDays: {} };
 
     const todayKey = dayKeyOf(new Date());
     const hourFloor = Date.now() - 7 * 24 * 60 * 60 * 1000;
@@ -985,12 +1053,23 @@ class CodexStore {
         speed.outputTokens += fileSpeed.outputTokens;
         speed.durationMs += fileSpeed.durationMs;
         if (fileSpeed.ttft) for (const value of fileSpeed.ttft) speed.ttft.push(value);
-        for (const [day, cell] of Object.entries(fileSpeed.days || {})) {
-          const target = speed.days[day] || (speed.days[day] = { turns: 0, outputTokens: 0, durationMs: 0, ttft: [] });
-          target.turns += cell.turns;
-          target.outputTokens += cell.outputTokens;
-          target.durationMs += cell.durationMs;
-          if (cell.ttft) for (const value of cell.ttft) target.ttft.push(value);
+        const mergeSpeedCell = (target, key, cell) => {
+          const dest = target[key] || (target[key] = { turns: 0, outputTokens: 0, durationMs: 0, ttft: [] });
+          dest.turns += cell.turns;
+          dest.outputTokens += cell.outputTokens;
+          dest.durationMs += cell.durationMs;
+          if (cell.ttft) for (const value of cell.ttft) dest.ttft.push(value);
+        };
+        for (const [day, cell] of Object.entries(fileSpeed.days || {})) mergeSpeedCell(speed.days, day, cell);
+        for (const [model, cell] of Object.entries(fileSpeed.models || {})) mergeSpeedCell(speed.models, model, cell);
+        for (const [hour, cell] of Object.entries(fileSpeed.hours || {})) mergeSpeedCell(speed.hours, hour, cell);
+        for (const [day, hours] of Object.entries(fileSpeed.dayHours || {})) {
+          if (!speed.dayHours[day]) speed.dayHours[day] = {};
+          for (const [hour, cell] of Object.entries(hours)) mergeSpeedCell(speed.dayHours[day], hour, cell);
+        }
+        for (const [day, byModel] of Object.entries(fileSpeed.modelDays || {})) {
+          if (!speed.modelDays[day]) speed.modelDays[day] = {};
+          for (const [model, cell] of Object.entries(byModel)) mergeSpeedCell(speed.modelDays[day], model, cell);
         }
       }
       if (detail.firstAt && (!session.firstAt || detail.firstAt < session.firstAt)) session.firstAt = detail.firstAt;
@@ -1041,12 +1120,13 @@ class CodexStore {
 
       for (const [hourKey, tokens] of Object.entries(detail.hours)) {
         const [dayPart, hourPart] = hourKey.split("T");
-        const stamp = new Date(`${hourKey}:00:00`).getTime();
-        if (Number.isNaN(stamp) || stamp < hourFloor) continue;
-        const hour = new Date(stamp).getHours();
-        hours[hour] += tokens;
+        // 全量落进 dailyHours，前端按 7/14/30/全部 现算，不再写死 7 天
         if (!dailyHours[dayPart]) dailyHours[dayPart] = new Array(24).fill(0);
         dailyHours[dayPart][Number(hourPart)] += tokens;
+
+        const stamp = new Date(`${hourKey}:00:00`).getTime();
+        if (Number.isNaN(stamp) || stamp < hourFloor) continue;
+        hours[new Date(stamp).getHours()] += tokens;
       }
 
       for (const key of Object.keys(zeroBucket())) sum[key] += detail.tokens[key] || 0;
@@ -1200,6 +1280,14 @@ class CodexStore {
       return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
     };
 
+    const speedCell = cell => ({
+      turns: cell.turns,
+      outputTokens: cell.outputTokens,
+      durationMs: cell.durationMs,
+      tps: cell.durationMs > 0 ? cell.outputTokens * 1000 / cell.durationMs : null,
+      ttftMs: median(cell.ttft || [])
+    });
+
     const throughput = speed.durationMs > 0
       ? {
         turns: speed.turns,
@@ -1207,18 +1295,31 @@ class CodexStore {
         durationMs: speed.durationMs,
         tps: speed.outputTokens * 1000 / speed.durationMs,
         ttftMs: median(speed.ttft),
-        days: Object.fromEntries(Object.entries(speed.days).map(([day, cell]) => [
+        days: Object.fromEntries(Object.entries(speed.days).map(([day, cell]) => [day, speedCell(cell)])),
+        models: Object.entries(speed.models)
+          .map(([model, cell]) => ({ model, ...speedCell(cell) }))
+          .sort((a, b) => b.turns - a.turns),
+        hours: Array.from({ length: 24 }, (_, hour) => {
+          const cell = speed.hours[String(hour)];
+          return cell ? speedCell(cell) : { turns: 0, outputTokens: 0, durationMs: 0, tps: null, ttftMs: null };
+        }),
+        dayHours: Object.fromEntries(Object.entries(speed.dayHours).map(([day, byHour]) => [
           day,
-          {
-            turns: cell.turns,
-            outputTokens: cell.outputTokens,
-            durationMs: cell.durationMs,
-            tps: cell.durationMs > 0 ? cell.outputTokens * 1000 / cell.durationMs : null,
-            ttftMs: median(cell.ttft || [])
-          }
+          Array.from({ length: 24 }, (_, hour) => {
+            const cell = byHour[String(hour)];
+            return cell ? speedCell(cell) : null;
+          })
+        ])),
+        modelDays: Object.fromEntries(Object.entries(speed.modelDays).map(([day, byModel]) => [
+          day,
+          Object.fromEntries(Object.entries(byModel).map(([model, cell]) => [model, speedCell(cell)]))
         ]))
       }
       : null;
+
+    // 供 snapshot() 复用：弹窗与看板从此共用这一份日聚合
+    this._detailDays = days;
+    this._detailSessions = sessions.length;
 
     return {
       ok: true,

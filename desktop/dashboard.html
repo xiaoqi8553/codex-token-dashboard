@@ -209,6 +209,9 @@
     box-shadow: 0 1px 2px rgba(19, 24, 40, .1);
   }
 
+  /* 卡片内的小号切换器 */
+  .range.mini button { font-size: 11px; padding: 3px 9px; border-radius: 6px; }
+
   .icon-btn {
     width: 30px;
     height: 30px;
@@ -262,6 +265,8 @@
     font-size: 11.5px;
     color: var(--text-3);
   }
+
+  .card-head .range { margin-left: auto; }
 
   .badge {
     margin-left: auto;
@@ -458,6 +463,7 @@
 
   .bar-val { font-size: 11.5px; color: var(--text-3); }
   .bar-val b { color: var(--text); font-weight: 560; }
+  .bar-extra { color: var(--text-3); }
 
   .bar-track {
     grid-column: 1 / -1;
@@ -502,8 +508,8 @@
   .hour-bar {
     width: 100%;
     margin-top: auto;
-    border-radius: 3px 3px 2px 2px;
-    background: var(--accent-2);
+    border-radius: 3px;
+    background: linear-gradient(180deg, var(--accent), color-mix(in srgb, var(--accent) 58%, transparent));
     min-height: 2px;
     transition: background .16s ease;
   }
@@ -673,8 +679,11 @@
 
     <section class="card">
       <div class="card-head">
-        <div><h2>活跃时段</h2></div>
-        <span class="badge">最近 7 天</span>
+        <div><h2 id="hour-title">活跃时段</h2></div>
+        <div class="range mini" id="hour-tabs" role="group" aria-label="时段指标">
+          <button type="button" data-metric="tokens" aria-pressed="true">用量</button>
+          <button type="button" data-metric="speed" aria-pressed="false">速度</button>
+        </div>
       </div>
       <div class="hours" id="hours"></div>
     </section>
@@ -730,6 +739,7 @@
     detail: null,
     status: null,
     range: Number(localStorage.getItem("codex.range") || 14) || 14,
+    hourMetric: localStorage.getItem("codex.hourMetric") || "tokens",
     theme: localStorage.getItem("codex.theme") || "auto",
     hover: -1
   };
@@ -741,7 +751,8 @@
   // ---------------------------------------------------------------------
   function fmtTokens(value) {
     const n = Number(value) || 0;
-    if (n >= 1e9) return (n / 1e9).toFixed(n >= 1e10 ? 1 : 2).replace(/\.00$/, "") + "B";
+    // B 级统一两位小数：看板与弹窗并排出现时不会一个 5.75 一个 5.7
+    if (n >= 1e9) return (n / 1e9).toFixed(n >= 1e10 ? 1 : 2) + "B";
     if (n >= 1e6) return (n / 1e6).toFixed(n >= 1e8 ? 0 : 1).replace(/\.0$/, "") + "M";
     if (n >= 1e3) return (n / 1e3).toFixed(1).replace(/\.0$/, "") + "K";
     return String(Math.round(n));
@@ -864,8 +875,32 @@
         grand += bucket.totalTokens || 0;
       }
     }
+
+    // 速度与用量走同一批天，避免「占比是 30 天、速度是全部时间」
+    const speedDays = (detail.throughput && detail.throughput.modelDays) || {};
+    const speedAcc = new Map();
+    for (const day of keys) {
+      const byModel = speedDays[day];
+      if (!byModel) continue;
+      for (const [model, cell] of Object.entries(byModel)) {
+        const current = speedAcc.get(model) || { output: 0, duration: 0, turns: 0 };
+        current.output += cell.outputTokens || 0;
+        current.duration += cell.durationMs || 0;
+        current.turns += cell.turns || 0;
+        speedAcc.set(model, current);
+      }
+    }
+
     return [...totals.values()]
-      .map(item => ({ ...item, share: grand ? item.totalTokens / grand : 0 }))
+      .map(item => {
+        const speed = speedAcc.get(item.model);
+        return {
+          ...item,
+          share: grand ? item.totalTokens / grand : 0,
+          turns: speed ? speed.turns : 0,
+          tps: speed && speed.duration > 0 ? speed.output * 1000 / speed.duration : null
+        };
+      })
       .sort((a, b) => b.totalTokens - a.totalTokens);
   }
 
@@ -1068,14 +1103,38 @@
     return 10 * magnitude;
   }
 
+  /** 平滑曲线：Catmull-Rom 转三次贝塞尔；纵向夹紧，避免曲线冲出坐标区 */
+  function smoothPath(points, top, bottom) {
+    if (!points.length) return "";
+    const head = "M " + points[0].x.toFixed(1) + " " + points[0].y.toFixed(1);
+    if (points.length === 1) return head;
+    const clamp = v => Math.max(top, Math.min(bottom, v));
+    let d = head;
+    for (let i = 0; i < points.length - 1; i += 1) {
+      const p0 = points[i - 1] || points[i];
+      const p1 = points[i];
+      const p2 = points[i + 1];
+      const p3 = points[i + 2] || p2;
+      const c1x = p1.x + (p2.x - p0.x) / 6;
+      const c1y = clamp(p1.y + (p2.y - p0.y) / 6);
+      const c2x = p2.x - (p3.x - p1.x) / 6;
+      const c2y = clamp(p2.y - (p3.y - p1.y) / 6);
+      d += " C " + c1x.toFixed(1) + " " + c1y.toFixed(1) + ", " +
+        c2x.toFixed(1) + " " + c2y.toFixed(1) + ", " +
+        p2.x.toFixed(1) + " " + p2.y.toFixed(1);
+    }
+    return d;
+  }
+
   function renderChart() {
     const svg = $("chart");
     const wrap = svg.parentElement;
     const width = Math.max(320, wrap.clientWidth);
     const height = 190;
-    const padL = 40, padR = 8, padT = 10, padB = 24;
+    const padL = 40, padR = 12, padT = 16, padB = 24;
     const innerW = width - padL - padR;
     const innerH = height - padT - padB;
+    const bottom = padT + innerH;
 
     const series = rangeSeries();
     if (!series.length) {
@@ -1086,88 +1145,67 @@
 
     let max = 0;
     for (const item of series) max = Math.max(max, item.totalTokens);
-    const ceiling = niceCeil(max || 1);
-
-    const slot = innerW / series.length;
-    // 细柱：[4, 12] 之间，留白多，接近 CodexBar 的疏朗感
-    const barW = Math.max(4, Math.min(12, slot * 0.42));
+    const ceiling = niceCeil(max * 1.06 || 1);
+    const step = series.length === 1 ? 0 : innerW / (series.length - 1);
+    const xAt = index => (series.length === 1 ? padL + innerW / 2 : padL + index * step);
+    const yAt = value => bottom - (Math.max(0, Math.min(value, ceiling)) / ceiling) * innerH;
     const todayKey = localDayKey(new Date());
-    const bottom = padT + innerH;
 
     const parts = [];
-    // 只画 3 条极淡的参考线，不画整块网格
-    parts.push('<g>');
+
+    // 参考线只留 0 / 中 / 顶，且中间那条极淡
     for (let i = 0; i <= 2; i += 1) {
       const y = bottom - (innerH * i) / 2;
-      const value = (ceiling * i) / 2;
       if (i > 0) {
         parts.push('<line class="grid-line" x1="' + padL + '" y1="' + y.toFixed(1) + '" x2="' + (padL + innerW) + '" y2="' + y.toFixed(1) + '"/>');
       }
-      parts.push('<text class="axis-text" x="' + (padL - 8) + '" y="' + (y + 3.5).toFixed(1) + '" text-anchor="end">' + fmtTokens(value) + '</text>');
+      parts.push('<text class="axis-text" x="' + (padL - 8) + '" y="' + (y + 3.5).toFixed(1) + '" text-anchor="end">' + fmtTokens((ceiling * i) / 2) + '</text>');
     }
-    parts.push('</g>');
 
-    // 悬停高亮底
-    if (state.hover >= 0 && state.hover < series.length) {
-      const hx = padL + state.hover * slot;
-      parts.push('<rect x="' + (hx + 1).toFixed(1) + '" y="' + padT + '" width="' + Math.max(2, slot - 2).toFixed(1) + '" height="' + innerH + '" fill="currentColor" opacity="0.035" rx="5"/>');
-    }
+    const points = series.map((item, index) => ({ x: xAt(index), y: yAt(item.totalTokens) }));
+    const line = smoothPath(points, padT, bottom);
+    const area = line +
+      " L " + points[points.length - 1].x.toFixed(1) + " " + bottom.toFixed(1) +
+      " L " + points[0].x.toFixed(1) + " " + bottom.toFixed(1) + " Z";
 
     parts.push('<defs>');
-    parts.push('<linearGradient id="g-bar" x1="0" y1="0" x2="0" y2="1">' +
-      '<stop offset="0%" stop-color="var(--c-bar)" stop-opacity="1"/>' +
-      '<stop offset="100%" stop-color="var(--c-bar)" stop-opacity="0.74"/>' +
+    parts.push('<linearGradient id="g-area" x1="0" y1="0" x2="0" y2="1">' +
+      '<stop offset="0%" stop-color="var(--accent)" stop-opacity="0.32"/>' +
+      '<stop offset="70%" stop-color="var(--accent)" stop-opacity="0.08"/>' +
+      '<stop offset="100%" stop-color="var(--accent)" stop-opacity="0.01"/>' +
       '</linearGradient>');
     parts.push('</defs>');
 
-    series.forEach((item, index) => {
-      const total = Math.max(0, item.totalTokens);
-      const x = padL + index * slot + (slot - barW) / 2;
+    parts.push('<path d="' + area + '" fill="url(#g-area)"/>');
+    parts.push('<path d="' + line + '" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>');
 
-      if (total <= 0) {
-        parts.push('<rect x="' + x.toFixed(1) + '" y="' + (bottom - 2) + '" width="' + barW.toFixed(1) + '" height="2" rx="1" fill="var(--line)" opacity="0.8"/>');
-        return;
-      }
-
-      const barH = Math.max(3, (total / ceiling) * innerH);
-      const top = bottom - barH;
-      // 顶端圆头、底端平贴基线，像 CodexBar 那样细长
-      const r = Math.min(barW / 2, barH);
-      const path = [
-        "M", x.toFixed(2), bottom.toFixed(2),
-        "L", x.toFixed(2), (top + r).toFixed(2),
-        "A", r.toFixed(2), r.toFixed(2), 0, 0, 1, (x + r).toFixed(2), top.toFixed(2),
-        "L", (x + barW - r).toFixed(2), top.toFixed(2),
-        "A", r.toFixed(2), r.toFixed(2), 0, 0, 1, (x + barW).toFixed(2), (top + r).toFixed(2),
-        "L", (x + barW).toFixed(2), bottom.toFixed(2),
-        "Z"
-      ].join(" ");
-
-      const isToday = item.day === todayKey;
-      // 单色柱：当天实色，其余稍淡，扫一眼就知道最新到哪儿
-      parts.push('<path d="' + path + '" fill="url(#g-bar)" opacity="' + (isToday ? 1 : 0.8) + '"/>');
-    });
-
-    // X 轴：首尾必标，中间最多再给 3 个，避免文字挤成一排
-    const labelIndexes = new Set([0, series.length - 1]);
-    const middleCount = Math.min(3, Math.max(0, series.length - 2));
-    for (let i = 1; i <= middleCount; i += 1) {
-      labelIndexes.add(Math.round((series.length - 1) * i / (middleCount + 1)));
+    // 今天：实心点；正在悬停：竖线 + 空心点
+    const todayIndex = series.findIndex(item => item.day === todayKey);
+    if (todayIndex >= 0) {
+      parts.push('<circle cx="' + points[todayIndex].x.toFixed(1) + '" cy="' + points[todayIndex].y.toFixed(1) + '" r="3.2" fill="var(--accent)" stroke="var(--panel)" stroke-width="2"/>');
     }
+
+    if (state.hover >= 0 && state.hover < series.length) {
+      const hx = points[state.hover].x;
+      parts.push('<line x1="' + hx.toFixed(1) + '" y1="' + padT + '" x2="' + hx.toFixed(1) + '" y2="' + bottom.toFixed(1) + '" stroke="var(--accent)" stroke-width="1" stroke-dasharray="3 3" opacity="0.42" vector-effect="non-scaling-stroke"/>');
+      parts.push('<circle cx="' + hx.toFixed(1) + '" cy="' + points[state.hover].y.toFixed(1) + '" r="4.2" fill="var(--panel)" stroke="var(--accent)" stroke-width="2.2"/>');
+    }
+
+    // X 轴：首、中、尾
+    const labelIndexes = new Set([0, series.length - 1, Math.round((series.length - 1) / 2)]);
     series.forEach((item, index) => {
       if (!labelIndexes.has(index)) return;
-      const cx = padL + index * slot + slot / 2;
-      parts.push('<text class="axis-text" x="' + cx.toFixed(1) + '" y="' + (height - 6) + '" text-anchor="middle">' + dayLabel(item.day) + '</text>');
+      parts.push('<text class="axis-text" x="' + xAt(index).toFixed(1) + '" y="' + (height - 6) + '" text-anchor="middle">' + dayLabel(item.day) + '</text>');
     });
 
     svg.setAttribute("viewBox", "0 0 " + width + " " + height);
-    svg.setAttribute("preserveAspectRatio", "none");
+    svg.removeAttribute("preserveAspectRatio");
     svg.innerHTML = parts.join("");
 
     // 概要文字：只留最有用的三项
     const sumRange = series.reduce((acc, item) => acc + item.totalTokens, 0);
     const sumRecords = series.reduce((acc, item) => acc + item.records, 0);
-    const avg = sumRange / series.length;
+    const avg = series.length ? sumRange / series.length : 0;
     $("chart-sub").textContent = fmtTokens(sumRange) + " · " + fmtCount(sumRecords) + " 次请求 · 日均 " + fmtTokens(avg);
 
     const peak = series.reduce((acc, item) => (item.totalTokens > (acc ? acc.totalTokens : -1) ? item : acc), null);
@@ -1183,11 +1221,11 @@
       const series = rangeSeries();
       if (!series.length) return;
       const rect = svg.getBoundingClientRect();
-      const padL = 40, padR = 8;
+      const padL = 40, padR = 12;
       const innerW = rect.width - padL - padR;
-      const slot = innerW / series.length;
+      const step = series.length === 1 ? 0 : innerW / (series.length - 1);
       const x = event.clientX - rect.left - padL;
-      const index = Math.max(0, Math.min(series.length - 1, Math.floor(x / slot)));
+      const index = step ? Math.max(0, Math.min(series.length - 1, Math.round(x / step))) : 0;
       if (index !== state.hover) {
         state.hover = index;
         renderChart();
@@ -1205,7 +1243,7 @@
         '<div class="tip-row"><span>请求</span><b>' + fmtCount(item.records) + '</b></div>',
         speed && speed.tps ? '<div class="tip-row"><span>速度</span><b>' + speed.tps.toFixed(1) + ' tok/s</b></div>' : ''
       ].join("");
-      const px = padL + index * slot + slot / 2;
+      const px = step ? padL + index * step : padL + innerW / 2;
       tip.style.left = Math.min(Math.max(px, 90), rect.width - 90) + "px";
       tip.style.top = (event.clientY - rect.top - 12) + "px";
       tip.classList.add("show");
@@ -1253,7 +1291,8 @@
       return [
         '<div class="bar-row">',
         '  <span class="bar-name"' + (item.muted ? ' style="color: var(--text-3)"' : '') + '>' + escapeHtml(item[nameKey]) + '</span>',
-        '  <span class="bar-val"><b>' + fmtPercent(item.share * 100, 1) + '</b> · ' + fmtTokens(item.totalTokens) + '</span>',
+        '  <span class="bar-val"><b>' + fmtPercent(item.share * 100, 1) + '</b> · ' + fmtTokens(item.totalTokens) +
+          (item.extra ? ' · <span class="bar-extra">' + escapeHtml(item.extra) + '</span>' : '') + '</span>',
         '  <span class="bar-track"><i style="width:' + width.toFixed(1) + '%"></i></span>',
         '</div>'
       ].join("");
@@ -1270,6 +1309,9 @@
 
   function renderModels() {
     const models = rangeModels();
+    for (const item of models) {
+      if (item.tps) item.extra = item.tps.toFixed(1) + " tok/s";
+    }
     renderBars($("models"), models, { nameKey: "model", limit: 6, empty: "此区间没有模型数据" });
     $("model-badge").textContent = rangeDays() === 0 ? "全部时间" : "最近 " + rangeDays() + " 天";
   }
@@ -1283,15 +1325,57 @@
   function renderHours() {
     const detail = state.detail;
     const container = $("hours");
-    const values = (detail && detail.hourly) || new Array(24).fill(0);
-    const max = Math.max.apply(null, values.concat([1]));
+    if (!detail) {
+      container.innerHTML = "";
+      return;
+    }
+    const speedMode = state.hourMetric === "speed";
+    $("hour-title").textContent = speedMode ? "活跃时段 · tok/s" : "活跃时段";
+    const days = rangeSeries().map(item => item.day);
+    const values = new Array(24).fill(0);
+    const turns = new Array(24).fill(0);
+
+    if (speedMode) {
+      // 每小时的完成轮速度：输出 tokens ÷ 耗时，按当前区间逐天累加
+      const acc = Array.from({ length: 24 }, () => ({ output: 0, duration: 0, turns: 0 }));
+      const byDay = (detail.throughput && detail.throughput.dayHours) || {};
+      for (const day of days) {
+        const cells = byDay[day];
+        if (!cells) continue;
+        cells.forEach((cell, hour) => {
+          if (!cell || !cell.durationMs) return;
+          acc[hour].output += cell.outputTokens;
+          acc[hour].duration += cell.durationMs;
+          acc[hour].turns += cell.turns;
+        });
+      }
+      acc.forEach((cell, hour) => {
+        values[hour] = cell.duration > 0 ? cell.output * 1000 / cell.duration : 0;
+        turns[hour] = cell.turns;
+      });
+    } else {
+      const byDay = detail.dailyHours || {};
+      for (const day of days) {
+        const row = byDay[day];
+        if (!row) continue;
+        for (let hour = 0; hour < 24; hour += 1) values[hour] += row[hour] || 0;
+      }
+    }
+
+    const max = Math.max.apply(null, values.concat([0.0001]));
     container.innerHTML = values.map((value, hour) => {
-      const height = value > 0 ? Math.max(3, (value / max) * 72) : 2;
-      const showLabel = hour % 3 === 0;
+      const ratio = max > 0 ? value / max : 0;
+      const height = value > 0 ? Math.max(3, ratio * 72) : 2;
+      const title = speedMode
+        ? hour + ":00 · " + value.toFixed(1) + " tok/s · " + turns[hour] + " 轮"
+        : hour + ":00 · " + fmtTokens(value) + " tokens";
+      const style = value > 0
+        ? "height:" + height.toFixed(1) + "px;opacity:" + (0.4 + ratio * 0.6).toFixed(2)
+        : "height:2px;background:var(--line)";
       return [
-        '<div class="hour-col" title="' + hour + ':00 · ' + fmtTokens(value) + ' tokens">',
-        '  <div class="hour-bar" style="height:' + height.toFixed(1) + 'px' + (value > 0 ? '' : ';background: var(--line)') + '"></div>',
-        '  <div class="hour-label">' + (showLabel ? hour : "") + '</div>',
+        '<div class="hour-col" title="' + title + '">',
+        '  <div class="hour-bar" style="' + style + '"></div>',
+        '  <div class="hour-label">' + (hour % 3 === 0 ? hour : "") + '</div>',
         '</div>'
       ].join("");
     }).join("");
@@ -1371,6 +1455,24 @@
       renderChart();
       renderModels();
       renderProjects();
+      renderHours();
+    });
+  }
+
+  function buildHourTabs() {
+    const container = $("hour-tabs");
+    for (const node of container.querySelectorAll("button")) {
+      node.setAttribute("aria-pressed", String(node.dataset.metric === state.hourMetric));
+    }
+    container.addEventListener("click", event => {
+      const button = event.target.closest("button");
+      if (!button || button.dataset.metric === state.hourMetric) return;
+      state.hourMetric = button.dataset.metric;
+      localStorage.setItem("codex.hourMetric", state.hourMetric);
+      for (const node of container.querySelectorAll("button")) {
+        node.setAttribute("aria-pressed", String(node.dataset.metric === state.hourMetric));
+      }
+      renderHours();
     });
   }
 
@@ -1427,6 +1529,7 @@
   // ---------------------------------------------------------------------
   applyTheme();
   buildRangeTabs();
+  buildHourTabs();
   bindButtons();
   bindChartHover();
 

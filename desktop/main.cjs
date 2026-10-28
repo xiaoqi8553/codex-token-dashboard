@@ -748,6 +748,19 @@ if (!gotLock) {
             fs.writeFileSync(bottomPath, bottom.toPNG());
             process.stdout.write(`dashboard shot saved: ${bottomPath}\n`);
           }
+          // 排查用：切到指定时段指标后再截一张（tokens / speed）
+          if (process.env.CODEX_TOKEN_DASHBOARD_SHOT_HOUR) {
+            const metric = String(process.env.CODEX_TOKEN_DASHBOARD_SHOT_HOUR).replace(/[^a-z]/gi, "");
+            await mainWindow.webContents.executeJavaScript(
+              `(() => { const el = document.querySelector('#hour-tabs button[data-metric="${metric}"]'); if (el) el.click(); return !!el; })()`
+            );
+            await mainWindow.webContents.executeJavaScript('(() => { const el = document.querySelector("main"); if (el) el.scrollTop = el.scrollHeight; return el ? el.scrollTop : -1; })()');
+            await new Promise(resolve => setTimeout(resolve, 700));
+            const hourShot = await shoot();
+            const hourPath = shotPath.replace(/\.png$/i, "-" + metric + ".png");
+            fs.writeFileSync(hourPath, hourShot.toPNG());
+            process.stdout.write(`dashboard shot saved: ${hourPath}\n`);
+          }
         } catch (error) {
           process.stdout.write(`dashboard shot failed: ${error.message}\n`);
         }
