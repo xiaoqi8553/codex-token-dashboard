@@ -1,821 +1,757 @@
 <!doctype html>
 <html lang="zh-CN">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Codex Token</title>
 <style>
   :root {
-    --canvas: #eef0fa;
-    --canvas-2: #f7f6fc;
-    --surface: #ffffff;
-    --ink: #16181f;
-    --ink-soft: #3d424f;
-    --muted: #6f7480;
-    --faint: #9aa0ac;
-    --hairline: rgba(18, 22, 34, 0.09);
-    --track: #e3e5ef;
-    --accent: #2f6cf5;
-    --accent-soft: #dbe4fd;
-    --bar-low: #3ba55d;
-    --bar-mid: #e0a03a;
-    --bar-high: #e2543f;
-    --tab-active: #2f6cf5;
-    --shadow: 0 18px 44px rgba(24, 32, 58, 0.22), 0 2px 6px rgba(24, 32, 58, 0.10);
+    color-scheme: light dark;
+    --panel-bg: rgba(250, 250, 252, 0.90);
+    --panel-border: rgba(0, 0, 0, 0.09);
+    --text: #1c1c1e;
+    --text-2: rgba(60, 60, 67, 0.62);
+    --text-3: rgba(60, 60, 67, 0.38);
+    --track: rgba(120, 120, 128, 0.15);
+    --accent: #5b5ce2;
+    --accent-2: #8b5cf6;
+    --warn: #f59e0b;
+    --hair: rgba(0, 0, 0, 0.07);
+    --hover: rgba(120, 120, 128, 0.11);
+    --mark-bg: #1c1c1e;
+    --mark-fg: #ffffff;
   }
 
   @media (prefers-color-scheme: dark) {
     :root {
-      --canvas: #1b1d24;
-      --canvas-2: #22242c;
-      --surface: #262830;
-      --ink: #f2f3f7;
-      --ink-soft: #d6d8e0;
-      --muted: #9aa0ad;
-      --faint: #7c828f;
-      --hairline: rgba(255, 255, 255, 0.10);
-      --track: #34363f;
-      --accent-soft: #2b3a63;
-      --shadow: 0 18px 44px rgba(0, 0, 0, 0.45);
+      --panel-bg: rgba(28, 29, 34, 0.90);
+      --panel-border: rgba(255, 255, 255, 0.11);
+      --text: #f2f2f7;
+      --text-2: rgba(235, 235, 245, 0.64);
+      --text-3: rgba(235, 235, 245, 0.36);
+      --track: rgba(255, 255, 255, 0.13);
+      --hair: rgba(255, 255, 255, 0.09);
+      --hover: rgba(255, 255, 255, 0.075);
+      --mark-bg: #f2f2f7;
+      --mark-fg: #1c1c1e;
     }
   }
 
-  * { box-sizing: border-box; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
 
   html, body {
-    margin: 0;
-    padding: 0;
-    height: 100%;
-    overflow: hidden;
     background: transparent;
+    overflow: hidden;
   }
 
   body {
-    font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
-    color: var(--ink);
+    font-family: "Segoe UI Variable Text", "Segoe UI", -apple-system, "Microsoft YaHei UI", "PingFang SC", sans-serif;
     font-size: 13px;
+    color: var(--text);
     -webkit-font-smoothing: antialiased;
     user-select: none;
     cursor: default;
   }
 
-  .popover {
-    position: relative;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
+  .panel {
     border-radius: 14px;
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.18), 0 2px 10px rgba(0, 0, 0, 0.10);
+    backdrop-filter: blur(40px) saturate(180%);
     overflow: hidden;
-    background:
-      radial-gradient(120% 70% at 10% 0%, rgba(140, 128, 255, 0.16), transparent 60%),
-      radial-gradient(110% 60% at 100% 6%, rgba(96, 200, 255, 0.14), transparent 55%),
-      linear-gradient(180deg, var(--canvas) 0%, var(--canvas-2) 42%, var(--canvas-2) 100%);
-    box-shadow: var(--shadow);
-    border: 1px solid var(--hairline);
+    padding-bottom: 2px;
   }
 
-  /* ---------------- provider tabs ---------------- */
-  .tabs {
-    display: flex;
-    gap: 2px;
-    padding: 12px 10px 8px;
-  }
+  /* ---------------------------------------------------------------- header */
 
-  .tab {
-    flex: 1 1 0;
-    min-width: 0;
+  .header {
     display: flex;
-    flex-direction: column;
     align-items: center;
-    gap: 3px;
-    padding: 0;
-    border: 0;
-    background: none;
-    font: inherit;
-    color: var(--muted);
-    cursor: pointer;
+    gap: 9px;
+    padding: 13px 16px 11px;
   }
 
-  .tab-glyph {
-    width: 42px;
-    height: 34px;
+  .mark {
+    width: 27px;
+    height: 27px;
+    border-radius: 8px;
+    background: var(--mark-bg);
+    color: var(--mark-fg);
     display: grid;
     place-items: center;
-    border-radius: 9px;
-    transition: background 140ms ease, transform 120ms ease;
-    position: relative;
+    font: 600 12px/1 "Consolas", "SF Mono", monospace;
+    letter-spacing: -0.5px;
+    flex: none;
   }
 
-  .tab-glyph svg { width: 21px; height: 21px; display: block; }
+  .head-text { flex: 1; min-width: 0; }
 
-  .tab-label {
-    font-size: 10.5px;
-    letter-spacing: 0.1px;
+  .title {
+    font-size: 14.5px;
+    font-weight: 640;
+    letter-spacing: -0.15px;
+    line-height: 1.25;
+  }
+
+  .sub {
+    font-size: 11.5px;
+    color: var(--text-2);
+    line-height: 1.35;
+    margin-top: 1px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 100%;
   }
 
-  .tab[aria-selected="true"] .tab-glyph { background: var(--tab-active); }
-  .tab[aria-selected="true"] .tab-glyph svg { color: #fff; }
-  .tab[aria-selected="true"] .tab-label { color: var(--ink); font-weight: 600; }
+  .plan {
+    font-size: 11.5px;
+    font-weight: 560;
+    color: var(--text-2);
+    padding: 2px 7px;
+    border-radius: 5px;
+    background: var(--hover);
+    flex: none;
+  }
 
-  .tab:active .tab-glyph { transform: scale(0.94); }
+  .plan:empty { display: none; }
 
-  .tab-dot {
-    width: 3px;
-    height: 3px;
+  .status-dot {
+    width: 7px;
+    height: 7px;
     border-radius: 50%;
-    background: var(--bar-low);
-    opacity: 0;
-  }
-  .tab[data-connected="1"] .tab-dot { opacity: 1; }
-  .tab[aria-selected="true"] .tab-dot { opacity: 0; }
-
-  /* ---------------- body ---------------- */
-  .body {
-    flex: 1 1 auto;
-    overflow-y: auto;
-    overflow-x: hidden;
-    padding: 0 16px;
-    scrollbar-width: thin;
+    flex: none;
+    background: #34c759;
+    box-shadow: 0 0 0 3px rgba(52, 199, 89, 0.15);
+    transition: background 0.25s ease, box-shadow 0.25s ease;
   }
 
-  .body::-webkit-scrollbar { width: 8px; }
-  .body::-webkit-scrollbar-thumb {
-    background: rgba(120, 128, 150, 0.35);
-    border-radius: 8px;
-    border: 2px solid transparent;
-    background-clip: content-box;
+  .status-dot.warn {
+    background: var(--warn);
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.17);
   }
 
-  .provider-head {
+  .status-dot.danger {
+    background: #ff453a;
+    box-shadow: 0 0 0 3px rgba(255, 69, 58, 0.17);
+  }
+
+  .status-dot.idle {
+    background: var(--text-3);
+    box-shadow: none;
+  }
+
+  /* ----------------------------------------------------------------- quota */
+
+  .quota {
+    padding: 0 16px 13px;
+  }
+
+  .quota-title {
     display: flex;
-    align-items: flex-start;
+    align-items: baseline;
     justify-content: space-between;
-    gap: 12px;
-    padding: 8px 0 12px;
+    gap: 8px;
+    margin-bottom: 7px;
   }
 
-  .provider-name {
-    font-size: 17px;
-    font-weight: 650;
-    letter-spacing: -0.2px;
-    line-height: 1.2;
-  }
-
-  .provider-sub {
-    margin-top: 3px;
-    font-size: 12px;
-    color: var(--muted);
-  }
-
-  .plan-badge {
-    font-size: 12px;
-    color: var(--muted);
-    padding-top: 3px;
-    white-space: nowrap;
-  }
-
-  hr.rule {
-    height: 1px;
-    border: 0;
-    margin: 0 0 14px;
-    background: var(--hairline);
-  }
-
-  .section { margin-bottom: 14px; }
-
-  .section-title {
-    font-size: 15px;
+  .quota-name {
+    font-size: 13px;
     font-weight: 620;
     letter-spacing: -0.1px;
-    margin-bottom: 9px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
   }
 
-  .bar {
-    height: 5px;
-    border-radius: 4px;
+  .quota-window {
+    font-size: 11px;
+    color: var(--text-3);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .track {
+    position: relative;
+    height: 6px;
+    border-radius: 3px;
     background: var(--track);
     overflow: hidden;
   }
 
-  .bar-fill {
-    height: 100%;
-    width: 0%;
-    border-radius: 4px;
-    background: var(--bar-low);
-    transition: width 420ms cubic-bezier(0.22, 1, 0.36, 1), background 200ms ease;
+  .fill {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 0;
+    border-radius: 3px;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    transition: width 0.75s cubic-bezier(0.22, 1, 0.36, 1), background 0.3s ease;
   }
 
-  .metric-row {
+  .fill.warn { background: linear-gradient(90deg, #f59e0b, #f97316); }
+  .fill.danger { background: linear-gradient(90deg, #ff453a, #ef4444); }
+
+  .quota-line {
     display: flex;
     align-items: baseline;
     justify-content: space-between;
     gap: 10px;
-    margin-top: 7px;
-    font-size: 12.5px;
-    color: var(--ink-soft);
+    margin-top: 6px;
+    font-size: 12px;
+    line-height: 1.35;
   }
 
-  .metric-row .right { color: var(--muted); white-space: nowrap; }
+  .used {
+    color: var(--text);
+    font-weight: 520;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .reset {
+    color: var(--text-2);
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+  }
 
   .pace {
-    margin-top: 6px;
-    font-size: 11.5px;
-    color: var(--faint);
-  }
-
-  .muted-note {
-    font-size: 11.5px;
-    color: var(--faint);
-    line-height: 1.5;
-  }
-
-  /* used grid */
-  .grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 6px;
-  }
-
-  .cell {
-    padding: 7px 8px;
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.62);
-    border: 1px solid var(--hairline);
-    min-width: 0;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    .cell { background: rgba(255, 255, 255, 0.04); }
-  }
-
-  .cell-label {
-    font-size: 10.5px;
-    color: var(--muted);
-    margin-bottom: 1px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .cell-value {
-    font-size: 13px;
-    font-weight: 620;
+    font-size: 11px;
+    color: var(--text-3);
+    line-height: 1.4;
+    margin-top: 3px;
     font-variant-numeric: tabular-nums;
-    letter-spacing: -0.2px;
+  }
+
+  .pace.warn { color: var(--warn); }
+
+  /* ------------------------------------------------------------- structure */
+
+  .rule {
+    height: 1px;
+    background: var(--hair);
+    margin: 0 16px 12px;
+  }
+
+  /* ----------------------------------------------------------------- today */
+
+  .today {
+    padding: 0 16px 8px;
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+  }
+
+  .today-main { flex: 1; min-width: 0; }
+
+  .today-label {
+    font-size: 11px;
+    color: var(--text-2);
+    margin-bottom: 2px;
+  }
+
+  .today-value {
+    font-size: 23px;
+    font-weight: 660;
+    letter-spacing: -0.7px;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .today-value small {
+    font-size: 12px;
+    font-weight: 520;
+    color: var(--text-2);
+    letter-spacing: 0;
+    margin-left: 3px;
+  }
+
+  .today-meta {
+    font-size: 11.5px;
+    color: var(--text-2);
+    margin-top: 4px;
+    font-variant-numeric: tabular-nums;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
 
-  /* collapsible cost */
-  .disclosure {
-    border: 0;
-    padding: 0;
-    width: 100%;
-    background: none;
-    font: inherit;
-    color: inherit;
-    cursor: pointer;
-    text-align: left;
+  .spark {
+    flex: none;
+    color: var(--accent);
+    opacity: 0.95;
+    padding-bottom: 3px;
   }
 
-  .disclosure-head {
+  /* ------------------------------------------------------------ disclosure */
+
+  .disclosure {
+    width: 100%;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    font-size: 15px;
-    font-weight: 620;
-    letter-spacing: -0.1px;
-    margin-bottom: 8px;
+    gap: 8px;
+    padding: 7px 16px;
+    background: none;
+    border: 0;
+    color: var(--text);
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 520;
+    cursor: default;
+    text-align: left;
   }
 
+  .disclosure:hover { background: var(--hover); }
+
   .chev {
-    color: var(--faint);
-    transition: transform 160ms ease;
-    display: inline-flex;
+    width: 11px;
+    height: 11px;
+    color: var(--text-3);
+    transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+    flex: none;
   }
+
   .disclosure[aria-expanded="true"] .chev { transform: rotate(90deg); }
+
+  .detail {
+    padding: 2px 16px 10px;
+  }
+
+  .detail[hidden] { display: none; }
 
   .line {
     display: flex;
+    align-items: baseline;
     justify-content: space-between;
-    gap: 10px;
-    font-size: 12.5px;
-    color: var(--ink-soft);
+    gap: 12px;
+    font-size: 12px;
     line-height: 1.75;
+    color: var(--text-2);
   }
-  .line .right { color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
 
-  /* action list */
+  .line b {
+    color: var(--text);
+    font-weight: 520;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* --------------------------------------------------------------- actions */
+
   .actions {
-    border-top: 1px solid var(--hairline);
-    padding: 6px 0 2px;
+    border-top: 1px solid var(--hair);
+    margin-top: 6px;
+    padding: 4px 0;
   }
 
   .action {
+    width: 100%;
     display: flex;
     align-items: center;
     gap: 9px;
-    width: 100%;
-    border: 0;
+    padding: 7px 16px;
     background: none;
+    border: 0;
+    color: var(--text);
     font: inherit;
-    font-size: 13.5px;
-    color: var(--ink);
-    padding: 7px 2px;
-    border-radius: 7px;
-    cursor: pointer;
+    font-size: 13px;
+    cursor: default;
     text-align: left;
   }
 
-  .action:hover { background: rgba(47, 108, 245, 0.09); }
-  .action:active { background: rgba(47, 108, 245, 0.16); }
-  .action svg { width: 15px; height: 15px; color: var(--muted); flex: 0 0 auto; }
-  .action .kbd { margin-left: auto; font-size: 11px; color: var(--faint); }
+  .action:hover { background: var(--hover); }
+
+  .action svg {
+    width: 15px;
+    height: 15px;
+    flex: none;
+    color: var(--text-2);
+  }
+
+  .action span { flex: 1; min-width: 0; }
+
+  kbd {
+    font: 500 10.5px/1 "Segoe UI", sans-serif;
+    color: var(--text-3);
+    padding: 2px 5px;
+    border-radius: 4px;
+    background: var(--hover);
+    letter-spacing: 0.2px;
+  }
+
+  /* ---------------------------------------------------------------- footer */
 
   .footer {
-    border-top: 1px solid var(--hairline);
-    padding: 6px 16px 10px;
-    flex: 0 0 auto;
+    border-top: 1px solid var(--hair);
+    margin-top: 4px;
+    padding: 3px 0;
   }
 
-  .footer .action { font-size: 13px; padding: 6px 2px; }
+  .row {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 7px 16px;
+    background: none;
+    border: 0;
+    color: var(--text);
+    font: inherit;
+    font-size: 12.5px;
+    cursor: default;
+    text-align: left;
+  }
+
+  button.row:hover { background: var(--hover); }
 
   .switch {
-    margin-left: auto;
-    width: 26px;
-    height: 15px;
-    border-radius: 10px;
+    width: 32px;
+    height: 18px;
+    border-radius: 9px;
     background: var(--track);
     position: relative;
-    transition: background 140ms ease;
-    flex: 0 0 auto;
+    transition: background 0.2s ease;
+    flex: none;
+    cursor: default;
   }
+
   .switch::after {
     content: "";
     position: absolute;
-    top: 1.5px;
-    left: 1.5px;
-    width: 12px;
-    height: 12px;
+    top: 2px;
+    left: 2px;
+    width: 14px;
+    height: 14px;
     border-radius: 50%;
     background: #fff;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
-    transition: transform 140ms ease;
-  }
-  .switch[data-on="1"] { background: var(--accent); }
-  .switch[data-on="1"]::after { transform: translateX(11px); }
-
-  .empty {
-    padding: 26px 0 30px;
-    text-align: center;
-    color: var(--muted);
-    font-size: 12.5px;
-    line-height: 1.6;
+    transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
   }
 
-  .spinning { animation: spin 900ms linear infinite; }
+  .switch.on { background: var(--accent); }
+  .switch.on::after { transform: translateX(14px); }
+
+  body.syncing #sync svg { animation: spin 0.9s linear infinite; }
+
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  .fade-in { animation: fade 220ms ease both; }
-  @keyframes fade { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: none; } }
+  body.booting .fill { opacity: 0.45; }
 </style>
 </head>
 <body>
-<div class="popover">
-  <nav class="tabs" id="tabs" role="tablist" aria-label="供应商"></nav>
+<div class="panel" id="panel">
+  <div class="header">
+    <div class="mark">&gt;_</div>
+    <div class="head-text">
+      <div class="title">Codex</div>
+      <div class="sub" id="updated">正在读取本地会话…</div>
+    </div>
+    <div class="plan" id="plan"></div>
+    <span class="status-dot idle" id="status-dot" title="额度状态"></span>
+  </div>
 
-  <div class="body" id="body">
-    <div class="empty">正在读取本机用量…</div>
+  <div class="quota">
+    <div class="quota-title">
+      <span class="quota-name">会话额度</span>
+      <span class="quota-window">5 小时窗口</span>
+    </div>
+    <div class="track"><span class="fill" id="fill-session"></span></div>
+    <div class="quota-line">
+      <span class="used" id="used-session">—</span>
+      <span class="reset" id="reset-session">—</span>
+    </div>
+    <div class="pace" id="pace-session"></div>
+  </div>
+
+  <div class="quota">
+    <div class="quota-title">
+      <span class="quota-name">每周额度</span>
+      <span class="quota-window">7 天窗口</span>
+    </div>
+    <div class="track"><span class="fill" id="fill-weekly"></span></div>
+    <div class="quota-line">
+      <span class="used" id="used-weekly">—</span>
+      <span class="reset" id="reset-weekly">—</span>
+    </div>
+    <div class="pace" id="pace-weekly"></div>
+  </div>
+
+  <div class="rule"></div>
+
+  <div class="today">
+    <div class="today-main">
+      <div class="today-label">今日用量</div>
+      <div class="today-value" id="today-value">—</div>
+      <div class="today-meta" id="today-meta">—</div>
+    </div>
+    <svg class="spark" id="spark" width="100" height="40" viewBox="0 0 100 40" aria-hidden="true"></svg>
+  </div>
+
+  <button class="disclosure" id="more" aria-expanded="false">
+    <span>累计与明细</span>
+    <svg class="chev" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 2.5 8 6l-3.5 3.5"/></svg>
+  </button>
+  <div class="detail" id="detail" hidden>
+    <div class="line"><span>累计 tokens</span><b id="d-total">—</b></div>
+    <div class="line"><span>输入 / 其中缓存</span><b id="d-input">—</b></div>
+    <div class="line"><span>输出 / 其中推理</span><b id="d-output">—</b></div>
+    <div class="line"><span>会话数 / 请求数</span><b id="d-count">—</b></div>
+  </div>
+
+  <div class="actions">
+    <button class="action" id="dashboard">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2.5" width="5" height="11" rx="1.2"/><rect x="9" y="2.5" width="5" height="6" rx="1.2"/></svg>
+      <span>打开完整看板</span>
+    </button>
+    <button class="action" id="sync">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 8a5.5 5.5 0 1 1-1.7-3.97"/><path d="M13.6 2.4v3.2h-3.2"/></svg>
+      <span>立即同步数据</span>
+      <kbd>F5</kbd>
+    </button>
+    <button class="action" id="status">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1.8 8.6h2.6l1.5-4 2.3 7 1.6-3h4.4"/></svg>
+      <span>Codex 状态页</span>
+    </button>
   </div>
 
   <div class="footer">
-    <button class="action" id="btn-launch">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v9"/><path d="M6.5 6.5a8 8 0 1 0 11 0"/></svg>
+    <div class="row">
       <span>登录 Windows 时启动</span>
-      <span class="switch" id="switch-launch" data-on="0"></span>
-    </button>
-    <button class="action" id="btn-about">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 16v-5"/><path d="M12 8h.01"/></svg>
-      <span>关于 Codex Token</span>
-    </button>
-    <button class="action" id="btn-quit">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/></svg>
-      <span>退出</span>
-    </button>
+      <span class="switch" id="launch-switch"></span>
+    </div>
+    <button class="row" id="about">关于 Codex Token</button>
+    <button class="row" id="quit">退出</button>
   </div>
 </div>
 
 <script>
-(function () {
-  "use strict";
+(() => {
+  const host = window.codexBar || {};
+  const state = { status: null, syncing: false, detailOpen: false };
+  const $ = id => document.getElementById(id);
 
-  const host = window.codexBar || {
-    onStatus() {},
-    refresh: async () => null,
-    openDashboard() {},
-    setLaunchAtLogin() {},
-    getPrefs: async () => ({ launchAtLogin: false }),
-    quit() {},
-    close() {}
-  };
-
-  // Provider tab catalogue. Icons are drawn inline so the popover stays
-  // self-contained (no network, no external assets).
-  const PROVIDER_META = {
-    all: {
-      label: "全部",
-      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m8 9-3 3 3 3"/><path d="m16 9 3 3-3 3"/><path d="m13.5 6-3 12"/></svg>'
-    },
-    official_plus: {
-      label: "官方 Plus",
-      icon: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.6a2 2 0 0 1 1.76 1.05l2.02 3.7 4.13.7a2 2 0 0 1 1.1 3.37l-2.9 2.96.6 4.1a2 2 0 0 1-2.87 2.08L12 18.63l-3.84 1.93a2 2 0 0 1-2.87-2.07l.6-4.1-2.9-2.97a2 2 0 0 1 1.1-3.37l4.13-.7 2.02-3.7A2 2 0 0 1 12 2.6Z"/></svg>'
-    },
-    relay: {
-      label: "中转站",
-      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h9a4 4 0 0 1 0 8H8"/><path d="m10 12 3 3-3 3"/><path d="M4 17h4"/></svg>'
-    },
-    unknown: {
-      label: "未知来源",
-      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.2a2.6 2.6 0 1 1 3.4 2.5c-.6.2-.9.7-.9 1.3v.4"/><path d="M12 16.6h.01"/></svg>'
-    }
-  };
-
-  const TEXT = {
-    session: "会话额度",
-    weekly: "每周额度",
-    today: "今日用量",
-    cost: "成本与累计",
-    input: "输入",
-    output: "输出",
-    cached: "缓存命中",
-    records: "请求数",
-    cacheRate: "缓存命中率",
-    total: "累计 Token",
-    sessions: "会话数",
-    updatedJustNow: "刚刚更新",
-    noQuota: "本机日志里还没有配额快照，先跑一次 Codex 会话即可出现。",
-    usedSuffix: "已用",
-    resetsIn: "后重置",
-    resetPassed: "即将重置",
-    paceSlow: "消耗慢于时间进度",
-    paceFast: "消耗快于时间进度",
-    paceOnTrack: "与时间进度持平",
-    dashboard: "打开完整看板",
-    sync: "立即同步数据",
-    status: "Codex 状态页"
-  };
-
-  const state = {
-    status: null,
-    quota: null,
-    prefs: { launchAtLogin: false },
-    activeProvider: "all",
-    costOpen: false,
-    syncing: false,
-    lastSyncAt: 0
-  };
-
-  const el = {
-    tabs: document.getElementById("tabs"),
-    body: document.getElementById("body")
-  };
-
+  // ------------------------------------------------------------------ utils
   function formatTokens(value) {
-    const number = Number(value) || 0;
-    if (number >= 1e9) return (number / 1e9).toFixed(number >= 1e10 ? 1 : 2).replace(/\.0+$/, "") + "B";
-    if (number >= 1e6) return (number / 1e6).toFixed(number >= 1e8 ? 0 : 1).replace(/\.0$/, "") + "M";
-    if (number >= 1e3) return (number / 1e3).toFixed(1).replace(/\.0$/, "") + "K";
-    return String(number);
+    const n = Number(value) || 0;
+    if (n >= 1e9) return (n / 1e9).toFixed(n >= 1e10 ? 1 : 2).replace(/0+$/, "").replace(/\.$/, "") + "B";
+    if (n >= 1e6) return (n / 1e6).toFixed(n >= 1e8 ? 0 : 1).replace(/\.0$/, "") + "M";
+    if (n >= 1e3) return (n / 1e3).toFixed(1).replace(/\.0$/, "") + "K";
+    return String(n);
   }
 
-  function escapeHtml(value) {
-    return String(value == null ? "" : value)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
+  function splitTokens(value) {
+    const n = Number(value) || 0;
+    if (n >= 1e9) return { num: (n / 1e9).toFixed(n >= 1e10 ? 1 : 2).replace(/0+$/, "").replace(/\.$/, ""), unit: "B" };
+    if (n >= 1e6) return { num: (n / 1e6).toFixed(n >= 1e8 ? 0 : 1).replace(/\.0$/, ""), unit: "M" };
+    if (n >= 1e3) return { num: (n / 1e3).toFixed(1).replace(/\.0$/, ""), unit: "K" };
+    return { num: String(n), unit: "" };
   }
 
-  function barColor(percent) {
-    if (percent >= 85) return "var(--bar-high)";
-    if (percent >= 60) return "var(--bar-mid)";
-    return "var(--bar-low)";
+  function relativeTime(iso) {
+    if (!iso) return "暂无数据";
+    const diff = Date.now() - new Date(iso).getTime();
+    if (!Number.isFinite(diff) || diff < 0) return "刚刚更新";
+    const minutes = Math.floor(diff / 60000);
+    if (minutes < 1) return "刚刚更新";
+    if (minutes < 60) return `${minutes} 分钟前更新`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours} 小时前更新`;
+    return `${Math.floor(hours / 24)} 天前更新`;
   }
 
-  function formatRemaining(isoString) {
-    if (!isoString) return "";
-    const target = new Date(isoString).getTime();
-    if (!Number.isFinite(target)) return "";
-    const diff = target - Date.now();
-    if (diff <= 0) return TEXT.resetPassed;
-    const totalMinutes = Math.floor(diff / 60000);
+  function resetCountdown(resetsAt) {
+    if (!resetsAt) return "重置时间未知";
+    const ms = Number(resetsAt) * 1000 - Date.now();
+    if (!Number.isFinite(ms)) return "重置时间未知";
+    if (ms <= 0) return "即将重置";
+    const totalMinutes = Math.floor(ms / 60000);
     const days = Math.floor(totalMinutes / 1440);
     const hours = Math.floor((totalMinutes % 1440) / 60);
     const minutes = totalMinutes % 60;
-    if (days > 0) return `${days}d ${hours}h ${TEXT.resetsIn}`;
-    if (hours > 0) return `${hours}h ${minutes}m ${TEXT.resetsIn}`;
-    return `${Math.max(1, minutes)}m ${TEXT.resetsIn}`;
+    if (days > 0) return `${days} 天 ${hours} 小时后重置`;
+    if (hours > 0) return `${hours} 小时 ${minutes} 分后重置`;
+    return `${minutes} 分钟后重置`;
   }
 
-  // Pace: compare share of quota already consumed with share of the window
-  // that has already elapsed. Negative delta means the user is pacing under
-  // the window, i.e. the quota should last until the reset.
-  function paceLine(windowInfo) {
-    if (!windowInfo || !windowInfo.resetsAt || !windowInfo.windowMinutes) return "";
-    const resetAt = new Date(windowInfo.resetsAt).getTime();
-    if (!Number.isFinite(resetAt)) return "";
-    const windowMs = windowInfo.windowMinutes * 60000;
-    const startAt = resetAt - windowMs;
-    const elapsedRatio = Math.min(1, Math.max(0, (Date.now() - startAt) / windowMs));
-    const elapsedPercent = elapsedRatio * 100;
-    const delta = windowInfo.usedPercent - elapsedPercent;
-    const rounded = Math.round(Math.abs(delta));
-    if (rounded <= 2) return `${TEXT.paceOnTrack} (${Math.round(elapsedPercent)}%)`;
-    if (delta < 0) return `${TEXT.paceSlow} (-${rounded}%) · 可撑到重置`;
-    return `${TEXT.paceFast} (+${rounded}%) · 可能提前用尽`;
+  function paceText(quotaWindow) {
+    if (!quotaWindow || !quotaWindow.resetsAt || !quotaWindow.windowMinutes) return "";
+    const end = quotaWindow.resetsAt * 1000;
+    const start = end - quotaWindow.windowMinutes * 60000;
+    const now = Date.now();
+    if (now <= start) return "";
+    const elapsedRatio = Math.min(1, (now - start) / (end - start));
+    const usedRatio = quotaWindow.usedPercent / 100;
+    const diff = Math.round((usedRatio - elapsedRatio) * 100);
+    if (Math.abs(diff) < 3) return "消耗与时间进度基本同步";
+    if (diff > 0) return `消耗快于时间进度 (+${diff}%) · 可能提前用尽`;
+    return `消耗慢于时间进度 (${diff}%) · 可撑到重置`;
   }
 
-  function providerTabs() {
-    const providers = (state.status && state.status.providers) || [];
-    const keys = providers.map(item => item.key);
-    const tabs = ["all"];
-    for (const key of ["official_plus", "relay", "unknown"]) {
-      if (keys.includes(key)) tabs.push(key);
-    }
-    return tabs;
-  }
+  // ------------------------------------------------------------------ render
+  function renderQuota(prefix, quotaWindow) {
+    const fill = $(`fill-${prefix}`);
+    const used = $(`used-${prefix}`);
+    const reset = $(`reset-${prefix}`);
+    const pace = $(`pace-${prefix}`);
+    if (!fill) return;
 
-  function activeTotals() {
-    const status = state.status;
-    if (!status) return { totalTokens: 0, todayTokens: 0, records: 0, sessions: 0 };
-    if (state.activeProvider === "all") {
-      return {
-        totalTokens: status.totals?.totalTokens || 0,
-        todayTokens: status.today?.totalTokens || 0,
-        records: status.totals?.records || 0,
-        sessions: status.sessions || 0
-      };
-    }
-    const item = (status.providers || []).find(provider => provider.key === state.activeProvider);
-    return {
-      totalTokens: item ? item.totalTokens : 0,
-      todayTokens: item ? item.todayTokens : 0,
-      records: item ? item.records : 0,
-      sessions: 0
-    };
-  }
-
-  function renderTabs() {
-    const tabs = providerTabs();
-    el.tabs.innerHTML = tabs.map(key => {
-      const meta = PROVIDER_META[key] || PROVIDER_META.unknown;
-      const selected = state.activeProvider === key;
-      return `<button class="tab" role="tab" data-key="${key}" data-connected="1" aria-selected="${selected}">
-        <span class="tab-glyph">${meta.icon}</span>
-        <span class="tab-label">${escapeHtml(meta.label)}</span>
-        <span class="tab-dot"></span>
-      </button>`;
-    }).join("");
-  }
-
-  function quotaFor(providerKey) {
-    // Quota snapshots come from the Codex rate limit header, which only covers
-    // the official account. Relay traffic has no quota windows.
-    if (providerKey !== "all" && providerKey !== "official_plus") return null;
-    return state.quota;
-  }
-
-  function renderQuotaSection(title, windowInfo) {
-    if (!windowInfo) {
-      return `<div class="section">
-        <div class="section-title">${title}</div>
-        <div class="bar"><div class="bar-fill" style="width:0%"></div></div>
-        <div class="metric-row"><span>— ${TEXT.usedSuffix}</span><span class="right"></span></div>
-        <div class="pace">${TEXT.noQuota}</div>
-      </div>`;
-    }
-    const percent = Math.max(0, Math.min(100, windowInfo.usedPercent));
-    const pace = paceLine(windowInfo);
-    return `<div class="section">
-      <div class="section-title">${title}</div>
-      <div class="bar"><div class="bar-fill" data-bar="${percent}" style="width:${percent}%;background:${barColor(percent)}"></div></div>
-      <div class="metric-row">
-        <span>${percent}% ${TEXT.usedSuffix}</span>
-        <span class="right" data-reset="${escapeHtml(windowInfo.resetsAt)}">${formatRemaining(windowInfo.resetsAt)}</span>
-      </div>
-      ${pace ? `<div class="pace">${escapeHtml(pace)}</div>` : ""}
-    </div>`;
-  }
-
-  function renderBody() {
-    const status = state.status;
-    if (!status) {
-      el.body.innerHTML = '<div class="empty">正在读取本机用量…</div>';
+    if (!quotaWindow) {
+      fill.style.width = "0%";
+      fill.className = "fill";
+      used.textContent = "暂无额度数据";
+      reset.textContent = "—";
+      pace.textContent = "";
+      pace.className = "pace";
       return;
     }
 
-    const quota = quotaFor(state.activeProvider);
-    const totals = activeTotals();
-    const providerMeta = PROVIDER_META[state.activeProvider] || PROVIDER_META.all;
-    const cacheRate = status.totals?.inputTokens
-      ? Math.round((status.totals.cachedInputTokens / status.totals.inputTokens) * 100)
-      : 0;
-    const plan = quota && quota.weekly ? "Plus" : "";
-    const updated = state.lastSyncAt
-      ? new Date(state.lastSyncAt).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })
-      : "";
+    const percent = Math.max(0, Math.min(100, quotaWindow.usedPercent));
+    fill.style.width = `${percent}%`;
+    fill.className = "fill" + (percent >= 90 ? " danger" : percent >= 70 ? " warn" : "");
+    used.textContent = `${percent % 1 === 0 ? percent : percent.toFixed(1)}% 已用`;
+    reset.textContent = resetCountdown(quotaWindow.resetsAt);
 
-    el.body.innerHTML = `
-      <div class="provider-head">
-        <div>
-          <div class="provider-name">${escapeHtml(state.activeProvider === "all" ? "Codex" : providerMeta.label)}</div>
-          <div class="provider-sub">${updated ? escapeHtml(updated + " 更新") : TEXT.updatedJustNow}</div>
-        </div>
-        ${plan ? `<div class="plan-badge">${plan}</div>` : ""}
-      </div>
-      <hr class="rule" />
-      ${renderQuotaSection(TEXT.session, quota ? quota.session : null)}
-      ${renderQuotaSection(TEXT.weekly, quota ? quota.weekly : null)}
-      <div class="section">
-        <div class="section-title">${TEXT.today}</div>
-        <div class="line"><span>Token</span><span class="right">${formatTokens(totals.todayTokens)} · ${TEXT.output} ${formatTokens(status.today?.outputTokens)}</span></div>
-        <div class="line"><span>${TEXT.records}</span><span class="right">${(status.today?.records || 0).toLocaleString("zh-CN")} · ${TEXT.cacheRate} ${cacheRate}%</span></div>
-      </div>
-      <div class="section">
-        <button class="disclosure" id="cost-toggle" aria-expanded="${state.costOpen}">
-          <div class="disclosure-head">
-            <span>${TEXT.cost}</span>
-            <span class="chev"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></span>
-          </div>
-          <div class="line"><span>${TEXT.total}</span><span class="right">${formatTokens(totals.totalTokens)} tokens</span></div>
-          <div class="line"><span>${TEXT.sessions}</span><span class="right">${(totals.sessions || status.sessions || 0).toLocaleString("zh-CN")}</span></div>
-          ${state.costOpen ? `
-            <div class="line"><span>${TEXT.input}</span><span class="right">${formatTokens(status.totals?.inputTokens)} tokens</span></div>
-            <div class="line"><span>${TEXT.cached}</span><span class="right">${formatTokens(status.totals?.cachedInputTokens)} tokens</span></div>
-            <div class="line"><span>${TEXT.output}</span><span class="right">${formatTokens(status.totals?.outputTokens)} tokens</span></div>
-            <div class="line"><span>配额余量</span><span class="right">${quota && quota.weekly ? Math.round(quota.weekly.remainingPercent) + "%" : "—"}</span></div>
-          ` : ""}
-        </button>
-      </div>
-      <div class="actions">
-        <button class="action" id="btn-dashboard">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18V9"/><path d="M10 18V5"/><path d="M16 18v-6"/><path d="M21 18H3"/></svg>
-          <span>${TEXT.dashboard}</span>
-        </button>
-        <button class="action" id="btn-sync">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" id="sync-icon"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v6h-6"/></svg>
-          <span>${TEXT.sync}</span>
-          <span class="kbd">${state.syncing ? "同步中…" : "F5"}</span>
-        </button>
-        <button class="action" id="btn-status">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2-5 3 10 2.5-5H21"/></svg>
-          <span>${TEXT.status}</span>
-        </button>
-      </div>
-    `;
-
-    bindBodyEvents();
-    runBarAnimation();
-    requestHeight();
+    const text = paceText(quotaWindow);
+    pace.textContent = text;
+    pace.className = "pace" + (/快于/.test(text) ? " warn" : "");
   }
 
-  // Ask the main process to fit the panel to its content so the collapsed and
-  // expanded states both look complete without an inner scrollbar.
-  let lastRequestedHeight = 0;
-  function requestHeight() {
-    if (typeof host.setHeight !== "function") return;
-    const tabs = document.getElementById("tabs");
-    const body = document.getElementById("body");
-    const footer = document.querySelector(".footer");
-    if (!tabs || !body || !footer) return;
-    const needed = tabs.offsetHeight + body.scrollHeight + footer.offsetHeight + 2;
-    if (!needed || Math.abs(needed - lastRequestedHeight) < 4) return;
-    lastRequestedHeight = needed;
-    host.setHeight(needed);
-  }
-
-  function bindBodyEvents() {
-    const costToggle = document.getElementById("cost-toggle");
-    if (costToggle) {
-      costToggle.addEventListener("click", () => {
-        state.costOpen = !state.costOpen;
-        renderBody();
-      });
+  function renderSpark(series) {
+    const svg = $("spark");
+    if (!svg) return;
+    const values = (series || []).map(item => Number(item.totalTokens) || 0);
+    if (!values.length) {
+      svg.innerHTML = "";
+      return;
     }
-    const dashboard = document.getElementById("btn-dashboard");
-    if (dashboard) dashboard.addEventListener("click", () => { host.openDashboard(); host.close(); });
-
-    const sync = document.getElementById("btn-sync");
-    if (sync) sync.addEventListener("click", triggerSync);
-
-    const status = document.getElementById("btn-status");
-    if (status) status.addEventListener("click", () => host.openDashboard());
+    const max = Math.max(...values, 1);
+    const slot = 100 / values.length;
+    const barWidth = Math.max(2.4, slot - 2.4);
+    const maxBar = 34;
+    svg.innerHTML = values.map((value, index) => {
+      const height = value > 0 ? Math.max(3, (value / max) * maxBar) : 2;
+      const isLast = index === values.length - 1;
+      const y = 40 - height;
+      const x = index * slot + (slot - barWidth) / 2;
+      // 今天还没过完，用半透明区分「进行中」与「已完成」
+      const opacity = isLast ? 0.55 : 0.30 + (index / values.length) * 0.46;
+      return `<rect x="${x.toFixed(2)}" y="${y.toFixed(2)}" width="${barWidth.toFixed(2)}" height="${height.toFixed(2)}" rx="1.5" fill="currentColor" opacity="${opacity.toFixed(2)}"/>`;
+    }).join("");
   }
 
-  function runBarAnimation() {
+  function renderDetail(status) {
+    const totals = status.totals || {};
+    const today = status.today || {};
+    $("d-total").textContent = `${formatTokens(totals.totalTokens)} tokens`;
+    $("d-input").textContent = `${formatTokens(totals.inputTokens)} / ${formatTokens(totals.cachedInputTokens)}`;
+    $("d-output").textContent = `${formatTokens(today.outputTokens)} / ${formatTokens(today.reasoningOutputTokens)}`;
+    $("d-count").textContent = `${(status.sessions || 0).toLocaleString("zh-CN")} / ${(totals.records || 0).toLocaleString("zh-CN")}`;
+  }
+
+  function render(status) {
+    if (!status) return;
+    state.status = status;
+    const quota = status.quota || {};
+
+    const building = status.phase === "fast" || status.phase === "full";
+    $("updated").textContent = building ? "正在建立完整索引…" : relativeTime(status.updatedAt || status.lastEventAt);
+    $("plan").textContent = quota.planType ? String(quota.planType).replace(/^\w/, c => c.toUpperCase()) : "";
+    document.body.classList.toggle("booting", building);
+
+    const dot = $("status-dot");
+    const usedPercent = quota.session ? quota.session.usedPercent
+      : quota.weekly ? quota.weekly.usedPercent : null;
+    if (usedPercent === null || usedPercent === undefined) dot.className = "status-dot idle";
+    else if (quota.limitReached || usedPercent >= 90) dot.className = "status-dot danger";
+    else if (usedPercent >= 70) dot.className = "status-dot warn";
+    else dot.className = "status-dot";
+
+    renderQuota("session", quota.session);
+    renderQuota("weekly", quota.weekly);
+
+    const today = status.today || {};
+    const split = splitTokens(today.totalTokens);
+    $("today-value").innerHTML = `${split.num}${split.unit ? `<small>${split.unit} tokens</small>` : " tokens"}`;
+
+    const cachedRate = today.inputTokens ? Math.round((today.cachedInputTokens / today.inputTokens) * 100) : 0;
+    $("today-meta").textContent = today.records
+      ? `请求 ${today.records.toLocaleString("zh-CN")} · 输出 ${formatTokens(today.outputTokens)} · 缓存 ${cachedRate}%`
+      : "今天还没有产生请求";
+
+    renderSpark(status.series);
+    renderDetail(status);
+  }
+
+  // ------------------------------------------------------------------ layout
+  function syncHeight() {
+    if (typeof host.setHeight !== "function") return;
     requestAnimationFrame(() => {
-      document.querySelectorAll(".bar-fill[data-bar]").forEach(node => {
-        node.style.width = node.dataset.bar + "%";
-      });
+      const panel = $("panel");
+      if (!panel) return;
+      host.setHeight(Math.ceil(panel.getBoundingClientRect().height) + 4);
     });
   }
 
-  async function triggerSync() {
-    if (state.syncing) return;
+  // ------------------------------------------------------------------ events
+  function bind() {
+    $("dashboard").addEventListener("click", () => { host.openDashboard && host.openDashboard(); });
+    $("sync").addEventListener("click", () => { runSync(true); });
+    $("status").addEventListener("click", () => { host.openStatusPage && host.openStatusPage(); });
+    $("quit").addEventListener("click", () => { host.quit && host.quit(); });
+    $("about").addEventListener("click", () => { host.openDashboard && host.openDashboard(); });
+
+    $("more").addEventListener("click", () => {
+      state.detailOpen = !state.detailOpen;
+      $("more").setAttribute("aria-expanded", String(state.detailOpen));
+      $("detail").hidden = !state.detailOpen;
+      syncHeight();
+    });
+
+    $("launch-switch").addEventListener("click", async event => {
+      const switchEl = event.currentTarget;
+      const next = !switchEl.classList.contains("on");
+      switchEl.classList.toggle("on", next);
+      try { await host.setLaunchAtLogin(next); } catch { switchEl.classList.toggle("on", !next); }
+    });
+
+    document.addEventListener("keydown", event => {
+      if (event.key === "Escape") host.close && host.close();
+      if (event.key === "F5") { event.preventDefault(); runSync(true); }
+    });
+
+    window.addEventListener("resize", syncHeight);
+
+    if (typeof host.onStatus === "function") {
+      host.onStatus(payload => {
+        render(payload);
+        syncHeight();
+      });
+    }
+  }
+
+  async function runSync() {
+    if (!host.refresh || state.syncing) return;
     state.syncing = true;
-    const icon = document.getElementById("sync-icon");
-    if (icon) icon.classList.add("spinning");
-    const kbd = document.querySelector("#btn-sync .kbd");
-    if (kbd) kbd.textContent = "同步中…";
+    document.body.classList.add("syncing");
     try {
       const payload = await host.refresh();
-      if (payload) applyStatus(payload);
+      if (payload) render(payload);
+    } catch {
+      /* 主进程会推送最新状态 */
     } finally {
       state.syncing = false;
-      renderBody();
+      document.body.classList.remove("syncing");
+      syncHeight();
     }
   }
 
-  function applyStatus(payload) {
-    if (!payload || !payload.ok) return;
-    state.status = payload;
-    state.quota = payload.quota || null;
-    state.lastSyncAt = Date.now();
-    if (!providerTabs().includes(state.activeProvider)) state.activeProvider = "all";
-    renderTabs();
-    renderBody();
-  }
-
-  function tickCountdowns() {
-    document.querySelectorAll("[data-reset]").forEach(node => {
-      const text = formatRemaining(node.dataset.reset);
-      if (text && node.textContent !== text) node.textContent = text;
-    });
-  }
-
-  el.tabs.addEventListener("click", event => {
-    const tab = event.target.closest(".tab");
-    if (!tab) return;
-    state.activeProvider = tab.dataset.key;
-    renderTabs();
-    renderBody();
-  });
-
-  document.getElementById("btn-quit").addEventListener("click", () => host.quit());
-  document.getElementById("btn-about").addEventListener("click", () => host.openDashboard());
-
-  document.getElementById("btn-launch").addEventListener("click", async () => {
-    const next = !state.prefs.launchAtLogin;
-    state.prefs.launchAtLogin = next;
-    document.getElementById("switch-launch").dataset.on = next ? "1" : "0";
-    await host.setLaunchAtLogin(next);
-  });
-
-  document.addEventListener("keydown", event => {
-    if (event.key === "F5") { event.preventDefault(); triggerSync(); }
-    if (event.key === "Escape") host.close();
-    if (event.key === "Tab") {
-      const tabs = providerTabs();
-      const index = tabs.indexOf(state.activeProvider);
-      const nextIndex = event.shiftKey
-        ? (index - 1 + tabs.length) % tabs.length
-        : (index + 1) % tabs.length;
-      state.activeProvider = tabs[nextIndex];
-      renderTabs();
-      renderBody();
-      event.preventDefault();
-    }
-  });
-
-  host.onStatus(payload => applyStatus(payload));
-
+  // -------------------------------------------------------------------- init
   (async () => {
+    bind();
+    renderSpark(Array.from({ length: 14 }, () => ({ totalTokens: 0 })));
+    syncHeight();
     try {
-      const prefs = await host.getPrefs();
-      if (prefs) {
-        state.prefs = { ...state.prefs, ...prefs };
-        document.getElementById("switch-launch").dataset.on = prefs.launchAtLogin ? "1" : "0";
-      }
-    } catch { /* preferences are optional */ }
-    try {
-      const payload = await host.refresh();
-      if (payload) applyStatus(payload);
-      else renderBody();
-    } catch {
-      renderBody();
-    }
+      const prefs = await host.getPrefs?.();
+      if (prefs && prefs.launchAtLogin) $("launch-switch").classList.add("on");
+    } catch { /* ignore */ }
+    runSync();
+    setInterval(() => { if (state.status) render(state.status); }, 20_000);
   })();
-
-  setInterval(tickCountdowns, 1000);
-  setInterval(() => { if (!state.syncing) host.refresh().then(payload => payload && applyStatus(payload)).catch(() => {}); }, 30000);
 })();
 </script>
 </body>

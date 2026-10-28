@@ -14,6 +14,7 @@ module.exports = {
     "desktop/preload.cjs",
     "desktop/popover.html",
     "desktop/icon.png",
+    "desktop/data/**",
     "server.js",
     "index.html",
     "folder-picker.html",

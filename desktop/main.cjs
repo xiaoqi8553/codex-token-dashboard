@@ -1,12 +1,24 @@
-const { app, BrowserWindow, Menu, Tray, shell, utilityProcess, ipcMain, screen } = require("electron");
+const { app, BrowserWindow, Menu, Tray, shell, utilityProcess, ipcMain, screen, nativeImage } = require("electron");
 const fs = require("node:fs");
+const os = require("node:os");
 const path = require("node:path");
+const { CodexStore } = require("./data/codex-store.cjs");
 
 const PRODUCT_NAME = "Codex Token";
 const PORTS = [8787, 8788, 8789];
 const APP_ROOT = app.getAppPath();
 const SERVER_PATH = path.join(APP_ROOT, "server.js");
-const gotLock = process.env.CODEX_TOKEN_DASHBOARD_SMOKE === "1" || app.requestSingleInstanceLock();
+const SMOKE = process.env.CODEX_TOKEN_DASHBOARD_SMOKE === "1";
+const gotLock = SMOKE || app.requestSingleInstanceLock();
+
+// 启动诊断：设置 CODEX_TOKEN_BOOT_MARK 可确认主进程脚本是否真的被执行
+if (process.env.CODEX_TOKEN_BOOT_MARK) {
+  try {
+    fs.writeFileSync(process.env.CODEX_TOKEN_BOOT_MARK, `boot ${new Date().toISOString()} packaged=${app.isPackaged}\n`);
+  } catch {
+    /* 诊断失败不影响启动 */
+  }
+}
 
 if (!gotLock) {
   app.quit();
@@ -16,6 +28,7 @@ if (!gotLock) {
   let popoverReady = false;
   let trayMenu;
   let tray;
+  /** 完整看板的后端；只有用户点「打开完整看板」时才会启动 */
   let backend;
   let backendExitCode;
   let backendOwned = false;
@@ -26,7 +39,28 @@ if (!gotLock) {
   let startupError = "";
   let statusTimer;
   let smokeExitTimer;
-  let preferences = { launchAtLogin: false, startMode: "popover" };
+  let preferences = { launchAtLogin: false, startMode: "popover", popoverOnly: true };
+  /** @type {CodexStore|null} 独立数据层：直接读 ~/.codex/sessions，不经过本地 HTTP 服务 */
+  let store = null;
+  /** 启动诊断日志的落盘位置，start() 阶段才确定 */
+  let logFile = null;
+
+  function log(message) {
+    const line = `[${new Date().toISOString()}] ${message}\n`;
+    try {
+      if (logFile) {
+        fs.appendFileSync(logFile, line);
+        return;
+      }
+    } catch {
+      /* 落盘失败时退回到标准输出 */
+    }
+    try {
+      process.stdout.write(line);
+    } catch {
+      /* 忽略 */
+    }
+  }
 
   app.setName(PRODUCT_NAME);
   if (process.platform === "win32") app.setAppUserModelId("com.xiaoqi.codex-token-dashboard");
@@ -39,8 +73,15 @@ if (!gotLock) {
       imports: path.join(userData, "data", "imports"),
       logs: path.join(userData, "logs"),
       config: path.join(userData, "config.json"),
-      preferences: path.join(userData, "preferences.json")
+      preferences: path.join(userData, "preferences.json"),
+      usageCache: path.join(userData, "data", "codex-usage-cache.json")
     };
+  }
+
+  function sessionsDir() {
+    return process.env.CODEX_HOME
+      ? path.join(process.env.CODEX_HOME, "sessions")
+      : path.join(os.homedir(), ".codex", "sessions");
   }
 
   function migrateUserData(paths) {
@@ -80,6 +121,10 @@ if (!gotLock) {
   function savePreferences(paths) {
     fs.writeFileSync(paths.preferences, JSON.stringify(preferences, null, 2), "utf8");
   }
+
+  // ---------------------------------------------------------------------
+  // 完整看板的后端：不再随应用启动，只在需要时拉起
+  // ---------------------------------------------------------------------
 
   async function readConfig(port) {
     try {
@@ -123,34 +168,34 @@ if (!gotLock) {
   }
 
   function startBackend(paths, port) {
-    if (!fs.existsSync(SERVER_PATH)) throw new Error(`找不到本机服务文件：${SERVER_PATH}`);
-      const child = utilityProcess.fork(SERVER_PATH, [], {
-        cwd: APP_ROOT,
-        env: {
-          ...process.env,
-          HOST: "127.0.0.1",
-          PORT: String(port),
-          CODEX_TOKEN_DASHBOARD_PORT: String(port),
-          CODEX_TOKEN_DASHBOARD_USER_DATA_DIR: paths.userData,
-          CODEX_TOKEN_DASHBOARD_DATA_DIR: paths.data,
-          DASHBOARD_AUTO_OPEN: "0",
-          PUBLIC_ACCESS: "0"
-        },
-        stdio: "pipe",
-        serviceName: "CodexTokenUsageIndex"
-      });
-      backend = child;
-      backendOwned = true;
-      backendExitCode = undefined;
-      child.stdout?.on("data", chunk => writeBackendLog(paths, "OUT", chunk));
-      child.stderr?.on("data", chunk => writeBackendLog(paths, "ERR", chunk));
-      child.on("exit", code => {
-        backendExitCode = code ?? -1;
-        if (quitting || !backendOwned) return;
-        startupError = `本机数据服务已退出（代码 ${code ?? "未知"}）。可查看 ${path.join(paths.logs, "desktop-backend.log")}`;
-        updateTray();
-      });
-      return port;
+    if (!fs.existsSync(SERVER_PATH)) throw new Error(`找不到看板服务文件：${SERVER_PATH}`);
+    const child = utilityProcess.fork(SERVER_PATH, [], {
+      cwd: APP_ROOT,
+      env: {
+        ...process.env,
+        HOST: "127.0.0.1",
+        PORT: String(port),
+        CODEX_TOKEN_DASHBOARD_PORT: String(port),
+        CODEX_TOKEN_DASHBOARD_USER_DATA_DIR: paths.userData,
+        CODEX_TOKEN_DASHBOARD_DATA_DIR: paths.data,
+        DASHBOARD_AUTO_OPEN: "0",
+        PUBLIC_ACCESS: "0"
+      },
+      stdio: "pipe",
+      serviceName: "CodexTokenUsageIndex"
+    });
+    backend = child;
+    backendOwned = true;
+    backendExitCode = undefined;
+    child.stdout?.on("data", chunk => writeBackendLog(paths, "OUT", chunk));
+    child.stderr?.on("data", chunk => writeBackendLog(paths, "ERR", chunk));
+    child.on("exit", code => {
+      backendExitCode = code ?? -1;
+      if (quitting || !backendOwned) return;
+      startupError = `看板服务已退出（代码 ${code ?? "未知"}）。可查看 ${path.join(paths.logs, "desktop-backend.log")}`;
+      updateTray();
+    });
+    return port;
   }
 
   async function waitForService(port) {
@@ -159,7 +204,7 @@ if (!gotLock) {
     while (Date.now() < deadline) {
       if (quitting) throw new Error("应用正在退出。");
       if (backendExitCode !== undefined) {
-        throw new Error(startupError || `本机服务启动失败（代码 ${backendExitCode}）。`);
+        throw new Error(startupError || `看板服务启动失败（代码 ${backendExitCode}）。`);
       }
       for (const candidate of PORTS) {
         try {
@@ -173,10 +218,28 @@ if (!gotLock) {
       }
       await new Promise(resolve => setTimeout(resolve, 750));
     }
-    throw new Error(`本机服务启动超时：${lastError}。日志：${path.join(userDataPaths().logs, "desktop-backend.log")}`);
+    throw new Error(`看板服务启动超时：${lastError}。日志：${path.join(userDataPaths().logs, "desktop-backend.log")}`);
   }
 
-  function loadingPage(message = "正在连接本机用量服务…") {
+  async function ensureBackend() {
+    if (serviceUrl) return serviceUrl;
+    const paths = userDataPaths();
+    const reusable = await findReusableService();
+    if (reusable) {
+      serviceUrl = reusable;
+      return serviceUrl;
+    }
+    const port = await findFreePort();
+    startBackend(paths, port);
+    serviceUrl = await waitForService(port);
+    return serviceUrl;
+  }
+
+  // ---------------------------------------------------------------------
+  // 完整看板窗口
+  // ---------------------------------------------------------------------
+
+  function loadingPage(message = "正在载入完整看板…") {
     const html = `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${PRODUCT_NAME}</title><style>*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;background:#f2f5f9;color:#172235;font:14px/1.6 "Segoe UI",sans-serif}.card{width:min(460px,calc(100vw - 40px));padding:32px;border:1px solid #d9e1eb;border-radius:18px;background:#fff;box-shadow:0 20px 70px #20395a18}.mark{width:44px;height:44px;display:grid;place-items:center;border-radius:13px;background:#172235;color:#fff;font-weight:700;font-size:19px}.title{margin:22px 0 4px;font-size:24px}.muted{color:#64748b}.bar{height:5px;margin-top:22px;border-radius:8px;background:linear-gradient(90deg,#2a61dd 0 38%,#e8edf5 38%);animation:move 1.4s ease-in-out infinite alternate}@keyframes move{to{background:linear-gradient(90deg,#e8edf5 0 40%,#2a61dd 40% 76%,#e8edf5 76%)}}</style><section class="card"><div class="mark">&gt;_</div><h1 class="title">Codex Token</h1><div class="muted">${message}</div><div class="bar"></div></section>`;
     return `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
   }
@@ -220,10 +283,10 @@ if (!gotLock) {
   }
 
   // ---------------------------------------------------------------------
-  // CodexBar-style tray popover: a frameless panel anchored to the tray icon.
+  // 托盘弹窗：不依赖本地服务，数据直接来自 CodexStore
   // ---------------------------------------------------------------------
-  const POPOVER_WIDTH = 400;
-  const POPOVER_HEIGHT = 752;
+  const POPOVER_WIDTH = 396;
+  const POPOVER_HEIGHT = 640;
 
   function createPopover() {
     popover = new BrowserWindow({
@@ -239,8 +302,9 @@ if (!gotLock) {
       skipTaskbar: true,
       alwaysOnTop: true,
       transparent: true,
-      hasShadow: false,
+      hasShadow: true,
       backgroundColor: "#00000000",
+      roundedCorners: true,
       title: PRODUCT_NAME,
       webPreferences: {
         preload: path.join(__dirname, "preload.cjs"),
@@ -265,7 +329,7 @@ if (!gotLock) {
     });
   }
 
-  function popoverPosition() {
+  function popoverPosition(height = POPOVER_HEIGHT) {
     const trayBounds = tray && typeof tray.getBounds === "function" ? tray.getBounds() : { x: 0, y: 0, width: 0, height: 0 };
     const anchor = trayBounds.width || trayBounds.height
       ? { x: Math.round(trayBounds.x + trayBounds.width / 2), y: Math.round(trayBounds.y + trayBounds.height / 2) }
@@ -275,22 +339,23 @@ if (!gotLock) {
     let x = Math.round(anchor.x - POPOVER_WIDTH / 2);
     let y;
     if (trayBounds.width && trayBounds.y > area.y + area.height / 2) {
-      y = Math.round(trayBounds.y - POPOVER_HEIGHT - 8);
+      y = Math.round(trayBounds.y - height - 6);
     } else if (trayBounds.width) {
-      y = Math.round(trayBounds.y + trayBounds.height + 8);
+      y = Math.round(trayBounds.y + trayBounds.height + 6);
     } else {
-      y = area.y + area.height - POPOVER_HEIGHT - 12;
-      x = area.x + area.width - POPOVER_WIDTH - 12;
+      y = area.y + area.height - height - 10;
+      x = area.x + area.width - POPOVER_WIDTH - 10;
     }
 
     x = Math.min(Math.max(x, area.x + 8), area.x + area.width - POPOVER_WIDTH - 8);
-    y = Math.min(Math.max(y, area.y + 8), area.y + area.height - POPOVER_HEIGHT - 8);
-    return { x, y, width: POPOVER_WIDTH, height: POPOVER_HEIGHT };
+    y = Math.min(Math.max(y, area.y + 8), area.y + area.height - height - 8);
+    return { x, y, width: POPOVER_WIDTH, height };
   }
 
   function showPopover() {
     if (!popover || popover.isDestroyed()) return;
-    popover.setBounds(popoverPosition());
+    const bounds = popover.getBounds();
+    popover.setBounds(popoverPosition(bounds.height));
     popover.showInactive();
     popover.focus();
     pushStatusToPopover();
@@ -310,7 +375,7 @@ if (!gotLock) {
 
   function pushStatusToPopover() {
     if (!popover || popover.isDestroyed() || !popoverReady) return;
-    popover.webContents.send("popover:status", latestStatus || { ok: false });
+    popover.webContents.send("popover:status", latestStatus || { ok: false, phase: store ? store.phase : "idle" });
   }
 
   function registerPopoverHandlers() {
@@ -318,9 +383,9 @@ if (!gotLock) {
       await refreshTrayStatus(true);
       return latestStatus;
     });
-    ipcMain.handle("popover:open-dashboard", () => {
+    ipcMain.handle("popover:open-dashboard", async () => {
       hidePopover();
-      showWindow();
+      await showWindow();
       return true;
     });
     ipcMain.handle("popover:close", () => {
@@ -331,12 +396,19 @@ if (!gotLock) {
       app.quit();
       return true;
     });
-    ipcMain.handle("popover:prefs", () => ({ launchAtLogin: Boolean(preferences.launchAtLogin) }));
+    ipcMain.handle("popover:open-status-page", () => {
+      shell.openExternal("https://status.openai.com/");
+      return true;
+    });
+    ipcMain.handle("popover:prefs", () => ({
+      launchAtLogin: Boolean(preferences.launchAtLogin),
+      startMode: preferences.startMode
+    }));
     ipcMain.on("popover:set-height", (_event, requested) => {
       if (!popover || popover.isDestroyed()) return;
       const area = screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea;
-      const maxHeight = Math.max(360, area.height - 32);
-      const nextHeight = Math.min(Math.max(Math.round(requested), 360), maxHeight);
+      const maxHeight = Math.max(320, area.height - 32);
+      const nextHeight = Math.min(Math.max(Math.round(requested), 320), maxHeight);
       const bounds = popover.getBounds();
       if (!nextHeight || Math.abs(bounds.height - nextHeight) < 2) return;
       // Keep the panel bottom-anchored above the tray icon while it grows.
@@ -366,28 +438,21 @@ if (!gotLock) {
   function updateTray() {
     if (!tray) return;
     const data = latestStatus;
+    const quota = data && data.quota;
     const tooltip = data
-      ? `Codex Token · 今日 ${formatTokens(data.today?.totalTokens)} · 累计 ${formatTokens(data.totals?.totalTokens)}`
-      : startupError || "Codex Token · 正在等待用量数据";
+      ? `Codex Token · 会话 ${quota && quota.session ? Math.round(quota.session.usedPercent) + "%" : "—"} · 今日 ${formatTokens(data.today?.totalTokens)}`
+      : startupError || "Codex Token · 正在读取用量";
     tray.setToolTip(tooltip.slice(0, 127));
-    const providerLabels = { official_plus: "Official Plus", relay: "Relay", unknown: "Unknown" };
-    const providerItems = (data?.providers || []).slice(0, 4).flatMap(provider => [
-      { label: `${providerLabels[provider.key] || provider.key}  ${formatTokens(provider.totalTokens)}`, enabled: false },
-      { label: `  今日 ${formatTokens(provider.todayTokens)} · ${provider.records.toLocaleString("zh-CN")} 条记录`, enabled: false }
-    ]);
     trayMenu = Menu.buildFromTemplate([
       { label: "打开用量速览", click: showPopover },
-      { label: "打开 Codex Token 看板", click: showWindow },
+      { label: "打开完整看板", click: () => { showWindow(); } },
       { type: "separator" },
-      { label: "CodexBar 用量速览", enabled: false },
-      ...providerItems,
-      { type: "separator" },
+      { label: quota && quota.session ? `会话额度：${Math.round(quota.session.usedPercent)}% 已用` : "会话额度：暂无数据", enabled: false },
+      { label: quota && quota.weekly ? `每周额度：${Math.round(quota.weekly.usedPercent)}% 已用` : "每周额度：暂无数据", enabled: false },
       { label: `今日用量：${formatTokens(data?.today?.totalTokens)} tokens`, enabled: false },
       { label: `累计用量：${formatTokens(data?.totals?.totalTokens)} tokens`, enabled: false },
-      { label: `今日输出：${formatTokens(data?.today?.outputTokens)} tokens`, enabled: false },
-      { label: data?.updatedAt ? `数据更新：${new Date(data.updatedAt).toLocaleString()}` : "数据更新：等待服务", enabled: false },
       { type: "separator" },
-      { label: "立即同步数据", click: () => refreshTrayStatus(true) },
+      { label: "立即同步数据", click: () => { refreshTrayStatus(true); } },
       {
         label: "登录 Windows 时启动",
         type: "checkbox",
@@ -412,92 +477,140 @@ if (!gotLock) {
       { type: "separator" },
       { label: "退出 Codex Token", click: () => app.quit() }
     ]);
+    tray.setContextMenu(null);
   }
 
   async function refreshTrayStatus(force = false) {
-    if (!serviceUrl) return;
+    if (!store) return;
     try {
-      const response = await fetch(`${serviceUrl}/api/desktop/status${force ? "?force=1" : ""}`, { signal: AbortSignal.timeout(5 * 60 * 1000) });
-      const payload = await response.json();
-      if (!response.ok || !payload.ok) throw new Error(payload.error || `服务响应 ${response.status}`);
-      latestStatus = payload;
+      latestStatus = await store.refresh({ full: false });
       startupError = "";
     } catch (error) {
-      startupError = `托盘同步失败：${error.message}`;
+      startupError = `读取用量失败：${error.message}`;
     }
     updateTray();
     pushStatusToPopover();
   }
 
-  function showWindow() {
+  async function showWindow() {
     if (!mainWindow || mainWindow.isDestroyed()) return;
     if (mainWindow.isMinimized()) mainWindow.restore();
+    if (!serviceUrl) {
+      mainWindow.show();
+      mainWindow.focus();
+      try {
+        const url = await ensureBackend();
+        await mainWindow.loadURL(`${url}/?desktop=1`);
+      } catch (error) {
+        await mainWindow.loadURL(loadingPage(`完整看板启动失败：${error.message}`));
+      }
+      return;
+    }
     mainWindow.show();
     mainWindow.focus();
   }
 
   function createTray() {
-    const image = require("electron").nativeImage.createFromPath(path.join(APP_ROOT, "desktop", "icon.png")).resize({ width: 32, height: 32 });
+    const image = nativeImage.createFromPath(path.join(APP_ROOT, "desktop", "icon.png")).resize({ width: 32, height: 32 });
     tray = new Tray(image);
     tray.setToolTip(`${PRODUCT_NAME} · 点击查看用量速览`);
     tray.on("click", togglePopover);
-    tray.on("double-click", showWindow);
+    tray.on("double-click", () => { showWindow(); });
     tray.on("right-click", () => {
       if (trayMenu) tray.popUpContextMenu(trayMenu);
     });
     updateTray();
   }
 
+  async function initStore(paths) {
+    store = new CodexStore({
+      sessionsDir: sessionsDir(),
+      cacheFile: paths.usageCache
+    });
+    const snapshot = await store.init({ full: false });
+    latestStatus = snapshot;
+    updateTray();
+    pushStatusToPopover();
+    // 后台补齐历史：先让弹窗秒开，再静默把全量索引跑完并推一次更新
+    store.buildFull()
+      .then(fullSnapshot => {
+        latestStatus = fullSnapshot;
+        updateTray();
+        pushStatusToPopover();
+      })
+      .catch(error => {
+        startupError = `历史索引构建失败：${error.message}`;
+        updateTray();
+      });
+  }
+
   async function start() {
     const paths = userDataPaths();
     migrateUserData(paths);
+    // 目录就绪后再挂日志，否则首次启动会写不进去
+    logFile = path.join(paths.logs, "desktop.log");
+    log(`start v${app.getVersion()} | smoke=${SMOKE} | packaged=${app.isPackaged} | execPath=${process.execPath}`);
     loadPreferences(paths);
     registerPopoverHandlers();
-    createWindow();
+    log("creating popover");
     createPopover();
+    log("creating tray");
     createTray();
+    // 完整看板窗口延后创建：弹窗是主入口，不需要先起一个大窗口
+    if (preferences.startMode === "dashboard" && !SMOKE) createWindow();
 
-    try {
-      const smokeMode = process.env.CODEX_TOKEN_DASHBOARD_SMOKE === "1";
-      serviceUrl = smokeMode ? "" : await findReusableService();
-      if (!serviceUrl) {
-        const port = await findFreePort();
-        startBackend(paths, port);
-        serviceUrl = await waitForService(port);
-      }
-      if (!mainWindow || mainWindow.isDestroyed()) return;
-      await mainWindow.loadURL(`${serviceUrl}/?desktop=1`);
-      await refreshTrayStatus();
-      // CodexBar-style startup: the tray panel is the front door, the full
-      // dashboard stays one click away (or is opened directly when preferred).
-      if (smokeMode || preferences.startMode === "dashboard") mainWindow.show();
-      else showPopover();
-      statusTimer = setInterval(() => refreshTrayStatus(), 30_000);
-      if (smokeMode) {
-        smokeExitTimer = setTimeout(() => {
-          process.stdout.write("Desktop smoke lifecycle check complete; quitting.\n");
-          app.quit();
-        }, 8_000);
-      }
-    } catch (error) {
-      startupError = error.message;
+    initStore(paths).catch(error => {
+      log(`initStore failed: ${error.stack || error.message}`);
+      startupError = `用量数据初始化失败：${error.message}`;
       updateTray();
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        await mainWindow.loadURL(loadingPage(`启动失败：${error.message}`));
-        mainWindow.show();
-      }
+      pushStatusToPopover();
+    });
+
+    if (preferences.startMode === "dashboard" && !SMOKE) {
+      showWindow().catch(() => {});
+    } else {
+      showPopover();
+    }
+
+    statusTimer = setInterval(() => { refreshTrayStatus().catch(() => {}); }, 30_000);
+
+    // Dev 诊断：把真实弹窗内容截成 PNG，用于验证 preload 与真实数据链路
+    if (process.env.CODEX_TOKEN_POPOVER_SHOT) {
+      setTimeout(async () => {
+        try {
+          if (!popover || popover.isDestroyed()) return;
+          const image = await popover.webContents.capturePage();
+          fs.writeFileSync(process.env.CODEX_TOKEN_POPOVER_SHOT, image.toPNG());
+          process.stdout.write(`popover shot saved: ${process.env.CODEX_TOKEN_POPOVER_SHOT}\n`);
+        } catch (error) {
+          process.stdout.write(`popover shot failed: ${error.message}\n`);
+        }
+      }, 3000);
+    }
+
+    if (SMOKE) {
+      smokeExitTimer = setTimeout(() => {
+        process.stdout.write("Desktop smoke lifecycle check complete; quitting.\n");
+        app.quit();
+      }, 8_000);
     }
   }
 
-  app.on("second-instance", () => showWindow());
+  app.on("second-instance", () => { showWindow(); });
+  app.on("window-all-closed", event => {
+    // 托盘常驻，不因窗口全部关闭而退出
+    if (event && typeof event.preventDefault === "function") event.preventDefault();
+  });
   app.on("before-quit", () => {
     quitting = true;
     allowWindowClose = true;
     if (statusTimer) clearInterval(statusTimer);
     if (smokeExitTimer) clearTimeout(smokeExitTimer);
     if (backendOwned && backend) backend.kill();
+    if (store) store.saveCache();
   });
   app.whenReady().then(start).catch(error => {
+    log(`fatal: ${error.stack || error.message}`);
     startupError = error.message;
     updateTray();
   });
