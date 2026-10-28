@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, Tray, shell, utilityProcess } = require("electron");
+const { app, BrowserWindow, Menu, Tray, shell, utilityProcess, ipcMain, screen } = require("electron");
 const fs = require("node:fs");
 const path = require("node:path");
 
@@ -12,6 +12,9 @@ if (!gotLock) {
   app.quit();
 } else {
   let mainWindow;
+  let popover;
+  let popoverReady = false;
+  let trayMenu;
   let tray;
   let backend;
   let backendExitCode;
@@ -216,6 +219,142 @@ if (!gotLock) {
     });
   }
 
+  // ---------------------------------------------------------------------
+  // CodexBar-style tray popover: a frameless panel anchored to the tray icon.
+  // ---------------------------------------------------------------------
+  const POPOVER_WIDTH = 400;
+  const POPOVER_HEIGHT = 752;
+
+  function createPopover() {
+    popover = new BrowserWindow({
+      width: POPOVER_WIDTH,
+      height: POPOVER_HEIGHT,
+      show: false,
+      frame: false,
+      resizable: false,
+      movable: false,
+      minimizable: false,
+      maximizable: false,
+      fullscreenable: false,
+      skipTaskbar: true,
+      alwaysOnTop: true,
+      transparent: true,
+      hasShadow: false,
+      backgroundColor: "#00000000",
+      title: PRODUCT_NAME,
+      webPreferences: {
+        preload: path.join(__dirname, "preload.cjs"),
+        contextIsolation: true,
+        nodeIntegration: false,
+        sandbox: true,
+        webSecurity: true
+      }
+    });
+
+    popover.loadFile(path.join(__dirname, "popover.html"));
+    popover.webContents.once("did-finish-load", () => {
+      popoverReady = true;
+      pushStatusToPopover();
+    });
+    popover.on("blur", () => {
+      if (popover && !popover.isDestroyed() && popover.isVisible()) hidePopover();
+    });
+    popover.webContents.setWindowOpenHandler(({ url }) => {
+      if (/^https:\/\//i.test(url)) shell.openExternal(url);
+      return { action: "deny" };
+    });
+  }
+
+  function popoverPosition() {
+    const trayBounds = tray && typeof tray.getBounds === "function" ? tray.getBounds() : { x: 0, y: 0, width: 0, height: 0 };
+    const anchor = trayBounds.width || trayBounds.height
+      ? { x: Math.round(trayBounds.x + trayBounds.width / 2), y: Math.round(trayBounds.y + trayBounds.height / 2) }
+      : { x: screen.getPrimaryDisplay().workArea.x + screen.getPrimaryDisplay().workArea.width, y: screen.getPrimaryDisplay().workArea.y + screen.getPrimaryDisplay().workArea.height };
+    const area = screen.getDisplayNearestPoint(anchor).workArea;
+
+    let x = Math.round(anchor.x - POPOVER_WIDTH / 2);
+    let y;
+    if (trayBounds.width && trayBounds.y > area.y + area.height / 2) {
+      y = Math.round(trayBounds.y - POPOVER_HEIGHT - 8);
+    } else if (trayBounds.width) {
+      y = Math.round(trayBounds.y + trayBounds.height + 8);
+    } else {
+      y = area.y + area.height - POPOVER_HEIGHT - 12;
+      x = area.x + area.width - POPOVER_WIDTH - 12;
+    }
+
+    x = Math.min(Math.max(x, area.x + 8), area.x + area.width - POPOVER_WIDTH - 8);
+    y = Math.min(Math.max(y, area.y + 8), area.y + area.height - POPOVER_HEIGHT - 8);
+    return { x, y, width: POPOVER_WIDTH, height: POPOVER_HEIGHT };
+  }
+
+  function showPopover() {
+    if (!popover || popover.isDestroyed()) return;
+    popover.setBounds(popoverPosition());
+    popover.showInactive();
+    popover.focus();
+    pushStatusToPopover();
+    refreshTrayStatus().catch(() => {});
+  }
+
+  function hidePopover() {
+    if (!popover || popover.isDestroyed()) return;
+    if (popover.isVisible()) popover.hide();
+  }
+
+  function togglePopover() {
+    if (!popover || popover.isDestroyed()) return;
+    if (popover.isVisible()) hidePopover();
+    else showPopover();
+  }
+
+  function pushStatusToPopover() {
+    if (!popover || popover.isDestroyed() || !popoverReady) return;
+    popover.webContents.send("popover:status", latestStatus || { ok: false });
+  }
+
+  function registerPopoverHandlers() {
+    ipcMain.handle("popover:refresh", async () => {
+      await refreshTrayStatus(true);
+      return latestStatus;
+    });
+    ipcMain.handle("popover:open-dashboard", () => {
+      hidePopover();
+      showWindow();
+      return true;
+    });
+    ipcMain.handle("popover:close", () => {
+      hidePopover();
+      return true;
+    });
+    ipcMain.handle("popover:quit", () => {
+      app.quit();
+      return true;
+    });
+    ipcMain.handle("popover:prefs", () => ({ launchAtLogin: Boolean(preferences.launchAtLogin) }));
+    ipcMain.on("popover:set-height", (_event, requested) => {
+      if (!popover || popover.isDestroyed()) return;
+      const area = screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea;
+      const maxHeight = Math.max(360, area.height - 32);
+      const nextHeight = Math.min(Math.max(Math.round(requested), 360), maxHeight);
+      const bounds = popover.getBounds();
+      if (!nextHeight || Math.abs(bounds.height - nextHeight) < 2) return;
+      // Keep the panel bottom-anchored above the tray icon while it grows.
+      const nextY = Math.min(
+        Math.max(bounds.y + bounds.height - nextHeight, area.y + 8),
+        area.y + area.height - nextHeight - 8
+      );
+      popover.setBounds({ x: bounds.x, y: nextY, width: bounds.width, height: nextHeight });
+    });
+    ipcMain.handle("popover:set-launch-at-login", (_event, enabled) => {
+      preferences.launchAtLogin = Boolean(enabled);
+      savePreferences(userDataPaths());
+      if (process.platform === "win32") app.setLoginItemSettings({ openAtLogin: Boolean(enabled), path: process.execPath });
+      updateTray();
+      return { launchAtLogin: preferences.launchAtLogin };
+    });
+  }
+
   function formatTokens(value) {
     const number = Number(value) || 0;
     if (number >= 1e9) return `${(number / 1e9).toFixed(number >= 1e10 ? 1 : 2).replace(/0+$/, "").replace(/\.$/, "")}B`;
@@ -236,8 +375,9 @@ if (!gotLock) {
       { label: `${providerLabels[provider.key] || provider.key}  ${formatTokens(provider.totalTokens)}`, enabled: false },
       { label: `  今日 ${formatTokens(provider.todayTokens)} · ${provider.records.toLocaleString("zh-CN")} 条记录`, enabled: false }
     ]);
-    tray.setContextMenu(Menu.buildFromTemplate([
-      { label: "打开 Codex Token", click: showWindow },
+    trayMenu = Menu.buildFromTemplate([
+      { label: "打开用量速览", click: showPopover },
+      { label: "打开 Codex Token 看板", click: showWindow },
       { type: "separator" },
       { label: "CodexBar 用量速览", enabled: false },
       ...providerItems,
@@ -261,7 +401,7 @@ if (!gotLock) {
       },
       { type: "separator" },
       { label: "退出 Codex Token", click: () => app.quit() }
-    ]));
+    ]);
   }
 
   async function refreshTrayStatus(force = false) {
@@ -276,6 +416,7 @@ if (!gotLock) {
       startupError = `托盘同步失败：${error.message}`;
     }
     updateTray();
+    pushStatusToPopover();
   }
 
   function showWindow() {
@@ -288,8 +429,12 @@ if (!gotLock) {
   function createTray() {
     const image = require("electron").nativeImage.createFromPath(path.join(APP_ROOT, "desktop", "icon.png")).resize({ width: 32, height: 32 });
     tray = new Tray(image);
-    tray.on("click", showWindow);
+    tray.setToolTip(`${PRODUCT_NAME} · 点击查看用量速览`);
+    tray.on("click", togglePopover);
     tray.on("double-click", showWindow);
+    tray.on("right-click", () => {
+      if (trayMenu) tray.popUpContextMenu(trayMenu);
+    });
     updateTray();
   }
 
@@ -297,7 +442,9 @@ if (!gotLock) {
     const paths = userDataPaths();
     migrateUserData(paths);
     loadPreferences(paths);
+    registerPopoverHandlers();
     createWindow();
+    createPopover();
     createTray();
 
     try {

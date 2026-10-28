@@ -1338,6 +1338,142 @@ async function apiUsage(url) {
   });
 }
 
+// ---------------------------------------------------------------------------
+// Rate limit snapshot (CodexBar-style quota windows)
+// Codex writes a `rate_limits` object into token_count events:
+//   primary   -> 5 hour rolling window
+//   secondary -> 7 day rolling window
+// We only read the tail of the newest session files, so this stays cheap and
+// never touches the heavy usage index or its cache.
+// ---------------------------------------------------------------------------
+const RATE_LIMIT_CACHE_MS = 20_000;
+let rateLimitCache = { at: 0, value: null };
+
+function readTailText(filePath, maxBytes = 512 * 1024) {
+  const fd = fs.openSync(filePath, "r");
+  try {
+    const { size } = fs.fstatSync(fd);
+    const length = Math.min(size, maxBytes);
+    const buffer = Buffer.alloc(length);
+    fs.readSync(fd, buffer, 0, length, size - length);
+    return buffer.toString("utf8");
+  } finally {
+    fs.closeSync(fd);
+  }
+}
+
+function sliceBalancedJson(text, startIndex) {
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  for (let index = startIndex; index < text.length; index += 1) {
+    const char = text[index];
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (char === "\\") escaped = true;
+      else if (char === '"') inString = false;
+      continue;
+    }
+    if (char === '"') inString = true;
+    else if (char === "{") depth += 1;
+    else if (char === "}") {
+      depth -= 1;
+      if (depth === 0) return text.slice(startIndex, index + 1);
+    }
+  }
+  return "";
+}
+
+function normalizeRateWindow(window) {
+  if (!window || typeof window !== "object") return null;
+  const used = Number(window.used_percent);
+  if (!Number.isFinite(used)) return null;
+  const percent = Math.max(0, Math.min(100, used));
+  const resetSeconds = Number(window.resets_at);
+  return {
+    usedPercent: percent,
+    remainingPercent: Math.max(0, 100 - percent),
+    windowMinutes: Number(window.window_minutes) || 0,
+    resetsAt: Number.isFinite(resetSeconds) && resetSeconds > 0 ? new Date(resetSeconds * 1000).toISOString() : "",
+    resetsAtEpoch: Number.isFinite(resetSeconds) ? resetSeconds : 0
+  };
+}
+
+function newestRateLimitIn(text) {
+  let best = null;
+  let cursor = text.indexOf('"rate_limits"');
+  while (cursor !== -1) {
+    const braceIndex = text.indexOf("{", cursor);
+    if (braceIndex === -1) break;
+    const raw = sliceBalancedJson(text, braceIndex);
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        const observedAt = extractTimestamp(text.slice(Math.max(0, cursor - 400), cursor)) || "";
+        const session = normalizeRateWindow(parsed.primary);
+        const weekly = normalizeRateWindow(parsed.secondary);
+        if (session || weekly) {
+          const candidate = {
+            limitId: firstScalar(parsed.limit_id, parsed.limitId) || "codex",
+            limitName: firstScalar(parsed.limit_name, parsed.limitName) || "",
+            session,
+            weekly,
+            credits: parsed.credits && typeof parsed.credits === "object"
+              ? {
+                  hasCredits: Boolean(parsed.credits.has_credits),
+                  unlimited: Boolean(parsed.credits.unlimited),
+                  balance: parsed.credits.balance === null || parsed.credits.balance === undefined ? "" : String(parsed.credits.balance)
+                }
+              : null,
+            observedAt
+          };
+          if (!best || observedAt >= best.observedAt) best = candidate;
+        }
+      } catch {
+        // Ignore malformed snapshots and keep scanning.
+      }
+    }
+    cursor = text.indexOf('"rate_limits"', cursor + 1);
+  }
+  return best;
+}
+
+function readLatestRateLimits() {
+  const now = Date.now();
+  if (now - rateLimitCache.at < RATE_LIMIT_CACHE_MS) return rateLimitCache.value;
+
+  let value = null;
+  try {
+    const candidates = listSessionFiles()
+      .filter(filePath => !/\.zst$/i.test(filePath))
+      .map(filePath => {
+        let mtime = 0;
+        try {
+          mtime = fs.statSync(filePath).mtimeMs;
+        } catch {
+          mtime = 0;
+        }
+        return { filePath, mtime };
+      })
+      .sort((a, b) => b.mtime - a.mtime)
+      .slice(0, 4);
+
+    for (const candidate of candidates) {
+      const text = readTailText(candidate.filePath);
+      const found = newestRateLimitIn(text);
+      if (found && (!value || String(found.observedAt) > String(value.observedAt))) {
+        value = { ...found, source: candidate.filePath, scannedAt: new Date(now).toISOString() };
+      }
+      if (value && value.session) break;
+    }
+  } catch {
+    value = null;
+  }
+
+  rateLimitCache = { at: now, value };
+  return value;
+}
+
 async function apiDesktopStatus(url) {
   const index = await getUsageIndex({ force: url.searchParams.get("force") === "1" });
   const now = new Date();
@@ -1371,7 +1507,8 @@ async function apiDesktopStatus(url) {
     estimatedRecords: index.records.reduce((count, record) => count + Number(Boolean(record.estimated)), 0),
     totals,
     today: todayTotals,
-    providers: Object.values(providers).sort((a, b) => b.totalTokens - a.totalTokens)
+    providers: Object.values(providers).sort((a, b) => b.totalTokens - a.totalTokens),
+    quota: readLatestRateLimits()
   };
 }
 

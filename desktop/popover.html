@@ -1,0 +1,822 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Codex Token</title>
+<style>
+  :root {
+    --canvas: #eef0fa;
+    --canvas-2: #f7f6fc;
+    --surface: #ffffff;
+    --ink: #16181f;
+    --ink-soft: #3d424f;
+    --muted: #6f7480;
+    --faint: #9aa0ac;
+    --hairline: rgba(18, 22, 34, 0.09);
+    --track: #e3e5ef;
+    --accent: #2f6cf5;
+    --accent-soft: #dbe4fd;
+    --bar-low: #3ba55d;
+    --bar-mid: #e0a03a;
+    --bar-high: #e2543f;
+    --tab-active: #2f6cf5;
+    --shadow: 0 18px 44px rgba(24, 32, 58, 0.22), 0 2px 6px rgba(24, 32, 58, 0.10);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --canvas: #1b1d24;
+      --canvas-2: #22242c;
+      --surface: #262830;
+      --ink: #f2f3f7;
+      --ink-soft: #d6d8e0;
+      --muted: #9aa0ad;
+      --faint: #7c828f;
+      --hairline: rgba(255, 255, 255, 0.10);
+      --track: #34363f;
+      --accent-soft: #2b3a63;
+      --shadow: 0 18px 44px rgba(0, 0, 0, 0.45);
+    }
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: hidden;
+    background: transparent;
+  }
+
+  body {
+    font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    color: var(--ink);
+    font-size: 13px;
+    -webkit-font-smoothing: antialiased;
+    user-select: none;
+    cursor: default;
+  }
+
+  .popover {
+    position: relative;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    border-radius: 14px;
+    overflow: hidden;
+    background:
+      radial-gradient(120% 70% at 10% 0%, rgba(140, 128, 255, 0.16), transparent 60%),
+      radial-gradient(110% 60% at 100% 6%, rgba(96, 200, 255, 0.14), transparent 55%),
+      linear-gradient(180deg, var(--canvas) 0%, var(--canvas-2) 42%, var(--canvas-2) 100%);
+    box-shadow: var(--shadow);
+    border: 1px solid var(--hairline);
+  }
+
+  /* ---------------- provider tabs ---------------- */
+  .tabs {
+    display: flex;
+    gap: 2px;
+    padding: 12px 10px 8px;
+  }
+
+  .tab {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    color: var(--muted);
+    cursor: pointer;
+  }
+
+  .tab-glyph {
+    width: 42px;
+    height: 34px;
+    display: grid;
+    place-items: center;
+    border-radius: 9px;
+    transition: background 140ms ease, transform 120ms ease;
+    position: relative;
+  }
+
+  .tab-glyph svg { width: 21px; height: 21px; display: block; }
+
+  .tab-label {
+    font-size: 10.5px;
+    letter-spacing: 0.1px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+
+  .tab[aria-selected="true"] .tab-glyph { background: var(--tab-active); }
+  .tab[aria-selected="true"] .tab-glyph svg { color: #fff; }
+  .tab[aria-selected="true"] .tab-label { color: var(--ink); font-weight: 600; }
+
+  .tab:active .tab-glyph { transform: scale(0.94); }
+
+  .tab-dot {
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: var(--bar-low);
+    opacity: 0;
+  }
+  .tab[data-connected="1"] .tab-dot { opacity: 1; }
+  .tab[aria-selected="true"] .tab-dot { opacity: 0; }
+
+  /* ---------------- body ---------------- */
+  .body {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 0 16px;
+    scrollbar-width: thin;
+  }
+
+  .body::-webkit-scrollbar { width: 8px; }
+  .body::-webkit-scrollbar-thumb {
+    background: rgba(120, 128, 150, 0.35);
+    border-radius: 8px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+
+  .provider-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 0 12px;
+  }
+
+  .provider-name {
+    font-size: 17px;
+    font-weight: 650;
+    letter-spacing: -0.2px;
+    line-height: 1.2;
+  }
+
+  .provider-sub {
+    margin-top: 3px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .plan-badge {
+    font-size: 12px;
+    color: var(--muted);
+    padding-top: 3px;
+    white-space: nowrap;
+  }
+
+  hr.rule {
+    height: 1px;
+    border: 0;
+    margin: 0 0 14px;
+    background: var(--hairline);
+  }
+
+  .section { margin-bottom: 14px; }
+
+  .section-title {
+    font-size: 15px;
+    font-weight: 620;
+    letter-spacing: -0.1px;
+    margin-bottom: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .bar {
+    height: 5px;
+    border-radius: 4px;
+    background: var(--track);
+    overflow: hidden;
+  }
+
+  .bar-fill {
+    height: 100%;
+    width: 0%;
+    border-radius: 4px;
+    background: var(--bar-low);
+    transition: width 420ms cubic-bezier(0.22, 1, 0.36, 1), background 200ms ease;
+  }
+
+  .metric-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 7px;
+    font-size: 12.5px;
+    color: var(--ink-soft);
+  }
+
+  .metric-row .right { color: var(--muted); white-space: nowrap; }
+
+  .pace {
+    margin-top: 6px;
+    font-size: 11.5px;
+    color: var(--faint);
+  }
+
+  .muted-note {
+    font-size: 11.5px;
+    color: var(--faint);
+    line-height: 1.5;
+  }
+
+  /* used grid */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+  }
+
+  .cell {
+    padding: 7px 8px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.62);
+    border: 1px solid var(--hairline);
+    min-width: 0;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .cell { background: rgba(255, 255, 255, 0.04); }
+  }
+
+  .cell-label {
+    font-size: 10.5px;
+    color: var(--muted);
+    margin-bottom: 1px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .cell-value {
+    font-size: 13px;
+    font-weight: 620;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* collapsible cost */
+  .disclosure {
+    border: 0;
+    padding: 0;
+    width: 100%;
+    background: none;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+    text-align: left;
+  }
+
+  .disclosure-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 15px;
+    font-weight: 620;
+    letter-spacing: -0.1px;
+    margin-bottom: 8px;
+  }
+
+  .chev {
+    color: var(--faint);
+    transition: transform 160ms ease;
+    display: inline-flex;
+  }
+  .disclosure[aria-expanded="true"] .chev { transform: rotate(90deg); }
+
+  .line {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    line-height: 1.75;
+  }
+  .line .right { color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+  /* action list */
+  .actions {
+    border-top: 1px solid var(--hairline);
+    padding: 6px 0 2px;
+  }
+
+  .action {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    width: 100%;
+    border: 0;
+    background: none;
+    font: inherit;
+    font-size: 13.5px;
+    color: var(--ink);
+    padding: 7px 2px;
+    border-radius: 7px;
+    cursor: pointer;
+    text-align: left;
+  }
+
+  .action:hover { background: rgba(47, 108, 245, 0.09); }
+  .action:active { background: rgba(47, 108, 245, 0.16); }
+  .action svg { width: 15px; height: 15px; color: var(--muted); flex: 0 0 auto; }
+  .action .kbd { margin-left: auto; font-size: 11px; color: var(--faint); }
+
+  .footer {
+    border-top: 1px solid var(--hairline);
+    padding: 6px 16px 10px;
+    flex: 0 0 auto;
+  }
+
+  .footer .action { font-size: 13px; padding: 6px 2px; }
+
+  .switch {
+    margin-left: auto;
+    width: 26px;
+    height: 15px;
+    border-radius: 10px;
+    background: var(--track);
+    position: relative;
+    transition: background 140ms ease;
+    flex: 0 0 auto;
+  }
+  .switch::after {
+    content: "";
+    position: absolute;
+    top: 1.5px;
+    left: 1.5px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+    transition: transform 140ms ease;
+  }
+  .switch[data-on="1"] { background: var(--accent); }
+  .switch[data-on="1"]::after { transform: translateX(11px); }
+
+  .empty {
+    padding: 26px 0 30px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 12.5px;
+    line-height: 1.6;
+  }
+
+  .spinning { animation: spin 900ms linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .fade-in { animation: fade 220ms ease both; }
+  @keyframes fade { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: none; } }
+</style>
+</head>
+<body>
+<div class="popover">
+  <nav class="tabs" id="tabs" role="tablist" aria-label="供应商"></nav>
+
+  <div class="body" id="body">
+    <div class="empty">正在读取本机用量…</div>
+  </div>
+
+  <div class="footer">
+    <button class="action" id="btn-launch">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v9"/><path d="M6.5 6.5a8 8 0 1 0 11 0"/></svg>
+      <span>登录 Windows 时启动</span>
+      <span class="switch" id="switch-launch" data-on="0"></span>
+    </button>
+    <button class="action" id="btn-about">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 16v-5"/><path d="M12 8h.01"/></svg>
+      <span>关于 Codex Token</span>
+    </button>
+    <button class="action" id="btn-quit">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/></svg>
+      <span>退出</span>
+    </button>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  const host = window.codexBar || {
+    onStatus() {},
+    refresh: async () => null,
+    openDashboard() {},
+    setLaunchAtLogin() {},
+    getPrefs: async () => ({ launchAtLogin: false }),
+    quit() {},
+    close() {}
+  };
+
+  // Provider tab catalogue. Icons are drawn inline so the popover stays
+  // self-contained (no network, no external assets).
+  const PROVIDER_META = {
+    all: {
+      label: "全部",
+      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m8 9-3 3 3 3"/><path d="m16 9 3 3-3 3"/><path d="m13.5 6-3 12"/></svg>'
+    },
+    official_plus: {
+      label: "官方 Plus",
+      icon: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.6a2 2 0 0 1 1.76 1.05l2.02 3.7 4.13.7a2 2 0 0 1 1.1 3.37l-2.9 2.96.6 4.1a2 2 0 0 1-2.87 2.08L12 18.63l-3.84 1.93a2 2 0 0 1-2.87-2.07l.6-4.1-2.9-2.97a2 2 0 0 1 1.1-3.37l4.13-.7 2.02-3.7A2 2 0 0 1 12 2.6Z"/></svg>'
+    },
+    relay: {
+      label: "中转站",
+      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h9a4 4 0 0 1 0 8H8"/><path d="m10 12 3 3-3 3"/><path d="M4 17h4"/></svg>'
+    },
+    unknown: {
+      label: "未知来源",
+      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.2a2.6 2.6 0 1 1 3.4 2.5c-.6.2-.9.7-.9 1.3v.4"/><path d="M12 16.6h.01"/></svg>'
+    }
+  };
+
+  const TEXT = {
+    session: "会话额度",
+    weekly: "每周额度",
+    today: "今日用量",
+    cost: "成本与累计",
+    input: "输入",
+    output: "输出",
+    cached: "缓存命中",
+    records: "请求数",
+    cacheRate: "缓存命中率",
+    total: "累计 Token",
+    sessions: "会话数",
+    updatedJustNow: "刚刚更新",
+    noQuota: "本机日志里还没有配额快照，先跑一次 Codex 会话即可出现。",
+    usedSuffix: "已用",
+    resetsIn: "后重置",
+    resetPassed: "即将重置",
+    paceSlow: "消耗慢于时间进度",
+    paceFast: "消耗快于时间进度",
+    paceOnTrack: "与时间进度持平",
+    dashboard: "打开完整看板",
+    sync: "立即同步数据",
+    status: "Codex 状态页"
+  };
+
+  const state = {
+    status: null,
+    quota: null,
+    prefs: { launchAtLogin: false },
+    activeProvider: "all",
+    costOpen: false,
+    syncing: false,
+    lastSyncAt: 0
+  };
+
+  const el = {
+    tabs: document.getElementById("tabs"),
+    body: document.getElementById("body")
+  };
+
+  function formatTokens(value) {
+    const number = Number(value) || 0;
+    if (number >= 1e9) return (number / 1e9).toFixed(number >= 1e10 ? 1 : 2).replace(/\.0+$/, "") + "B";
+    if (number >= 1e6) return (number / 1e6).toFixed(number >= 1e8 ? 0 : 1).replace(/\.0$/, "") + "M";
+    if (number >= 1e3) return (number / 1e3).toFixed(1).replace(/\.0$/, "") + "K";
+    return String(number);
+  }
+
+  function escapeHtml(value) {
+    return String(value == null ? "" : value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function barColor(percent) {
+    if (percent >= 85) return "var(--bar-high)";
+    if (percent >= 60) return "var(--bar-mid)";
+    return "var(--bar-low)";
+  }
+
+  function formatRemaining(isoString) {
+    if (!isoString) return "";
+    const target = new Date(isoString).getTime();
+    if (!Number.isFinite(target)) return "";
+    const diff = target - Date.now();
+    if (diff <= 0) return TEXT.resetPassed;
+    const totalMinutes = Math.floor(diff / 60000);
+    const days = Math.floor(totalMinutes / 1440);
+    const hours = Math.floor((totalMinutes % 1440) / 60);
+    const minutes = totalMinutes % 60;
+    if (days > 0) return `${days}d ${hours}h ${TEXT.resetsIn}`;
+    if (hours > 0) return `${hours}h ${minutes}m ${TEXT.resetsIn}`;
+    return `${Math.max(1, minutes)}m ${TEXT.resetsIn}`;
+  }
+
+  // Pace: compare share of quota already consumed with share of the window
+  // that has already elapsed. Negative delta means the user is pacing under
+  // the window, i.e. the quota should last until the reset.
+  function paceLine(windowInfo) {
+    if (!windowInfo || !windowInfo.resetsAt || !windowInfo.windowMinutes) return "";
+    const resetAt = new Date(windowInfo.resetsAt).getTime();
+    if (!Number.isFinite(resetAt)) return "";
+    const windowMs = windowInfo.windowMinutes * 60000;
+    const startAt = resetAt - windowMs;
+    const elapsedRatio = Math.min(1, Math.max(0, (Date.now() - startAt) / windowMs));
+    const elapsedPercent = elapsedRatio * 100;
+    const delta = windowInfo.usedPercent - elapsedPercent;
+    const rounded = Math.round(Math.abs(delta));
+    if (rounded <= 2) return `${TEXT.paceOnTrack} (${Math.round(elapsedPercent)}%)`;
+    if (delta < 0) return `${TEXT.paceSlow} (-${rounded}%) · 可撑到重置`;
+    return `${TEXT.paceFast} (+${rounded}%) · 可能提前用尽`;
+  }
+
+  function providerTabs() {
+    const providers = (state.status && state.status.providers) || [];
+    const keys = providers.map(item => item.key);
+    const tabs = ["all"];
+    for (const key of ["official_plus", "relay", "unknown"]) {
+      if (keys.includes(key)) tabs.push(key);
+    }
+    return tabs;
+  }
+
+  function activeTotals() {
+    const status = state.status;
+    if (!status) return { totalTokens: 0, todayTokens: 0, records: 0, sessions: 0 };
+    if (state.activeProvider === "all") {
+      return {
+        totalTokens: status.totals?.totalTokens || 0,
+        todayTokens: status.today?.totalTokens || 0,
+        records: status.totals?.records || 0,
+        sessions: status.sessions || 0
+      };
+    }
+    const item = (status.providers || []).find(provider => provider.key === state.activeProvider);
+    return {
+      totalTokens: item ? item.totalTokens : 0,
+      todayTokens: item ? item.todayTokens : 0,
+      records: item ? item.records : 0,
+      sessions: 0
+    };
+  }
+
+  function renderTabs() {
+    const tabs = providerTabs();
+    el.tabs.innerHTML = tabs.map(key => {
+      const meta = PROVIDER_META[key] || PROVIDER_META.unknown;
+      const selected = state.activeProvider === key;
+      return `<button class="tab" role="tab" data-key="${key}" data-connected="1" aria-selected="${selected}">
+        <span class="tab-glyph">${meta.icon}</span>
+        <span class="tab-label">${escapeHtml(meta.label)}</span>
+        <span class="tab-dot"></span>
+      </button>`;
+    }).join("");
+  }
+
+  function quotaFor(providerKey) {
+    // Quota snapshots come from the Codex rate limit header, which only covers
+    // the official account. Relay traffic has no quota windows.
+    if (providerKey !== "all" && providerKey !== "official_plus") return null;
+    return state.quota;
+  }
+
+  function renderQuotaSection(title, windowInfo) {
+    if (!windowInfo) {
+      return `<div class="section">
+        <div class="section-title">${title}</div>
+        <div class="bar"><div class="bar-fill" style="width:0%"></div></div>
+        <div class="metric-row"><span>— ${TEXT.usedSuffix}</span><span class="right"></span></div>
+        <div class="pace">${TEXT.noQuota}</div>
+      </div>`;
+    }
+    const percent = Math.max(0, Math.min(100, windowInfo.usedPercent));
+    const pace = paceLine(windowInfo);
+    return `<div class="section">
+      <div class="section-title">${title}</div>
+      <div class="bar"><div class="bar-fill" data-bar="${percent}" style="width:${percent}%;background:${barColor(percent)}"></div></div>
+      <div class="metric-row">
+        <span>${percent}% ${TEXT.usedSuffix}</span>
+        <span class="right" data-reset="${escapeHtml(windowInfo.resetsAt)}">${formatRemaining(windowInfo.resetsAt)}</span>
+      </div>
+      ${pace ? `<div class="pace">${escapeHtml(pace)}</div>` : ""}
+    </div>`;
+  }
+
+  function renderBody() {
+    const status = state.status;
+    if (!status) {
+      el.body.innerHTML = '<div class="empty">正在读取本机用量…</div>';
+      return;
+    }
+
+    const quota = quotaFor(state.activeProvider);
+    const totals = activeTotals();
+    const providerMeta = PROVIDER_META[state.activeProvider] || PROVIDER_META.all;
+    const cacheRate = status.totals?.inputTokens
+      ? Math.round((status.totals.cachedInputTokens / status.totals.inputTokens) * 100)
+      : 0;
+    const plan = quota && quota.weekly ? "Plus" : "";
+    const updated = state.lastSyncAt
+      ? new Date(state.lastSyncAt).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })
+      : "";
+
+    el.body.innerHTML = `
+      <div class="provider-head">
+        <div>
+          <div class="provider-name">${escapeHtml(state.activeProvider === "all" ? "Codex" : providerMeta.label)}</div>
+          <div class="provider-sub">${updated ? escapeHtml(updated + " 更新") : TEXT.updatedJustNow}</div>
+        </div>
+        ${plan ? `<div class="plan-badge">${plan}</div>` : ""}
+      </div>
+      <hr class="rule" />
+      ${renderQuotaSection(TEXT.session, quota ? quota.session : null)}
+      ${renderQuotaSection(TEXT.weekly, quota ? quota.weekly : null)}
+      <div class="section">
+        <div class="section-title">${TEXT.today}</div>
+        <div class="line"><span>Token</span><span class="right">${formatTokens(totals.todayTokens)} · ${TEXT.output} ${formatTokens(status.today?.outputTokens)}</span></div>
+        <div class="line"><span>${TEXT.records}</span><span class="right">${(status.today?.records || 0).toLocaleString("zh-CN")} · ${TEXT.cacheRate} ${cacheRate}%</span></div>
+      </div>
+      <div class="section">
+        <button class="disclosure" id="cost-toggle" aria-expanded="${state.costOpen}">
+          <div class="disclosure-head">
+            <span>${TEXT.cost}</span>
+            <span class="chev"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></span>
+          </div>
+          <div class="line"><span>${TEXT.total}</span><span class="right">${formatTokens(totals.totalTokens)} tokens</span></div>
+          <div class="line"><span>${TEXT.sessions}</span><span class="right">${(totals.sessions || status.sessions || 0).toLocaleString("zh-CN")}</span></div>
+          ${state.costOpen ? `
+            <div class="line"><span>${TEXT.input}</span><span class="right">${formatTokens(status.totals?.inputTokens)} tokens</span></div>
+            <div class="line"><span>${TEXT.cached}</span><span class="right">${formatTokens(status.totals?.cachedInputTokens)} tokens</span></div>
+            <div class="line"><span>${TEXT.output}</span><span class="right">${formatTokens(status.totals?.outputTokens)} tokens</span></div>
+            <div class="line"><span>配额余量</span><span class="right">${quota && quota.weekly ? Math.round(quota.weekly.remainingPercent) + "%" : "—"}</span></div>
+          ` : ""}
+        </button>
+      </div>
+      <div class="actions">
+        <button class="action" id="btn-dashboard">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18V9"/><path d="M10 18V5"/><path d="M16 18v-6"/><path d="M21 18H3"/></svg>
+          <span>${TEXT.dashboard}</span>
+        </button>
+        <button class="action" id="btn-sync">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" id="sync-icon"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v6h-6"/></svg>
+          <span>${TEXT.sync}</span>
+          <span class="kbd">${state.syncing ? "同步中…" : "F5"}</span>
+        </button>
+        <button class="action" id="btn-status">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2-5 3 10 2.5-5H21"/></svg>
+          <span>${TEXT.status}</span>
+        </button>
+      </div>
+    `;
+
+    bindBodyEvents();
+    runBarAnimation();
+    requestHeight();
+  }
+
+  // Ask the main process to fit the panel to its content so the collapsed and
+  // expanded states both look complete without an inner scrollbar.
+  let lastRequestedHeight = 0;
+  function requestHeight() {
+    if (typeof host.setHeight !== "function") return;
+    const tabs = document.getElementById("tabs");
+    const body = document.getElementById("body");
+    const footer = document.querySelector(".footer");
+    if (!tabs || !body || !footer) return;
+    const needed = tabs.offsetHeight + body.scrollHeight + footer.offsetHeight + 2;
+    if (!needed || Math.abs(needed - lastRequestedHeight) < 4) return;
+    lastRequestedHeight = needed;
+    host.setHeight(needed);
+  }
+
+  function bindBodyEvents() {
+    const costToggle = document.getElementById("cost-toggle");
+    if (costToggle) {
+      costToggle.addEventListener("click", () => {
+        state.costOpen = !state.costOpen;
+        renderBody();
+      });
+    }
+    const dashboard = document.getElementById("btn-dashboard");
+    if (dashboard) dashboard.addEventListener("click", () => { host.openDashboard(); host.close(); });
+
+    const sync = document.getElementById("btn-sync");
+    if (sync) sync.addEventListener("click", triggerSync);
+
+    const status = document.getElementById("btn-status");
+    if (status) status.addEventListener("click", () => host.openDashboard());
+  }
+
+  function runBarAnimation() {
+    requestAnimationFrame(() => {
+      document.querySelectorAll(".bar-fill[data-bar]").forEach(node => {
+        node.style.width = node.dataset.bar + "%";
+      });
+    });
+  }
+
+  async function triggerSync() {
+    if (state.syncing) return;
+    state.syncing = true;
+    const icon = document.getElementById("sync-icon");
+    if (icon) icon.classList.add("spinning");
+    const kbd = document.querySelector("#btn-sync .kbd");
+    if (kbd) kbd.textContent = "同步中…";
+    try {
+      const payload = await host.refresh();
+      if (payload) applyStatus(payload);
+    } finally {
+      state.syncing = false;
+      renderBody();
+    }
+  }
+
+  function applyStatus(payload) {
+    if (!payload || !payload.ok) return;
+    state.status = payload;
+    state.quota = payload.quota || null;
+    state.lastSyncAt = Date.now();
+    if (!providerTabs().includes(state.activeProvider)) state.activeProvider = "all";
+    renderTabs();
+    renderBody();
+  }
+
+  function tickCountdowns() {
+    document.querySelectorAll("[data-reset]").forEach(node => {
+      const text = formatRemaining(node.dataset.reset);
+      if (text && node.textContent !== text) node.textContent = text;
+    });
+  }
+
+  el.tabs.addEventListener("click", event => {
+    const tab = event.target.closest(".tab");
+    if (!tab) return;
+    state.activeProvider = tab.dataset.key;
+    renderTabs();
+    renderBody();
+  });
+
+  document.getElementById("btn-quit").addEventListener("click", () => host.quit());
+  document.getElementById("btn-about").addEventListener("click", () => host.openDashboard());
+
+  document.getElementById("btn-launch").addEventListener("click", async () => {
+    const next = !state.prefs.launchAtLogin;
+    state.prefs.launchAtLogin = next;
+    document.getElementById("switch-launch").dataset.on = next ? "1" : "0";
+    await host.setLaunchAtLogin(next);
+  });
+
+  document.addEventListener("keydown", event => {
+    if (event.key === "F5") { event.preventDefault(); triggerSync(); }
+    if (event.key === "Escape") host.close();
+    if (event.key === "Tab") {
+      const tabs = providerTabs();
+      const index = tabs.indexOf(state.activeProvider);
+      const nextIndex = event.shiftKey
+        ? (index - 1 + tabs.length) % tabs.length
+        : (index + 1) % tabs.length;
+      state.activeProvider = tabs[nextIndex];
+      renderTabs();
+      renderBody();
+      event.preventDefault();
+    }
+  });
+
+  host.onStatus(payload => applyStatus(payload));
+
+  (async () => {
+    try {
+      const prefs = await host.getPrefs();
+      if (prefs) {
+        state.prefs = { ...state.prefs, ...prefs };
+        document.getElementById("switch-launch").dataset.on = prefs.launchAtLogin ? "1" : "0";
+      }
+    } catch { /* preferences are optional */ }
+    try {
+      const payload = await host.refresh();
+      if (payload) applyStatus(payload);
+      else renderBody();
+    } catch {
+      renderBody();
+    }
+  })();
+
+  setInterval(tickCountdowns, 1000);
+  setInterval(() => { if (!state.syncing) host.refresh().then(payload => payload && applyStatus(payload)).catch(() => {}); }, 30000);
+})();
+</script>
+</body>
+</html>
