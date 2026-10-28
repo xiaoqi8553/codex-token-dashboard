@@ -26,7 +26,7 @@ if (!gotLock) {
   let startupError = "";
   let statusTimer;
   let smokeExitTimer;
-  let preferences = { launchAtLogin: false };
+  let preferences = { launchAtLogin: false, startMode: "popover" };
 
   app.setName(PRODUCT_NAME);
   if (process.platform === "win32") app.setAppUserModelId("com.xiaoqi.codex-token-dashboard");
@@ -399,6 +399,16 @@ if (!gotLock) {
           updateTray();
         }
       },
+      {
+        label: "启动时打开完整看板",
+        type: "checkbox",
+        checked: preferences.startMode === "dashboard",
+        click: item => {
+          preferences.startMode = item.checked ? "dashboard" : "popover";
+          savePreferences(userDataPaths());
+          updateTray();
+        }
+      },
       { type: "separator" },
       { label: "退出 Codex Token", click: () => app.quit() }
     ]);
@@ -457,8 +467,11 @@ if (!gotLock) {
       }
       if (!mainWindow || mainWindow.isDestroyed()) return;
       await mainWindow.loadURL(`${serviceUrl}/?desktop=1`);
-      mainWindow.show();
       await refreshTrayStatus();
+      // CodexBar-style startup: the tray panel is the front door, the full
+      // dashboard stays one click away (or is opened directly when preferred).
+      if (smokeMode || preferences.startMode === "dashboard") mainWindow.show();
+      else showPopover();
       statusTimer = setInterval(() => refreshTrayStatus(), 30_000);
       if (smokeMode) {
         smokeExitTimer = setTimeout(() => {
