@@ -34,8 +34,6 @@ contextBridge.exposeInMainWorld("dashboard", {
     ipcRenderer.on("dashboard:status", handler);
     return () => ipcRenderer.removeListener("dashboard:status", handler);
   },
-  /** 打开旧版网页看板（需要本地服务，属可选功能） */
-  openLegacy: () => ipcRenderer.invoke("dashboard:open-legacy"),
   /** 在资源管理器中打开日志目录 */
   openSessions: () => ipcRenderer.invoke("dashboard:open-sessions"),
   /** 打开周报/外部链接（仅 https） */

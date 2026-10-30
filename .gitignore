@@ -1,8 +1,6 @@
 # Runtime data
 data/usage-index.json
-data/imports/
 logs/
-server*.log
 
 # Local configuration and secrets
 config.json
@@ -22,13 +20,8 @@ node_modules/
 dist/
 release/
 *.zip
-docs/screenshots/current/
 .DS_Store
 Thumbs.db
-
-# Keep public-safe sample data
-!sample-data/**
-!config.example.json
 
 # 开发截图脚本生成的中间快照
 docs/popover-snapshot.json

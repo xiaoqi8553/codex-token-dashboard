@@ -139,8 +139,7 @@ npm run desktop:shortcut   # desktop shortcut
 ```bash
 npm install
 npm start                  # Electron in dev mode
-npm test                   # 16 desktop tests
-npm run legacy:test        # 67 tests for the old web dashboard
+npm test                   # data layer + UI assertions
 npm run usage:audit        # compare the total-accounting approaches
 npm run usage:verify       # check merged totals against the raw index
 npm run desktop:smoke      # startup, tray, window lifecycle
@@ -156,7 +155,6 @@ desktop/
   data/history-baseline.cjs   old index → per-day summary (with hourly buckets)
   data/pricing.cjs            price table and conversion
 tests/                        data layer and UI assertions
-legacy/                       old web dashboard
 ```
 
 Caches live in `%APPDATA%/TokenBar/data/`. Deleting them only forces a rescan.

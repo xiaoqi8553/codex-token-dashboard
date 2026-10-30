@@ -15,9 +15,7 @@
     "desktop:shortcut": "electron scripts/make-desktop-shortcut.cjs",
     "popover:shot": "electron scripts/dev-popover-shot.cjs",
     "usage:audit": "node scripts/dev-audit-usage.cjs",
-    "usage:verify": "node scripts/verify-usage-merge.cjs",
-    "legacy:start": "node legacy/server.js",
-    "legacy:test": "node --test legacy/tests/*.test.js"
+    "usage:verify": "node scripts/verify-usage-merge.cjs"
   },
   "engines": {
     "node": ">=18"

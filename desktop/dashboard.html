@@ -830,7 +830,6 @@
     <span style="flex:1"></span>
     <button class="link" id="btn-pricing">价格表</button>
     <button class="link" id="btn-sessions">日志目录</button>
-    <button class="link" id="btn-legacy">旧版网页看板</button>
   </footer>
 </div>
 
@@ -2051,7 +2050,6 @@
       if (state.source === "workbuddy" && window.dashboard.openWorkBuddy) window.dashboard.openWorkBuddy();
       else window.dashboard.openSessions();
     });
-    $("btn-legacy").addEventListener("click", () => window.dashboard.openLegacy());
     // 价格表：直接在系统默认编辑器里打开 pricing.json，改完重开看板即生效
     $("btn-pricing").addEventListener("click", () => {
       if (window.dashboard.openPricing) window.dashboard.openPricing();

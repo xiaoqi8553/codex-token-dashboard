@@ -17,16 +17,6 @@ module.exports = {
     "desktop/dashboard-preload.cjs",
     "desktop/icon.png",
     "desktop/data/**",
-    // 旧网页看板只在「打开旧版网页看板」时用到，一起打包，避免菜单点了没反应
-    "legacy/server.js",
-    "legacy/index.html",
-    "legacy/folder-picker.html",
-    "legacy/usage-accounting.js",
-    "legacy/output-speed.js",
-    "legacy/session-files.js",
-    "legacy/scripts/account-snapshot-process.js",
-    "legacy/scripts/notion-local-access.js",
-    "legacy/vendor/**",
     "package.json"
   ],
   win: {

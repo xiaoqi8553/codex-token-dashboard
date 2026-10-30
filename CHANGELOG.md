@@ -6,10 +6,10 @@
 
 - 新增 **WorkBuddy 国际版** 支持：国际版把日志写在 `~/.workbuddy-ai/projects`，国内版写 `~/.workbuddy/projects`，之前只扫后者，切到国际版之后新产生的用量完全没进统计。现在两套一起读，按会话 id 去重（同名会话只留体积更大的那份，因为国际版首次启动会把旧目录整份搬过去），本机实测 172.6M → 180.5M。
 - 累计卡片的「来源」提示改成实际扫到的目录，底栏日志行也会打出 `workbuddy-ai:10 + workbuddy:9` 这样的分布，能看出数据来自哪套安装。
-- 仓库结构收敛：旧网页看板（Node 服务、单页 HTML、Chrome 扩展、Notion 桥接、视觉审计脚本、旧测试）整体移到 `legacy/`，托盘菜单里的「打开旧版网页看板」仍可用。删掉 `AGENTS.md`、`RELEASE_NOTES.md`、`docs/`、`screenshots/`、`sample-data/` 和已经失效的 Pages 部署 workflow。
+- 旧网页看板（Node 服务、单页 HTML、Chrome 扩展、Notion 桥接、视觉审计脚本、旧测试）**整份删除**，连入口一起：托盘菜单项、看板底栏按钮、preload 的 `openLegacy`、主进程里的 `utilityProcess` 后端与端口探测、`builder.config` 的 `legacy/**`、`package.json` 的 `legacy:start` / `legacy:test` 全部清掉。应用现在只有一个进程，不再起本地 HTTP 服务。同时删掉 `AGENTS.md`、`RELEASE_NOTES.md`、`docs/`、`screenshots/`、`sample-data/` 和已经失效的 Pages 部署 workflow。
 - 改名后 userData 会从 `%APPDATA%/Codex Token` 变成 `%APPDATA%/TokenBar`。历史索引（5.7B 的基线）还在旧目录，首次启动会整份复制过来，否则累计会掉回磁盘日志的 2.4B。开发模式与打包模式统一用 `TokenBar`，不再出现大小写两份缓存。
 - README 重写，按「为什么 / 看什么 / 数据从哪来 / 口径 / 安装 / 开发」重排，去掉网页版的部署、Notion、Sites 章节。
-- 测试重新分层：`tests/` 只留桌面端（16 个），旧网页看板的 67 个测试移到 `legacy/tests/`，用 `npm run legacy:test` 跑。新增 `tests/dashboard.test.js`，覆盖改名、双数据源、legacy 归档和多根去重。
+- 测试收敛到桌面端 16 个（旧网页看板的 67 个随目录一起删掉）。新增 `tests/dashboard.test.js`，覆盖改名、双数据源、旧看板彻底消失、多根去重。`npm run desktop:smoke` 重写成真正拉起 Electron 的冒烟：用临时 `CODEX_HOME` 喂两轮假日志，验证弹窗能开、能点开看板、区间切换会让时段徽标变化，且 `openLegacy` 不再存在。
 
 ## 1.2.2 - 2026-10-28
 

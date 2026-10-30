@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, Tray, shell, utilityProcess, ipcMain, screen, nativeImage } = require("electron");
+const { app, BrowserWindow, Menu, Tray, shell, ipcMain, screen, nativeImage } = require("electron");
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
@@ -8,10 +8,7 @@ const { loadTable, ensureTableFile } = require("./data/pricing.cjs");
 const { buildBaseline, baselineIsFresh, loadBaseline, saveBaseline } = require("./data/history-baseline.cjs");
 
 const PRODUCT_NAME = "TokenBar";
-const PORTS = [8787, 8788, 8789];
 const APP_ROOT = app.getAppPath();
-// 旧网页看板已归档到 legacy/，只服务托盘菜单里的「打开旧版网页看板」
-const SERVER_PATH = path.join(APP_ROOT, "legacy", "server.js");
 const SMOKE = process.env.CODEX_TOKEN_DASHBOARD_SMOKE === "1";
 const gotLock = SMOKE || app.requestSingleInstanceLock();
 
@@ -53,8 +50,8 @@ function adoptLegacyUserData() {
   }
 }
 
-// 只有拿到单实例锁才搬数据，避免两个实例同时读同一个索引
-if (gotLock) adoptLegacyUserData();
+// 只有拿到单实例锁才搬数据，避免两个实例同时读同一个索引；冒烟测试不碰真实账本
+if (gotLock && !SMOKE) adoptLegacyUserData();
 
 // 启动诊断：设置 CODEX_TOKEN_BOOT_MARK 可确认主进程脚本是否真的被执行
 if (process.env.CODEX_TOKEN_BOOT_MARK) {
@@ -73,11 +70,7 @@ if (!gotLock) {
   let popoverReady = false;
   let trayMenu;
   let tray;
-  /** 完整看板的后端；只有用户点「打开完整看板」时才会启动 */
-  let backend;
-  let backendExitCode;
-  let backendOwned = false;
-  let serviceUrl = "";
+  /** 关窗口默认只是隐藏，退出时才允许真关 */
   let allowWindowClose = false;
   let quitting = false;
   let latestStatus = null;
@@ -110,20 +103,19 @@ if (!gotLock) {
   }
 
   app.setName(PRODUCT_NAME);
-  if (process.platform === "win32") app.setAppUserModelId("com.xiaoqi.codex-token-dashboard");
+  if (process.platform === "win32") app.setAppUserModelId("com.xiaoqi.tokenbar");
 
   function userDataPaths() {
     const userData = app.getPath("userData");
     return {
       userData,
       data: path.join(userData, "data"),
-      imports: path.join(userData, "data", "imports"),
       logs: path.join(userData, "logs"),
       config: path.join(userData, "config.json"),
       preferences: path.join(userData, "preferences.json"),
       usageCache: path.join(userData, "data", "codex-usage-cache.json"),
       detailCache: path.join(userData, "data", "codex-detail-cache.json"),
-      legacyIndex: path.join(userData, "data", "usage-index.json"),
+      usageIndex: path.join(userData, "data", "usage-index.json"),
       baseline: path.join(userData, "data", "history-baseline.json"),
       workbuddyCache: path.join(userData, "data", "workbuddy-detail-cache.json"),
       pricing: path.join(userData, "data", "pricing.json")
@@ -154,25 +146,7 @@ if (!gotLock) {
 
   function migrateUserData(paths) {
     fs.mkdirSync(paths.data, { recursive: true });
-    fs.mkdirSync(paths.imports, { recursive: true });
     fs.mkdirSync(paths.logs, { recursive: true });
-
-    const legacyData = path.join(APP_ROOT, "data");
-    const targetIndex = path.join(paths.data, "usage-index.json");
-    if (!fs.existsSync(targetIndex) && fs.existsSync(path.join(legacyData, "usage-index.json"))) {
-      fs.copyFileSync(path.join(legacyData, "usage-index.json"), targetIndex);
-    }
-    if (fs.existsSync(legacyData)) {
-      const legacyImports = path.join(legacyData, "imports");
-      if (fs.existsSync(legacyImports)) {
-        for (const entry of fs.readdirSync(legacyImports, { withFileTypes: true }).filter(item => item.isFile())) {
-          const target = path.join(paths.imports, entry.name);
-          if (!fs.existsSync(target)) fs.copyFileSync(path.join(legacyImports, entry.name), target);
-        }
-      }
-    }
-    const legacyConfig = path.join(APP_ROOT, "config.json");
-    if (!fs.existsSync(paths.config) && fs.existsSync(legacyConfig)) fs.copyFileSync(legacyConfig, paths.config);
   }
 
   function loadPreferences(paths) {
@@ -188,119 +162,6 @@ if (!gotLock) {
 
   function savePreferences(paths) {
     fs.writeFileSync(paths.preferences, JSON.stringify(preferences, null, 2), "utf8");
-  }
-
-  // ---------------------------------------------------------------------
-  // 完整看板的后端：不再随应用启动，只在需要时拉起
-  // ---------------------------------------------------------------------
-
-  async function readConfig(port) {
-    try {
-      const response = await fetch(`http://127.0.0.1:${port}/api/config`, { signal: AbortSignal.timeout(900) });
-      const data = await response.json();
-      return response.ok && data.ok === true;
-    } catch {
-      return false;
-    }
-  }
-
-  async function hasDesktopStatus(port) {
-    try {
-      const response = await fetch(`http://127.0.0.1:${port}/api/desktop/status`, { signal: AbortSignal.timeout(900) });
-      return response.ok;
-    } catch {
-      return false;
-    }
-  }
-
-  function writeBackendLog(paths, prefix, value) {
-    const text = Buffer.isBuffer(value) ? value.toString("utf8") : String(value || "");
-    if (!text) return;
-    fs.appendFile(path.join(paths.logs, "desktop-backend.log"), `[${new Date().toISOString()}] ${prefix} ${text}`, () => {});
-  }
-
-  async function findReusableService() {
-    for (const port of PORTS) {
-      if (await readConfig(port)) {
-        if (await hasDesktopStatus(port)) return `http://127.0.0.1:${port}`;
-      }
-    }
-    return "";
-  }
-
-  async function findFreePort() {
-    for (const port of PORTS) {
-      if (!await readConfig(port)) return port;
-    }
-    throw new Error("本机端口 8787–8789 均被占用；请关闭其他看板服务后重试。");
-  }
-
-  function startBackend(paths, port) {
-    if (!fs.existsSync(SERVER_PATH)) throw new Error(`找不到看板服务文件：${SERVER_PATH}`);
-    const child = utilityProcess.fork(SERVER_PATH, [], {
-      cwd: APP_ROOT,
-      env: {
-        ...process.env,
-        HOST: "127.0.0.1",
-        PORT: String(port),
-        CODEX_TOKEN_DASHBOARD_PORT: String(port),
-        CODEX_TOKEN_DASHBOARD_USER_DATA_DIR: paths.userData,
-        CODEX_TOKEN_DASHBOARD_DATA_DIR: paths.data,
-        DASHBOARD_AUTO_OPEN: "0",
-        PUBLIC_ACCESS: "0"
-      },
-      stdio: "pipe",
-      serviceName: "CodexTokenUsageIndex"
-    });
-    backend = child;
-    backendOwned = true;
-    backendExitCode = undefined;
-    child.stdout?.on("data", chunk => writeBackendLog(paths, "OUT", chunk));
-    child.stderr?.on("data", chunk => writeBackendLog(paths, "ERR", chunk));
-    child.on("exit", code => {
-      backendExitCode = code ?? -1;
-      if (quitting || !backendOwned) return;
-      startupError = `看板服务已退出（代码 ${code ?? "未知"}）。可查看 ${path.join(paths.logs, "desktop-backend.log")}`;
-      updateTray();
-    });
-    return port;
-  }
-
-  async function waitForService(port) {
-    const deadline = Date.now() + 5 * 60 * 1000;
-    let lastError = "服务正在启动";
-    while (Date.now() < deadline) {
-      if (quitting) throw new Error("应用正在退出。");
-      if (backendExitCode !== undefined) {
-        throw new Error(startupError || `看板服务启动失败（代码 ${backendExitCode}）。`);
-      }
-      for (const candidate of PORTS) {
-        try {
-          const response = await fetch(`http://127.0.0.1:${candidate}/api/config`, { signal: AbortSignal.timeout(700) });
-          const payload = await response.json();
-          if (response.ok && payload.ok === true && await hasDesktopStatus(candidate)) return `http://127.0.0.1:${candidate}`;
-          lastError = payload.error || `服务响应 ${response.status}`;
-        } catch (error) {
-          lastError = error.message || lastError;
-        }
-      }
-      await new Promise(resolve => setTimeout(resolve, 750));
-    }
-    throw new Error(`看板服务启动超时：${lastError}。日志：${path.join(userDataPaths().logs, "desktop-backend.log")}`);
-  }
-
-  async function ensureBackend() {
-    if (serviceUrl) return serviceUrl;
-    const paths = userDataPaths();
-    const reusable = await findReusableService();
-    if (reusable) {
-      serviceUrl = reusable;
-      return serviceUrl;
-    }
-    const port = await findFreePort();
-    startBackend(paths, port);
-    serviceUrl = await waitForService(port);
-    return serviceUrl;
   }
 
   // ---------------------------------------------------------------------
@@ -354,48 +215,6 @@ if (!gotLock) {
       return { action: "deny" };
     });
     return mainWindow;
-  }
-
-  /** 旧版网页看板：按需拉起本地服务，作为可选的历史分析工作台 */
-  let legacyWindow = null;
-
-  async function openLegacyDashboard() {
-    if (!legacyWindow || legacyWindow.isDestroyed()) {
-      legacyWindow = new BrowserWindow({
-        width: 1440,
-        height: 940,
-        minWidth: 960,
-        minHeight: 640,
-        show: false,
-        title: `${PRODUCT_NAME} · 旧版网页看板`,
-        backgroundColor: "#f2f5f9",
-        autoHideMenuBar: true,
-        webPreferences: {
-          contextIsolation: true,
-          nodeIntegration: false,
-          sandbox: true,
-          webSecurity: true
-        }
-      });
-      legacyWindow.loadURL(loadingPage());
-      legacyWindow.once("ready-to-show", () => legacyWindow?.show());
-      legacyWindow.on("closed", () => { legacyWindow = null; });
-      legacyWindow.webContents.setWindowOpenHandler(({ url }) => {
-        if (/^https:\/\//i.test(url)) shell.openExternal(url);
-        return { action: "deny" };
-      });
-    } else {
-      if (legacyWindow.isMinimized()) legacyWindow.restore();
-      legacyWindow.show();
-    }
-
-    try {
-      const url = await ensureBackend();
-      await legacyWindow.loadURL(`${url}/?desktop=1`);
-    } catch (error) {
-      await legacyWindow.loadURL(loadingPage(`旧版看板启动失败：${error.message}`));
-    }
-    return true;
   }
 
   // ---------------------------------------------------------------------
@@ -611,7 +430,6 @@ if (!gotLock) {
       packaged: app.isPackaged
     }));
 
-    ipcMain.handle("dashboard:open-legacy", () => openLegacyDashboard());
     ipcMain.handle("dashboard:open-sessions", () => shell.openPath(sessionsDir()));
     ipcMain.handle("dashboard:open-workbuddy", () => {
       const roots = workBuddyRoots();
@@ -650,7 +468,6 @@ if (!gotLock) {
     trayMenu = Menu.buildFromTemplate([
       { label: "打开用量速览", click: showPopover },
       { label: "打开完整看板", click: () => { showWindow(); } },
-      { label: "打开旧版网页看板", click: () => { openLegacyDashboard().catch(() => {}); } },
       { type: "separator" },
       { label: quota && quota.session ? `会话额度：${Math.round(quota.session.usedPercent)}% 已用` : "会话额度：暂无数据", enabled: false },
       { label: quota && quota.weekly ? `每周额度：${Math.round(quota.weekly.usedPercent)}% 已用` : "每周额度：暂无数据", enabled: false },
@@ -729,11 +546,11 @@ if (!gotLock) {
   }
 
   /**
-   * 历史基线：旧版网页看板把历史上扫到的每条请求都存进了 usage-index.json，
-   * 里面包含 Codex 已经清理掉的早期日志。没有它，累计会少算一大半。
+   * 历史基线：usage-index.json 里存着本机历史上扫到的每条请求，包含 Codex
+   * 已经清理掉的早期日志。没有它，累计会少算一大半。
    */
   function resolveBaseline(paths) {
-    const indexPath = paths.legacyIndex;
+    const indexPath = paths.usageIndex;
     if (!fs.existsSync(indexPath)) return null;
     const cached = loadBaseline(paths.baseline);
     if (cached && baselineIsFresh(cached, indexPath)) return cached;
@@ -958,10 +775,13 @@ if (!gotLock) {
     }
 
     if (SMOKE) {
+      // 冒烟脚本自己控制节奏，超时可从外面传
+      const smokeTimeout = Number(process.env.CODEX_TOKEN_DASHBOARD_SMOKE_TIMEOUT)
+        || (process.env.CODEX_TOKEN_DASHBOARD_SHOT ? 40_000 : 8_000);
       smokeExitTimer = setTimeout(() => {
         process.stdout.write("Desktop smoke lifecycle check complete; quitting.\n");
         app.quit();
-      }, process.env.CODEX_TOKEN_DASHBOARD_SHOT ? 40_000 : 8_000);
+      }, smokeTimeout);
     }
   }
 
@@ -975,7 +795,6 @@ if (!gotLock) {
     allowWindowClose = true;
     if (statusTimer) clearInterval(statusTimer);
     if (smokeExitTimer) clearTimeout(smokeExitTimer);
-    if (backendOwned && backend) backend.kill();
     if (store) store.saveCache();
   });
   app.whenReady().then(start).catch(error => {

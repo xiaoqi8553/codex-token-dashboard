@@ -37,12 +37,16 @@ test("2.0 桌面看板仍是双数据源 + 时段徽标", () => {
   assert.match(dashboard, /等价花费/);
 });
 
-test("2.0 旧网页看板已经归档到 legacy，主进程仍能拉起", () => {
-  assert.ok(fs.existsSync(path.join(root, "legacy", "server.js")));
-  assert.ok(fs.existsSync(path.join(root, "legacy", "index.html")));
+test("2.0 旧网页看板已经整体删除，桌面端不再有入口", () => {
+  assert.equal(fs.existsSync(path.join(root, "legacy")), false, "legacy 目录应已删除");
   assert.equal(fs.existsSync(path.join(root, "server.js")), false);
-  assert.match(main, /path\.join\(APP_ROOT, "legacy", "server\.js"\)/);
-  assert.match(builder, /"legacy\/server\.js"/);
+  assert.doesNotMatch(main, /openLegacy|utilityProcess|startBackend|ensureBackend|SERVER_PATH|dashboard:open-legacy/);
+  assert.doesNotMatch(dashboard, /btn-legacy|openLegacy/);
+  assert.doesNotMatch(read("desktop/dashboard-preload.cjs"), /openLegacy/);
+  assert.doesNotMatch(builder, /legacy/);
+  assert.equal(packageJson.scripts["legacy:start"], undefined);
+  assert.equal(packageJson.scripts["legacy:test"], undefined);
+  assert.doesNotMatch(readme, /legacy|旧版网页看板/);
 });
 
 test("2.0 WorkBuddy 同时读国际版与国内版，并按会话去重", async () => {
