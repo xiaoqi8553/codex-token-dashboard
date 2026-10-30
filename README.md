@@ -114,7 +114,8 @@ npm run desktop:shortcut
 ```bash
 npm install
 npm start                  # 开发模式直接起 Electron
-npm test                   # 80 个测试
+npm test                   # 桌面端 16 个测试
+npm run legacy:test        # 旧网页看板 67 个测试
 npm run usage:audit        # 逐条对比几种累计口径
 npm run usage:verify       # 校验合并后总量与索引原始总量是否一致
 npm run desktop:smoke      # 冒烟：启动、托盘、窗口生命周期

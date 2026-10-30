@@ -35,14 +35,11 @@ function adoptLegacyUserData() {
   } catch {
     return;
   }
-  const hasData = dir => {
-    try {
-      return fs.readdirSync(dir).length > 0;
-    } catch {
-      return false;
-    }
-  };
-  if (hasData(current)) return;
+  // 注意不能只看「目录是否为空」：requestSingleInstanceLock() 已经在 userData 下写了
+  // SingletonLock，目录永远非空。只认真正的账本文件。
+  const hasPayload = dir => fs.existsSync(path.join(dir, "data", "usage-index.json"))
+    || fs.existsSync(path.join(dir, "data", "history-baseline.json"));
+  if (hasPayload(current)) return;
   for (const name of ["Codex Token", "codex-token-dashboard"]) {
     const legacy = path.join(appData, name);
     if (legacy === current || !fs.existsSync(legacy)) continue;

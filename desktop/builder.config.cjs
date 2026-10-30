@@ -24,6 +24,8 @@ module.exports = {
     "legacy/usage-accounting.js",
     "legacy/output-speed.js",
     "legacy/session-files.js",
+    "legacy/scripts/account-snapshot-process.js",
+    "legacy/scripts/notion-local-access.js",
     "legacy/vendor/**",
     "package.json"
   ],
