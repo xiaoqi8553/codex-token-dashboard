@@ -21,7 +21,10 @@ function adoptLegacyUserData() {
   // 开发模式取 package.json 的 name（tokenbar），打包后取 productName（TokenBar），
   // 大小写两套目录会让缓存各存一份，这里统一钉死。
   try {
-    app.setPath("userData", path.join(app.getPath("appData"), "TokenBar"));
+    // 外部显式指定 --user-data-dir（冒烟、排查）时不覆盖，别把测试数据写进真账本
+    if (!process.argv.some(arg => arg.startsWith("--user-data-dir"))) {
+      app.setPath("userData", path.join(app.getPath("appData"), "TokenBar"));
+    }
   } catch {
     /* 极早期调用失败就沿用默认路径 */
   }
