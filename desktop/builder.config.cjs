@@ -1,11 +1,11 @@
 const path = require("node:path");
 
 module.exports = {
-  appId: "com.xiaoqi.codex-token-dashboard",
-  productName: "Codex Token",
-  artifactName: "Codex-Token-Setup-${version}.${ext}",
+  appId: "com.xiaoqi.tokenbar",
+  productName: "TokenBar",
+  artifactName: "TokenBar-Setup-${version}.${ext}",
   directories: {
-    output: process.env.CODEX_TOKEN_BUILD_DIR || "release/desktop"
+    output: process.env.TOKENBAR_BUILD_DIR || "release/desktop"
   },
   asar: false,
   electronDist: path.resolve(__dirname, "../node_modules/electron/dist"),
@@ -17,21 +17,20 @@ module.exports = {
     "desktop/dashboard-preload.cjs",
     "desktop/icon.png",
     "desktop/data/**",
-    "server.js",
-    "index.html",
-    "folder-picker.html",
-    "usage-accounting.js",
-    "output-speed.js",
-    "session-files.js",
-    "scripts/**",
-    "vendor/**",
-    "sample-data/**",
+    // 旧网页看板只在「打开旧版网页看板」时用到，一起打包，避免菜单点了没反应
+    "legacy/server.js",
+    "legacy/index.html",
+    "legacy/folder-picker.html",
+    "legacy/usage-accounting.js",
+    "legacy/output-speed.js",
+    "legacy/session-files.js",
+    "legacy/vendor/**",
     "package.json"
   ],
   win: {
     target: ["nsis"],
     icon: "desktop/icon.png",
-    artifactName: "Codex-Token-Setup-${version}.${ext}"
+    artifactName: "TokenBar-Setup-${version}.${ext}"
   },
   nsis: {
     oneClick: false,
@@ -40,7 +39,7 @@ module.exports = {
     allowToChangeInstallationDirectory: true,
     createDesktopShortcut: true,
     createStartMenuShortcut: true,
-    shortcutName: "Codex Token",
+    shortcutName: "TokenBar",
     deleteAppDataOnUninstall: false
   }
 };

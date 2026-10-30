@@ -7,12 +7,57 @@ const { WorkBuddyStore } = require("./data/workbuddy-store.cjs");
 const { loadTable, ensureTableFile } = require("./data/pricing.cjs");
 const { buildBaseline, baselineIsFresh, loadBaseline, saveBaseline } = require("./data/history-baseline.cjs");
 
-const PRODUCT_NAME = "Codex Token";
+const PRODUCT_NAME = "TokenBar";
 const PORTS = [8787, 8788, 8789];
 const APP_ROOT = app.getAppPath();
-const SERVER_PATH = path.join(APP_ROOT, "server.js");
+// 旧网页看板已归档到 legacy/，只服务托盘菜单里的「打开旧版网页看板」
+const SERVER_PATH = path.join(APP_ROOT, "legacy", "server.js");
 const SMOKE = process.env.CODEX_TOKEN_DASHBOARD_SMOKE === "1";
 const gotLock = SMOKE || app.requestSingleInstanceLock();
+
+/**
+ * 改名 TokenBar 后，userData 会从 %APPDATA%/Codex Token 变成 %APPDATA%/TokenBar。
+ * 历史索引（usage-index.json，5.7B 的基线）还在旧目录，直接换名会让累计掉回磁盘日志的 2.4B，
+ * 所以首次启动把旧目录整份搬过来。搬不动（占用/权限）就继续用旧目录，宁可名字不对也不能丢账。
+ */
+function adoptLegacyUserData() {
+  // 开发模式取 package.json 的 name（tokenbar），打包后取 productName（TokenBar），
+  // 大小写两套目录会让缓存各存一份，这里统一钉死。
+  try {
+    app.setPath("userData", path.join(app.getPath("appData"), "TokenBar"));
+  } catch {
+    /* 极早期调用失败就沿用默认路径 */
+  }
+  const appData = app.getPath("appData");
+  let current;
+  try {
+    current = app.getPath("userData");
+  } catch {
+    return;
+  }
+  const hasData = dir => {
+    try {
+      return fs.readdirSync(dir).length > 0;
+    } catch {
+      return false;
+    }
+  };
+  if (hasData(current)) return;
+  for (const name of ["Codex Token", "codex-token-dashboard"]) {
+    const legacy = path.join(appData, name);
+    if (legacy === current || !fs.existsSync(legacy)) continue;
+    try {
+      fs.mkdirSync(current, { recursive: true });
+      fs.cpSync(legacy, current, { recursive: true, force: false, errorOnExist: false });
+      return;
+    } catch {
+      /* 复制失败就往下走，后续扫描会重建缓存（慢一点，但不影响正确性） */
+    }
+  }
+}
+
+// 只有拿到单实例锁才搬数据，避免两个实例同时读同一个索引
+if (gotLock) adoptLegacyUserData();
 
 // 启动诊断：设置 CODEX_TOKEN_BOOT_MARK 可确认主进程脚本是否真的被执行
 if (process.env.CODEX_TOKEN_BOOT_MARK) {
@@ -45,7 +90,7 @@ if (!gotLock) {
   let preferences = { launchAtLogin: false, startMode: "popover", popoverOnly: true };
   /** @type {CodexStore|null} 独立数据层：直接读 ~/.codex/sessions，不经过本地 HTTP 服务 */
   let store = null;
-  /** @type {WorkBuddyStore|null} WorkBuddy 用量：读 ~/.workbuddy/projects 下的会话日志 */
+  /** @type {WorkBuddyStore|null} WorkBuddy 用量：国际版 ~/.workbuddy-ai、国内版 ~/.workbuddy */
   let wbStore = null;
   /** 启动诊断日志的落盘位置，start() 阶段才确定 */
   let logFile = null;
@@ -92,6 +137,22 @@ if (!gotLock) {
     return process.env.CODEX_HOME
       ? path.join(process.env.CODEX_HOME, "sessions")
       : path.join(os.homedir(), ".codex", "sessions");
+  }
+
+  /**
+   * WorkBuddy 有两套安装，日志目录不同：
+   *   国际版 ~/.workbuddy-ai/projects，国内版 ~/.workbuddy/projects。
+   * 两个都读，同名会话按体积取大者（见 WorkBuddyStore.listFiles）。
+   */
+  function workBuddyRoots() {
+    const home = os.homedir();
+    const candidates = [
+      process.env.WORKBUDDY_HOME,
+      path.join(home, ".workbuddy-ai"),
+      path.join(home, ".workbuddy")
+    ].filter(Boolean);
+    const existing = candidates.filter(root => fs.existsSync(path.join(root, "projects")));
+    return existing.length ? existing : [path.join(home, ".workbuddy")];
   }
 
   function migrateUserData(paths) {
@@ -250,7 +311,7 @@ if (!gotLock) {
   // ---------------------------------------------------------------------
 
   function loadingPage(message = "正在载入完整看板…") {
-    const html = `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${PRODUCT_NAME}</title><style>*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;background:#f2f5f9;color:#172235;font:14px/1.6 "Segoe UI",sans-serif}.card{width:min(460px,calc(100vw - 40px));padding:32px;border:1px solid #d9e1eb;border-radius:18px;background:#fff;box-shadow:0 20px 70px #20395a18}.mark{width:44px;height:44px;display:grid;place-items:center;border-radius:13px;background:#172235;color:#fff;font-weight:700;font-size:19px}.title{margin:22px 0 4px;font-size:24px}.muted{color:#64748b}.bar{height:5px;margin-top:22px;border-radius:8px;background:linear-gradient(90deg,#2a61dd 0 38%,#e8edf5 38%);animation:move 1.4s ease-in-out infinite alternate}@keyframes move{to{background:linear-gradient(90deg,#e8edf5 0 40%,#2a61dd 40% 76%,#e8edf5 76%)}}</style><section class="card"><div class="mark">&gt;_</div><h1 class="title">Codex Token</h1><div class="muted">${message}</div><div class="bar"></div></section>`;
+    const html = `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${PRODUCT_NAME}</title><style>*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;background:#f2f5f9;color:#172235;font:14px/1.6 "Segoe UI",sans-serif}.card{width:min(460px,calc(100vw - 40px));padding:32px;border:1px solid #d9e1eb;border-radius:18px;background:#fff;box-shadow:0 20px 70px #20395a18}.mark{width:44px;height:44px;display:grid;place-items:center;border-radius:13px;background:#172235;color:#fff;font-weight:700;font-size:19px}.title{margin:22px 0 4px;font-size:24px}.muted{color:#64748b}.bar{height:5px;margin-top:22px;border-radius:8px;background:linear-gradient(90deg,#2a61dd 0 38%,#e8edf5 38%);animation:move 1.4s ease-in-out infinite alternate}@keyframes move{to{background:linear-gradient(90deg,#e8edf5 0 40%,#2a61dd 40% 76%,#e8edf5 76%)}}</style><section class="card"><div class="mark">&gt;_</div><h1 class="title">${PRODUCT_NAME}</h1><div class="muted">${message}</div><div class="bar"></div></section>`;
     return `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
   }
 
@@ -549,13 +610,18 @@ if (!gotLock) {
     ipcMain.handle("dashboard:meta", () => ({
       name: PRODUCT_NAME,
       version: app.getVersion(),
-      repo: "https://github.com/xiaoqi8553/codex-token-dashboard",
+      repo: "https://github.com/xiaoqi8553/tokenbar",
       packaged: app.isPackaged
     }));
 
     ipcMain.handle("dashboard:open-legacy", () => openLegacyDashboard());
     ipcMain.handle("dashboard:open-sessions", () => shell.openPath(sessionsDir()));
-    ipcMain.handle("dashboard:open-workbuddy", () => shell.openPath(path.join(os.homedir(), ".workbuddy", "projects")));
+    ipcMain.handle("dashboard:open-workbuddy", () => {
+      const roots = workBuddyRoots();
+      // 优先打开有数据的那套（国际版在前）
+      const target = roots.find(root => fs.existsSync(path.join(root, "projects"))) || roots[0];
+      return shell.openPath(path.join(target, "projects"));
+    });
     // 价格表就在 userData 里，点开就能改单价
     ipcMain.handle("dashboard:open-pricing", () => {
       const file = userDataPaths().pricing;
@@ -581,8 +647,8 @@ if (!gotLock) {
     const data = latestStatus;
     const quota = data && data.quota;
     const tooltip = data
-      ? `Codex Token · 会话 ${quota && quota.session ? Math.round(quota.session.usedPercent) + "%" : "—"} · 今日 ${formatTokens(data.today?.totalTokens)}`
-      : startupError || "Codex Token · 正在读取用量";
+      ? `TokenBar · 会话 ${quota && quota.session ? Math.round(quota.session.usedPercent) + "%" : "—"} · 今日 ${formatTokens(data.today?.totalTokens)}`
+      : startupError || "TokenBar · 正在读取用量";
     tray.setToolTip(tooltip.slice(0, 127));
     trayMenu = Menu.buildFromTemplate([
       { label: "打开用量速览", click: showPopover },
@@ -618,7 +684,7 @@ if (!gotLock) {
         }
       },
       { type: "separator" },
-      { label: "退出 Codex Token", click: () => app.quit() }
+      { label: "退出 TokenBar", click: () => app.quit() }
     ]);
     tray.setContextMenu(null);
   }
@@ -702,12 +768,18 @@ if (!gotLock) {
     // 明细缓存先读盘：看板第二次打开可以秒出
     store.loadDetailCache();
 
-    wbStore = new WorkBuddyStore({ cacheFile: paths.workbuddyCache, pricing });
+    wbStore = new WorkBuddyStore({
+      roots: workBuddyRoots(),
+      cacheFile: paths.workbuddyCache,
+      pricing
+    });
     wbStore.loadCache();
-    // WorkBuddy 日志量小（本机 25MB / 千条请求），并行构建，几十毫秒
+    // WorkBuddy 日志量小（本机 38MB / 千条请求），并行构建，几十毫秒
     wbStore.build()
       .then(() => {
-        log(`workbuddy: ${wbStore.files.size} files, ${(wbStore.summary().totals.totalTokens / 1e6).toFixed(1)}M tokens`);
+        const summary = wbStore.summary();
+        const sources = (summary.roots || []).filter(item => item.files > 0).map(item => `${path.basename(item.root)}:${item.files}`).join(" + ");
+        log(`workbuddy: ${wbStore.files.size} files (${sources}), ${(summary.totals.totalTokens / 1e6).toFixed(1)}M tokens`);
         attachWorkBuddySummary();
       })
       .catch(error => log(`workbuddy scan failed: ${error.message}`));

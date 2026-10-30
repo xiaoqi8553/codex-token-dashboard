@@ -24,7 +24,8 @@ const fsp = require("node:fs/promises");
 const path = require("node:path");
 const { normalizeTable, costOfModels, describeTable } = require("./pricing.cjs");
 
-const CACHE_VERSION = 1;
+// 2：扫描范围从单一 ~/.workbuddy 扩到国际版 ~/.workbuddy-ai，缓存按会话 id 合并去重
+const CACHE_VERSION = 2;
 const SCAN_CHUNK_BYTES = 4 * 1024 * 1024;
 
 function pad2(value) {
@@ -58,46 +59,85 @@ function addBucket(target, source, sign = 1) {
 
 class WorkBuddyStore {
   /**
-   * @param {{root?:string, cacheFile?:string}} options root 默认 ~/.workbuddy
+   * @param {{root?:string, roots?:string[], cacheFile?:string}} options
+   *   roots 支持多套安装：国内版写 `~/.workbuddy`，国际版写 `~/.workbuddy-ai`。
+   *   两边常常是同一批会话（国际版首次启动会把旧目录整份搬过去），所以扫描时按会话去重。
    */
   constructor(options = {}) {
-    this.root = options.root || path.join(require("node:os").homedir(), ".workbuddy");
+    const home = require("node:os").homedir();
+    const roots = Array.isArray(options.roots) && options.roots.length
+      ? options.roots.filter(Boolean)
+      : [options.root || path.join(home, ".workbuddy")];
+    /** @type {string[]} 去重后的安装根目录，顺序决定同名会话谁优先 */
+    this.roots = [...new Set(roots)];
+    this.root = this.roots[0];
     /** 模型价格表：和 Codex 共用一份，口径见 pricing.cjs */
     this.pricing = normalizeTable(options.pricing || {});
     this.projectsDir = path.join(this.root, "projects");
     this.cacheFile = options.cacheFile || null;
     /** @type {Map<string, {size:number,mtimeMs:number,detail:object}>} */
     this.files = new Map();
+    /** 每个根目录扫到多少、最终留下多少，供界面说明数据来自哪套安装 */
+    this.rootsInfo = [];
     this.builtAt = null;
     this.phase = "idle";
     this._promise = null;
   }
 
-  /** 递归列出所有会话日志（按 mtime 升序，新的在后面） */
+  /**
+   * 递归列出所有会话日志（按 mtime 升序，新的在后面）。
+   * 同一会话 id 在多套安装里都存在时，取体积更大的那份——国际版是接着国内版续写的，
+   * 直接两边都算会把整段历史重复计入。
+   */
   listFiles() {
-    const out = [];
     const walk = dir => {
-      let entries;
-      try {
-        entries = fs.readdirSync(dir, { withFileTypes: true });
-      } catch {
-        return;
-      }
-      for (const entry of entries) {
-        const full = path.join(dir, entry.name);
-        if (entry.isDirectory()) {
-          walk(full);
-        } else if (entry.isFile() && entry.name.endsWith(".jsonl")) {
-          try {
-            const stat = fs.statSync(full);
-            out.push({ path: full, size: stat.size, mtimeMs: stat.mtimeMs });
-          } catch {
-            /* 边走边删的日志跳过 */
+      const out = [];
+      const dig = current => {
+        let entries;
+        try {
+          entries = fs.readdirSync(current, { withFileTypes: true });
+        } catch {
+          return;
+        }
+        for (const entry of entries) {
+          const full = path.join(current, entry.name);
+          if (entry.isDirectory()) {
+            dig(full);
+          } else if (entry.isFile() && entry.name.endsWith(".jsonl")) {
+            try {
+              const stat = fs.statSync(full);
+              out.push({ path: full, size: stat.size, mtimeMs: stat.mtimeMs });
+            } catch {
+              /* 边走边删的日志跳过 */
+            }
           }
         }
-      }
+      };
+      dig(dir);
+      return out;
     };
-    walk(this.projectsDir);
+
+    /** @type {Map<string, {path:string,size:number,mtimeMs:number,root:string}>} */
+    const bySession = new Map();
+    const info = [];
+    for (const root of this.roots) {
+      const found = walk(path.join(root, "projects"));
+      let kept = 0;
+      for (const entry of found) {
+        const sessionId = path.basename(entry.path, ".jsonl");
+        const prev = bySession.get(sessionId);
+        const wins = !prev
+          || entry.size > prev.size
+          || (entry.size === prev.size && entry.mtimeMs > prev.mtimeMs);
+        if (!wins) continue;
+        bySession.set(sessionId, { ...entry, root });
+        kept += 1;
+      }
+      info.push({ root, files: found.length, kept });
+    }
+    this.rootsInfo = info;
+
+    const out = [...bySession.values()];
     out.sort((a, b) => a.mtimeMs - b.mtimeMs);
     return out;
   }
@@ -461,6 +501,8 @@ class WorkBuddyStore {
       builtAt: this.builtAt,
       sessions: sessionList.length,
       scannedFiles: this.files.size,
+      /** 数据来自哪几套安装（国际版 ~/.workbuddy-ai、国内版 ~/.workbuddy） */
+      roots: this.rootsInfo,
       baseline: null,
       throughput: null,
       credits: { total: credits, today: sessionList.reduce((acc, item) => acc + (item.credit || 0), 0) },
@@ -498,6 +540,7 @@ class WorkBuddyStore {
       today: snap.today ? { day: snap.today.day, totalTokens: snap.today.totalTokens, records: snap.today.records, outputTokens: snap.today.outputTokens, cachedInputTokens: snap.today.cachedInputTokens, inputTokens: snap.today.inputTokens } : null,
       totals: { totalTokens: snap.totals.totalTokens, records: snap.totals.records, inputTokens: snap.totals.inputTokens, cachedInputTokens: snap.totals.cachedInputTokens, outputTokens: snap.totals.outputTokens, cost: snap.totals.cost },
       credits: snap.credits,
+      roots: snap.roots,
       cost: snap.cost ? { cny: snap.cost.cny, usd: snap.cost.usd, todayCny: snap.cost.todayCny } : null
     };
   }

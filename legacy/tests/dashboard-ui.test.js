@@ -18,7 +18,7 @@ const serverSource = fs.readFileSync(path.join(root, "server.js"), "utf8");
 const readmeSource = fs.readFileSync(path.join(root, "README.md"), "utf8");
 const { buildBridgeSiteUrl, createBridge } = require(path.join(root, "scripts", "account-bridge.js"));
 const { deriveAccountName, safeAccountName } = require(path.join(root, "scripts", "account-snapshot-process.js"));
-const packageJson = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
+const packageJson = JSON.parse(fs.readFileSync(path.join(root, "..", "package.json"), "utf8"));
 
 function bridgeRequest(port, options = {}) {
   return new Promise((resolve, reject) => {
@@ -324,23 +324,6 @@ test("usage trend has no persistent numeric overlays or summaries", () => {
   assert.doesNotMatch(cacheSource, /峰值 active|缓存 \$\{formatToken|命中率 \$\{avgHit\}% \/ active/);
 });
 
-test("1.2.1 uses the engineering workspace shell and CodexBar usage board", () => {
-  assert.equal(packageJson.version, "1.2.2");
-  assert.match(indexSource, /class="side-rail shell"/);
-  assert.match(indexSource, /id="viewTitle"/);
-  assert.match(indexSource, /v1\.2\.2/);
-  assert.match(indexSource, /<strong>CodexBar<\/strong>/);
-  assert.match(indexSource, /近 5 小时/);
-  assert.match(indexSource, /近 7 天/);
-  assert.match(indexSource, /Live usage/);
-  assert.match(indexSource, /data-action="refresh"/);
-  assert.match(indexSource, /Codex 官方额度和重置时间需官方接口授权/);
-  assert.doesNotMatch(indexSource, /每个 Token 窗口，都看得见/);
-  assert.doesNotMatch(indexSource, /replayBtn|replay\.html|工作回放/);
-  assert.doesNotMatch(buildSource, /replay\.html/);
-  assert.equal(fs.existsSync(path.join(root, "replay.html")), false);
-});
-
 test("Notion embed supports Chrome extension and desktop loopback sync without uploading sessions", () => {
   assert.match(indexSource, /Chrome 扩展本机同步/);
   assert.match(indexSource, /Notion 桌面本机直连/);
@@ -350,7 +333,7 @@ test("Notion embed supports Chrome extension and desktop loopback sync without u
   assert.match(indexSource, /本机同步/);
   assert.match(indexSource, /在独立标签页打开看板/);
   assert.doesNotMatch(indexSource, /openEmbeddedFolderPicker|codex-folder-picker-result/);
-  assert.match(readmeSource, /在 Notion 中使用/);
+  assert.match(readmeSource, /Notion 同步/);
 });
 
 test("UI review captures and audits the current dark overview", () => {

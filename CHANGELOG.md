@@ -1,5 +1,16 @@
 # 更新日志
 
+## 2.0.0 - 2026-10-30
+
+**改名 TokenBar。** 旧名字 `codex-token-dashboard` 是网页版看板时期的，现在这东西是 Windows 托盘应用，两个数据源、五个指标卡，叫 token dashboard 已经对不上。仓库地址变成 `github.com/xiaoqi8553/tokenbar`（旧链接会重定向）。
+
+- 新增 **WorkBuddy 国际版** 支持：国际版把日志写在 `~/.workbuddy-ai/projects`，国内版写 `~/.workbuddy/projects`，之前只扫后者，切到国际版之后新产生的用量完全没进统计。现在两套一起读，按会话 id 去重（同名会话只留体积更大的那份，因为国际版首次启动会把旧目录整份搬过去），本机实测 172.6M → 180.5M。
+- 累计卡片的「来源」提示改成实际扫到的目录，底栏日志行也会打出 `workbuddy-ai:10 + workbuddy:9` 这样的分布，能看出数据来自哪套安装。
+- 仓库结构收敛：旧网页看板（Node 服务、单页 HTML、Chrome 扩展、Notion 桥接、视觉审计脚本、旧测试）整体移到 `legacy/`，托盘菜单里的「打开旧版网页看板」仍可用。删掉 `AGENTS.md`、`RELEASE_NOTES.md`、`docs/`、`screenshots/`、`sample-data/` 和已经失效的 Pages 部署 workflow。
+- 改名后 userData 会从 `%APPDATA%/Codex Token` 变成 `%APPDATA%/TokenBar`。历史索引（5.7B 的基线）还在旧目录，首次启动会整份复制过来，否则累计会掉回磁盘日志的 2.4B。开发模式与打包模式统一用 `TokenBar`，不再出现大小写两份缓存。
+- README 重写，按「为什么 / 看什么 / 数据从哪来 / 口径 / 安装 / 开发」重排，去掉网页版的部署、Notion、Sites 章节。
+- 测试重新分层：`tests/` 只留桌面端（16 个），旧网页看板的 67 个测试移到 `legacy/tests/`，用 `npm run legacy:test` 跑。新增 `tests/dashboard.test.js`，覆盖改名、双数据源、legacy 归档和多根去重。
+
 ## 1.2.2 - 2026-10-28
 
 - 修复「活跃时段」不跟着 7/14/30/全部 切换变化：这张图原来只读本机残留日志的小时桶（本机 53 天 / 1.84B），历史上被 Codex 清理掉的 3.86B 全在 `usage-index` 基线里且没有小时粒度，所以切区间只是在这 53 天里换窗口，幅度和形状几乎不变。

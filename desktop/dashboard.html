@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Codex Token · 用量看板</title>
+<title>TokenBar · 用量看板</title>
 <style>
   :root {
     color-scheme: light;
@@ -719,7 +719,7 @@
     <div class="boot-mark">&gt;_</div>
     <div class="boot-text" id="boot-text">正在读取本地会话日志…</div>
     <div class="boot-bar"><i id="boot-fill"></i></div>
-    <div class="boot-hint" id="boot-hint">数据来自 ~/.codex/sessions 与 ~/.workbuddy/projects，不联网</div>
+    <div class="boot-hint" id="boot-hint">数据来自 ~/.codex/sessions 与 WorkBuddy 本地日志，不联网</div>
   </div>
 </div>
 
@@ -1351,6 +1351,11 @@
     const cacheRate = totals.inputTokens ? (totals.cachedInputTokens / totals.inputTokens) * 100 : 0;
     const todayRate = today && today.inputTokens ? (today.cachedInputTokens / today.inputTokens) * 100 : 0;
     const credits = detail.credits || { total: 0 };
+    // 国际版写 ~/.workbuddy-ai，国内版写 ~/.workbuddy；同名会话只算体积更大的一份
+    const rootHint = (detail.roots || [])
+      .filter(item => item.files > 0)
+      .map(item => "~/" + String(item.root).split(/[\\/]/).filter(Boolean).pop() + "/projects")
+      .join(" + ") || "~/.workbuddy/projects";
 
     return [
       {
@@ -1373,7 +1378,7 @@
         unit: "tokens",
         hideMeter: true,
         foot: "<b>" + fmtCount(totals.sessions) + "</b> 个会话 · <b>" + fmtCount(totals.records) + "</b> 次调用",
-        hints: ["来源 ~/.workbuddy/projects"]
+        hints: ["来源 " + rootHint]
       },
       {
         label: "等价花费",
@@ -2021,7 +2026,7 @@
       }
     } catch (error) {
       $("boot-text").textContent = "读取失败：" + (error && error.message ? error.message : error);
-      $("boot-hint").textContent = "请确认 ~/.codex/sessions 与 ~/.workbuddy/projects 目录存在";
+      $("boot-hint").textContent = "请确认 ~/.codex/sessions 与 ~/.workbuddy(-ai)/projects 目录存在";
     } finally {
       button.dataset.busy = "0";
     }
